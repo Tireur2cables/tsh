@@ -30,10 +30,10 @@ int main(int argc, char *argv[]){
 		int read_size = 0;
 		while((n=read(fd, header, BLOCKSIZE))>0){
 			if(strcmp(header->name, "\0") == 0){
-				printf("---- FIN DE L'AFFICHAGE ----\n");
 				return 0;
 			}
 			show_header_infos(header, &read_size);
+			/*TODO : Changer en lseek*/
 			read(fd, header, BLOCKSIZE*read_size);
 		}
 		printf("\n");
@@ -46,5 +46,6 @@ void show_header_infos(struct posix_header *header, int *read_size){
 	int taille = 0;
 	sscanf(header->size, "%o", &taille);
 	*read_size = ((taille + 512-1)/512);
+	/*TODO : droits - nombre de références - createur - date */
 	printf("%c--------- x user user %d date %s\n", ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-'), taille, header->name);
 }
