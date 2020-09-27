@@ -11,6 +11,8 @@
 
 void show_header_infos(struct posix_header *, int *);
 
+//OBJECTIF : FONCTION LS
+
 int main(int argc, char *argv[]){
 	if(argc == 0 || argc == 1) printf("Aucun fichier passé en paramètre !\n");
 	else{
@@ -44,7 +46,5 @@ void show_header_infos(struct posix_header *header, int *read_size){
 	int taille = 0;
 	sscanf(header->size, "%o", &taille);
 	*read_size = ((taille + 512-1)/512);
-	printf("Nom du premier fichier de l'archive : %s\n", header->name);
-	printf("Le premier fichier de l'archive fait %d octet(s).\n", taille);
-	printf("Le premier fichier de l'archive est %s.\n", (header->typeflag=='0')?"un fichier standard":(header->typeflag=='5')?" un repertoire":"un type inconnu");
+	printf("%c--------- x user user %d date %s\n", ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-'), taille, header->name);
 }
