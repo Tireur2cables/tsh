@@ -1,0 +1,8 @@
+# Ignore tout
+*
+
+# Unignore tout ce qui a une extension
+!*.*
+
+# Unignore tous les répertoires
+!*/
