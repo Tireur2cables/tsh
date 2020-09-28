@@ -1,8 +1,8 @@
 CC = gcc
 CFLAGS = -Wall -g -std=c11
 LDLIBS =
-ALL = ls-l
+ALL = ls
 all : $(ALL)
-show_tar_infos : ls-l.c
+show_tar_infos : ls.c
 clean :
 	rm -rf *~ $(ALL)
