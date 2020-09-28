@@ -9,14 +9,24 @@
 #include <assert.h>
 #include "tar.h"
 
-void show_header_infos(struct posix_header *, int *);
+void show_simple_header_infos(struct posix_header *, int *);
+void show_complete_header_infos(struct posix_header *, int *);
 
 //OBJECTIF : FONCTION LS
+//
 
 int main(int argc, char *argv[]){
 	if(argc == 0 || argc == 1) printf("Aucun fichier passé en paramètre !\n");
 	else{
-		char *file = argv[1];
+		char *option = "\0";
+		char *file;
+		//Gestion des options (-l pour le moment)
+		if(argc == 3){
+			option = argv[1];
+			file = argv[2];
+		}else{
+			file = argv[1];
+		}
 		struct posix_header * header = malloc(sizeof(struct posix_header));
 		assert(header);
 
@@ -32,20 +42,35 @@ int main(int argc, char *argv[]){
 			if(strcmp(header->name, "\0") == 0){
 				return 0;
 			}
-			show_header_infos(header, &read_size);
+			if((strcmp(option, "\0") == 0)){
+				show_simple_header_infos(header, &read_size);
+			}
+			else if((strcmp(option, "-l") == 0)){
+				show_complete_header_infos(header, &read_size);
+			}
 			/*TODO : Changer en lseek*/
 			read(fd, header, BLOCKSIZE*read_size);
 		}
 		printf("\n");
 		close(fd);
 	}
+	printf("\n");
 	return 0;
 }
 
-void show_header_infos(struct posix_header *header, int *read_size){
+void show_complete_header_infos(struct posix_header *header, int *read_size){
 	int taille = 0;
 	sscanf(header->size, "%o", &taille);
 	*read_size = ((taille + 512-1)/512);
-	/*TODO : droits - nombre de références - createur - date */
+	/*TODO : droits - nombre de références - createur - date
+			Changer le printf en write
+	*/
 	printf("%c--------- x user user %d date %s\n", ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-'), taille, header->name);
+}
+void show_simple_header_infos(struct posix_header *header, int *read_size){
+	int taille = 0;
+	sscanf(header->size, "%o", &taille);
+	*read_size = ((taille + 512-1)/512);
+	/*TODO : Changer le printf en write*/
+	printf("%s  ", header->name);
 }
