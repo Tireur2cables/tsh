@@ -60,12 +60,14 @@ int main(int argc, char *argv[]){
 
 void show_complete_header_infos(struct posix_header *header, int *read_size){
 	int taille = 0;
+	int mode = 0;
 	sscanf(header->size, "%o", &taille);
+	sscanf(header->mode, "%o", &mode);
 	*read_size = ((taille + 512-1)/512);
 	/*TODO : droits - nombre de références - createur - date
 			Changer le printf en write
 	*/
-	printf("%c--------- x user user %d date %s\n", ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-'), taille, header->name);
+	printf("%c%o x user user %d date %s\n", ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-'), mode, taille, header->name);
 }
 void show_simple_header_infos(struct posix_header *header, int *read_size){
 	int taille = 0;
