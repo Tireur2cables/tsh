@@ -3,6 +3,7 @@
 
 # Unignore tout ce qui a une extension
 !*.*
+Makefile
 
 # Unignore tous les répertoires
 !*/
