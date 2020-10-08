@@ -24,6 +24,7 @@ int check_options(char *);
 		 REMPLACER TOUT LES PRINTF PAR DES WRITE
 		 GERER LES OPTIONS (-a dans ., dans
 		 TAR : - Afficher les droits correctement - nombre de references - createur - date
+		 	   - Changer le read inutile en lseek
 
 */
 
