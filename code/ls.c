@@ -15,6 +15,8 @@ void show_complete_header_infos(struct posix_header *, int *);
 int print_normal_dir(DIR*);
 int print_inoeud_normal_dir(DIR*);
 int print_dir(char *, char *);
+int print_tar(char *, char *);
+int print_rep(char *, char *);
 int is_tar(char *);
 //fixme implémenter
 int check_options(char *);
@@ -24,8 +26,8 @@ int check_options(char *);
 		 REMPLACER TOUT LES PRINTF PAR DES WRITE
 		 GERER LES OPTIONS (-a dans ., dans
 		 TAR : - Afficher les droits correctement - nombre de references - createur - date
-		 	   - Changer le read inutile en lseek
-		FIXME : ERREUR DE SEGMENTATION (exemple ls e.e)
+		FIXME :GERER LES RETOURS D'ERREURS
+		FIXME : BUG TOTO.TAR
 
 */
 
@@ -52,61 +54,75 @@ int print_dir(char *file, char *options){
 	char *cp = malloc(sizeof(file)+1);
 	strcpy(cp, file);
 	if(is_tar(cp) == 0){
-		if(strcmp(options, "\0") == 0){ //pas d'option
-			struct posix_header * header = malloc(sizeof(struct posix_header));
-			assert(header);
-			int fd = open(file, O_RDONLY);
-			if(fd == -1){
-			  perror("erreur d'ouverture du fichier");
-			  return -1;
-			}
-
-			int n = 0;
-			int read_size = 0;
-			while((n=read(fd, header, BLOCKSIZE))>0){
-				if(strcmp(header->name, "\0") == 0){
-					return 0;
-				}
-				show_simple_header_infos(header, &read_size);
-				/*TODO : Changer en lseek*/
-				read(fd, header, BLOCKSIZE*read_size);
-			}
-			printf("\n");
-			close(fd);
-		}else{
-			struct posix_header * header = malloc(sizeof(struct posix_header));
-			assert(header);
-
-			int fd = open(file, O_RDONLY);
-			if(fd == -1){
-			  perror("erreur d'ouverture du fichier");
-			  return -1;
-			}
-
-			int n = 0;
-			int read_size = 0;
-			while((n=read(fd, header, BLOCKSIZE))>0){
-				if(strcmp(header->name, "\0") == 0){
-					return 0;
-				}
-				show_complete_header_infos(header, &read_size);
-				read(fd, header, BLOCKSIZE*read_size);
-			}
-			printf("\n");
-			close(fd);
-		}
+		print_tar(file, options);
 	}else{
-		if(strcmp(options, "\0") == 0){ //pas d'options
-			DIR* dir = opendir(file);
-			print_normal_dir(dir);
-			closedir(dir);
-		}else{
-			DIR* dir = opendir(file);
-			print_inoeud_normal_dir(dir);
-			closedir(dir);
-		}
+		print_rep(file, options);
 	}
 	printf("\n");
+	return 0;
+}
+
+int print_tar(char *file, char *options){
+	if(strcmp(options, "\0") == 0){ //pas d'option
+		struct posix_header * header = malloc(sizeof(struct posix_header));
+		assert(header);
+		int fd = open(file, O_RDONLY);
+		if(fd == -1){
+		  perror("erreur d'ouverture du fichier");
+		  return -1;
+		}
+
+		int n = 0;
+		int read_size = 0;
+		while((n=read(fd, header, BLOCKSIZE))>0){
+			if(strcmp(header->name, "\0") == 0){
+				return 0;
+			}
+			show_simple_header_infos(header, &read_size);
+			lseek(fd, BLOCKSIZE*read_size, SEEK_CUR);
+		}
+		close(fd);
+	}else{
+		struct posix_header * header = malloc(sizeof(struct posix_header));
+		assert(header);
+		int fd = open(file, O_RDONLY);
+		if(fd == -1){
+		  perror("erreur d'ouverture du fichier");
+		  return -1;
+		}
+
+		int n = 0;
+		int read_size = 0;
+		while((n=read(fd, header, BLOCKSIZE))>0){
+			if(strcmp(header->name, "\0") == 0){
+				return 0;
+			}
+			show_complete_header_infos(header, &read_size);
+			lseek(fd, BLOCKSIZE*read_size, SEEK_CUR);
+		}
+		printf("\n");
+		close(fd);
+	}
+	return 0;
+}
+
+int print_rep(char *file, char *options){
+	DIR* dir;
+	if(strcmp(options, "\0") == 0){ //pas d'options
+		if((dir = opendir(file)) == NULL){
+			perror("erreur");
+			exit(1); //fixme mettre la valeur d'erreur
+		}
+		print_normal_dir(dir);
+		closedir(dir);
+	}else{
+		if((dir = opendir(file)) == NULL){
+			perror("erreur");
+			exit(1); //fixme mettre la valeur d'erreur
+		}
+		print_inoeud_normal_dir(dir);
+		closedir(dir);
+	}
 	return 0;
 }
 
@@ -133,7 +149,9 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 }
 void show_simple_header_infos(struct posix_header *header, int *read_size){
 	int taille = 0;
+	int mode = 0;
 	sscanf(header->size, "%o", &taille);
+	sscanf(header->mode, "%o", &mode);
 	*read_size = ((taille + 512-1)/512);
 	//fixme printf
 	printf("%s  ", header->name);
