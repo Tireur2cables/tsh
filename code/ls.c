@@ -25,7 +25,7 @@ int check_options(char *);
 		 GERER LES OPTIONS (-a dans ., dans
 		 TAR : - Afficher les droits correctement - nombre de references - createur - date
 		 	   - Changer le read inutile en lseek
-		FIXME : ERREUR DE SEGMENTATION
+		FIXME : ERREUR DE SEGMENTATION (exemple ls e.e)
 
 */
 
