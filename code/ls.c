@@ -7,52 +7,85 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <dirent.h>
 #include "tar.h"
 
 void show_simple_header_infos(struct posix_header *, int *);
 void show_complete_header_infos(struct posix_header *, int *);
+int print_normal_dir(DIR*);
+int print_inoeud_normal_dir(DIR*);
+int print_dir(char *, char *);
+int check_options(char *);
 
-//OBJECTIF : FONCTION LS
-//
+//FONCTION LS
 
 int main(int argc, char *argv[]){
-	if(argc == 0 || argc == 1) printf("Aucun fichier passé en paramètre !\n");
+	if(argc == 0){
+		errno = EINVAL;
+		perror("erreur du programmee");
+	}
 	else{
-		char *option = "\0";
-		char *file;
-		//Gestion des options (-l pour le moment)
-		if(argc == 3){
-			option = argv[1];
-			file = argv[2];
+		if(argc == 1){
+			print_dir(".", "\0");
+		}else if(argc == 2){
+			print_dir(argv[1], "\0");
+		}else if(argc == 3){
+			//check_options(argv[2]);
+			print_dir(argv[1], argv[2]);
+		}
+
+	}
+	return 0;
+}
+
+int print_dir(char *file /*NULL si repetoire = .*/, char *options/*NULL si pas d'options*/){
+	if(strcmp(file, ".") == 0){ //repertoire courant
+		DIR* dir = opendir(file);
+		print_normal_dir(dir);
+		closedir(dir);
+	}else{ //repetoire en paramètre
+		if(strcmp(options, "\0") == 0){ //pas d'options
+			char *arg = ".";
+			DIR* dir = opendir(arg);
+			print_normal_dir(dir);
+			closedir(dir);
 		}else{
-			file = argv[1];
-		}
-		struct posix_header * header = malloc(sizeof(struct posix_header));
-		assert(header);
+			if(strcmp(options, "\t")){ //temporaire pour gérer les tars a remplacer par une fonction is_tar(char *file)
+				struct posix_header * header = malloc(sizeof(struct posix_header));
+				assert(header);
 
-		int fd = open(file, O_RDONLY);
-		if(fd == -1){
-	      perror("erreur d'ouverture du fichier");
-		  return -1;
-	    }
+				int fd = open(file, O_RDONLY);
+				if(fd == -1){
+			      perror("erreur d'ouverture du fichier");
+				  return -1;
+			    }
 
-		int n = 0;
-		int read_size = 0;
-		while((n=read(fd, header, BLOCKSIZE))>0){
-			if(strcmp(header->name, "\0") == 0){
-				return 0;
+				int n = 0;
+				int read_size = 0;
+				while((n=read(fd, header, BLOCKSIZE))>0){
+					if(strcmp(header->name, "\0") == 0){
+						return 0;
+					}
+					show_complete_header_infos(header, &read_size);
+					/*if((strcmp(options, "\0") == 0)){
+						show_simple_header_infos(header, &read_size);
+					}
+					else if((strcmp(options, "-l") == 0)){
+						show_complete_header_infos(header, &read_size);
+					}*/
+					/*TODO : Changer en lseek*/
+					read(fd, header, BLOCKSIZE*read_size);
+				}
+				printf("\n");
+				close(fd);
 			}
-			if((strcmp(option, "\0") == 0)){
-				show_simple_header_infos(header, &read_size);
+			else{
+				char *arg = ".";
+				DIR* dir = opendir(arg);
+				print_inoeud_normal_dir(dir);
+				closedir(dir);
 			}
-			else if((strcmp(option, "-l") == 0)){
-				show_complete_header_infos(header, &read_size);
-			}
-			/*TODO : Changer en lseek*/
-			read(fd, header, BLOCKSIZE*read_size);
 		}
-		printf("\n");
-		close(fd);
 	}
 	printf("\n");
 	return 0;
@@ -75,4 +108,22 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 	*read_size = ((taille + 512-1)/512);
 	/*TODO : Changer le printf en write*/
 	printf("%s  ", header->name);
+}
+
+int print_normal_dir(DIR* dirp){
+	struct dirent *entry;
+	while((entry = readdir(dirp)) != NULL){
+		printf("%s  ", entry->d_name);
+	}
+	return 0;
+}
+
+int print_inoeud_normal_dir(DIR* dirp){
+	struct dirent *entry;
+	while((entry = readdir(dirp)) != NULL){
+		if(entry->d_name[0] != '.'){
+			printf("%ld %s  ", entry->d_ino, entry->d_name);
+		}
+	}
+	return 0;
 }
