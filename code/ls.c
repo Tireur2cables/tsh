@@ -27,7 +27,6 @@ int check_options(char *);
 		 GERER LES OPTIONS (-a dans ., dans
 		 TAR : - Afficher les droits correctement - nombre de references - createur - date
 		FIXME :GERER LES RETOURS D'ERREURS
-		FIXME : BUG TOTO.TAR
 
 */
 
@@ -58,7 +57,6 @@ int print_dir(char *file, char *options){
 	}else{
 		print_rep(file, options);
 	}
-	printf("\n");
 	return 0;
 }
 
@@ -76,11 +74,12 @@ int print_tar(char *file, char *options){
 		int read_size = 0;
 		while((n=read(fd, header, BLOCKSIZE))>0){
 			if(strcmp(header->name, "\0") == 0){
-				return 0;
+				break;
 			}
 			show_simple_header_infos(header, &read_size);
 			lseek(fd, BLOCKSIZE*read_size, SEEK_CUR);
 		}
+		printf("\n");
 		close(fd);
 	}else{
 		struct posix_header * header = malloc(sizeof(struct posix_header));
@@ -95,12 +94,11 @@ int print_tar(char *file, char *options){
 		int read_size = 0;
 		while((n=read(fd, header, BLOCKSIZE))>0){
 			if(strcmp(header->name, "\0") == 0){
-				return 0;
+				break;
 			}
 			show_complete_header_infos(header, &read_size);
 			lseek(fd, BLOCKSIZE*read_size, SEEK_CUR);
 		}
-		printf("\n");
 		close(fd);
 	}
 	return 0;
@@ -123,6 +121,7 @@ int print_rep(char *file, char *options){
 		print_inoeud_normal_dir(dir);
 		closedir(dir);
 	}
+	printf("\n");
 	return 0;
 }
 
