@@ -15,9 +15,17 @@ void show_complete_header_infos(struct posix_header *, int *);
 int print_normal_dir(DIR*);
 int print_inoeud_normal_dir(DIR*);
 int print_dir(char *, char *);
+//fixme implémenter
 int check_options(char *);
 
 //FONCTION LS
+/*TODO : FONCTION CHECK_OPTIONS
+		 FONCTION is_tar et supprimé options -t
+		 REMPLACER TOUT LES PRINTF PAR DES WRITE
+		 GERER LES OPTIONS (-a dans ., dans
+		 TAR : - Afficher les droits correctement - nombre de references - createur - date
+
+*/
 
 int main(int argc, char *argv[]){
 	if(argc == 0){
@@ -40,16 +48,33 @@ int main(int argc, char *argv[]){
 
 int print_dir(char *file /*NULL si repetoire = .*/, char *options/*NULL si pas d'options*/){
 	if(strcmp(file, ".") == 0){ //repertoire courant
+		//fixme gerer les options
+		/*
+		if(option == x){
+		}else{
+		}*/
 		DIR* dir = opendir(file);
 		print_normal_dir(dir);
 		closedir(dir);
+
 	}else{ //repetoire en paramètre
+		//fixme gerer les options
+		/*if(is_tar(file)){
+			if(option == x){
+			}else{
+			}
+		}else{
+			if(option == x){
+			}else{
+		}
+		}*/
 		if(strcmp(options, "\0") == 0){ //pas d'options
 			char *arg = ".";
 			DIR* dir = opendir(arg);
 			print_normal_dir(dir);
 			closedir(dir);
 		}else{
+			//fixme fonctions istar
 			if(strcmp(options, "\t")){ //temporaire pour gérer les tars a remplacer par une fonction is_tar(char *file)
 				struct posix_header * header = malloc(sizeof(struct posix_header));
 				assert(header);
@@ -97,22 +122,22 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	sscanf(header->size, "%o", &taille);
 	sscanf(header->mode, "%o", &mode);
 	*read_size = ((taille + 512-1)/512);
-	/*TODO : droits - nombre de références - createur - date
-			Changer le printf en write
-	*/
+	//fixme Afficher les droits correctement - nombre de references - createur - date
+	//fixme printf
 	printf("%c%o x user user %d date %s\n", ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-'), mode, taille, header->name);
 }
 void show_simple_header_infos(struct posix_header *header, int *read_size){
 	int taille = 0;
 	sscanf(header->size, "%o", &taille);
 	*read_size = ((taille + 512-1)/512);
-	/*TODO : Changer le printf en write*/
+	//fixme printf
 	printf("%s  ", header->name);
 }
 
 int print_normal_dir(DIR* dirp){
 	struct dirent *entry;
 	while((entry = readdir(dirp)) != NULL){
+		//fixme printf
 		printf("%s  ", entry->d_name);
 	}
 	return 0;
@@ -122,6 +147,7 @@ int print_inoeud_normal_dir(DIR* dirp){
 	struct dirent *entry;
 	while((entry = readdir(dirp)) != NULL){
 		if(entry->d_name[0] != '.'){
+			//fixme printf
 			printf("%ld %s  ", entry->d_ino, entry->d_name);
 		}
 	}
