@@ -1,9 +1,13 @@
 CC = gcc
 CFLAGS = -Wall -g -std=c11
 LDLIBS =
-ALL = ls
-all : $(ALL)
-ls : ls.c
+all : tsh
+tsh : tsh.o ls.o mycat.o
+ls.o : ls.c tar.h
+tsh.o : tsh.c mycat.h ls.h
+mycat.o : mycat.c mycat.h
+cleanall : clean
+	rm -rf tsh *.o
 clean :
-	rm -rf *~ $(ALL)
+	rm -rf *~
 
