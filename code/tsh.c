@@ -10,6 +10,7 @@
 //#include "ls.h"
 
 int is_ls(char *);
+int is_help(char *);
 
 
 int main(int argc, char const *argv[]) {
@@ -51,6 +52,13 @@ int main(int argc, char const *argv[]) {
 				fic = strtok(NULL, "\n");
 				printf("ls avec arguments : %s\n", fic); // FIXME: temporaire
 			}
+		}else if (is_help(mycat_buf)) {
+			char *help = "Voici une liste non exhaustive des commandes implémentées:ǹ\nexit : quitte le tsh\nls : wip\nhelp : obtenir la liste des commandes\n";
+			int help_len = strlen(help);
+			if (write(STDOUT_FILENO, help, help_len) < help_len) {
+				perror("Erreur d'écriture du prompt!");
+				exit(EXIT_FAILURE);
+			}
 		}else {
 			char *fini = "Commande inconnue!\nEssayez \'help\' pour connaître les commandes disponibles.\n\n";
 			int fini_len = strlen(fini);
@@ -62,6 +70,11 @@ int main(int argc, char const *argv[]) {
 	}
 
 	return 0;
+}
+
+// FIXME: peut etre factoriser à mon avis
+int is_help(char *mycat_buf) {
+	return (strncmp(mycat_buf, "help", 4) == 0) && (isspace(mycat_buf[4]));
 }
 
 int is_ls(char *mycat_buf) {
