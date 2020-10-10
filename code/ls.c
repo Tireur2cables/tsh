@@ -15,7 +15,7 @@ void show_complete_header_infos(struct posix_header *, int *);
 //OBJECTIF : FONCTION LS
 //
 
-int maain(int argc, char *argv[]){
+int main(int argc, char *argv[]){
 	if(argc == 0 || argc == 1) printf("Aucun fichier passé en paramètre !\n");
 	else{
 		char *option = "\0";
