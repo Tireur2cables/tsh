@@ -23,11 +23,9 @@ int check_options(char *);
 int is_options(char *);
 
 //FONCTION LS
-/*TODO : FONCTION CHECK_OPTIONS
-		 REMPLACER TOUT LES PRINTF PAR DES WRITE
-		 TAR : - Afficher les droits correctement - nombre de references - createur - date
-		FIXME :GERER LES RETOURS D'ERREURS
-		traiter le cas d'un fichier dans un tar
+/*TODO : REMPLACER TOUT LES PRINTF PAR DES WRITE
+		 Afficher les droits correctement - nombre de references - createur - date
+		 traiter le cas d'un fichier dans un tar
 
 */
 
@@ -35,6 +33,7 @@ int main(int argc, char *argv[]){
 	if(argc == 0){
 		errno = EINVAL;
 		perror("erreur du programme");
+		exit(EXIT_FAILURE);
 	}
 	else{
 		if(argc == 1){
@@ -58,6 +57,7 @@ int main(int argc, char *argv[]){
 
 int print_dir(char *file, char *options){
 	char *cp = malloc(sizeof(file)+1);
+	assert(cp);
 	strcpy(cp, file);
 	if(is_tar(cp) == 0){
 		print_tar(file, options);
@@ -74,7 +74,7 @@ int print_tar(char *file, char *options){
 		int fd = open(file, O_RDONLY);
 		if(fd == -1){
 		  perror("erreur d'ouverture du fichier");
-		  return -1;
+		  exit(EXIT_FAILURE);
 		}
 
 		int n = 0;
@@ -84,7 +84,10 @@ int print_tar(char *file, char *options){
 				break;
 			}
 			show_simple_header_infos(header, &read_size);
-			lseek(fd, BLOCKSIZE*read_size, SEEK_CUR);
+			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+				perror("erreur de lecture de l'archive");
+				exit(EXIT_FAILURE);
+			}
 		}
 		printf("\n");
 		close(fd);
@@ -104,7 +107,10 @@ int print_tar(char *file, char *options){
 				break;
 			}
 			show_complete_header_infos(header, &read_size);
-			lseek(fd, BLOCKSIZE*read_size, SEEK_CUR);
+			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+				perror("erreur de lecture de l'archive");
+				exit(EXIT_FAILURE);
+			}
 		}
 		close(fd);
 	}
@@ -116,15 +122,15 @@ int print_rep(char *file, char *options){
 	if(strcmp(options, "\0") == 0){ //pas d'options
 		if((dir = opendir(file)) == NULL){
 			perror("erreur");
-			exit(1); //fixme mettre la valeur d'erreur
+			exit(EXIT_FAILURE); //fixme mettre la valeur d'erreur
 		}
 		print_normal_dir(dir);
-		printf("\n");
 		closedir(dir);
+		printf("\n");
 	}else{
 		if((dir = opendir(file)) == NULL){
 			perror("erreur");
-			exit(1); //fixme mettre la valeur d'erreur
+			exit(EXIT_FAILURE); //fixme mettre la valeur d'erreur
 		}
 		print_complete_normal_dir(dir);
 		closedir(dir);
