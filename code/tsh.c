@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include "mycat.h"
-#include "ls.h"
+//#include "ls.h"
 
 int is_ls(char *);
 
@@ -31,7 +31,7 @@ int main(int argc, char const *argv[]) {
 			perror("Erreur de lecture dans le prompt!");
 			exit(EXIT_FAILURE);
 		}
-		if (strncmp(mycat_buf, "exit", readen-1) == 0) { //probleme quand on appui sur entré direct
+		if ((readen > 1) && (strncmp(mycat_buf, "exit", readen-1) == 0)) {
 			char *fini = "Arrivederci mio signore!\n\n";
 			int fini_len = strlen(fini);
 			if (write(STDOUT_FILENO, fini, fini_len) < fini_len) {
@@ -39,14 +39,17 @@ int main(int argc, char const *argv[]) {
 				exit(EXIT_FAILURE);
 			}
 			exit(EXIT_SUCCESS);
-		}else if (is_ls(mycat_buf)) { //ls marche pas
+		}else if (is_ls(mycat_buf)) {
+			char mycat_buf_copy[BUFSIZE];
+			strncpy(mycat_buf_copy, mycat_buf, readen);
 			strtok(mycat_buf, " ");
 			char *fic;
-			if ((fic = strtok(NULL, "\n")) == NULL) {
-				char *t = "./ls";
-				ls(1, &t);
+			if (strtok(NULL, " ") == NULL) {
+				printf("ls sans arguments\n"); // FIXME: temporaire
 			}else {
-				printf("%s\n", fic);
+				strtok(mycat_buf_copy, " ");
+				fic = strtok(NULL, "\n");
+				printf("ls avec arguments : %s\n", fic); // FIXME: temporaire
 			}
 		}else {
 			char *fini = "Commande inconnue!\nEssayez \'help\' pour connaître les commandes disponibles.\n\n";

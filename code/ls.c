@@ -8,12 +8,14 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "tar.h"
-#include "ls.h"
+
+void show_simple_header_infos(struct posix_header *, int *);
+void show_complete_header_infos(struct posix_header *, int *);
 
 //OBJECTIF : FONCTION LS
 //
 
-int ls(int argc, char *argv[]){
+int maain(int argc, char *argv[]){
 	if(argc == 0 || argc == 1) printf("Aucun fichier passé en paramètre !\n");
 	else{
 		char *option = "\0";
