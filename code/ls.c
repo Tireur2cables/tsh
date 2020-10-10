@@ -30,7 +30,7 @@ int is_options(char *);
 		 gerer la cas ou on donne repertoire/fichier
 */
 
-int main(int argc, char *argv[]){
+int ls(int argc, char *argv[]){
 	print_tar("tonton.tar/somedir", "\0");
 	if(argc == 0){
 		errno = EINVAL;
