@@ -13,36 +13,43 @@
 void show_simple_header_infos(struct posix_header *, int *);
 void show_complete_header_infos(struct posix_header *, int *);
 int print_normal_dir(DIR*);
-int print_inoeud_normal_dir(DIR*);
+int print_complete_normal_dir(DIR*);
 int print_dir(char *, char *);
 int print_tar(char *, char *);
 int print_rep(char *, char *);
 int is_tar(char *);
 //fixme implémenter
 int check_options(char *);
+int is_options(char *);
 
 //FONCTION LS
 /*TODO : FONCTION CHECK_OPTIONS
 		 REMPLACER TOUT LES PRINTF PAR DES WRITE
-		 GERER LES OPTIONS (-a dans ., dans
 		 TAR : - Afficher les droits correctement - nombre de references - createur - date
 		FIXME :GERER LES RETOURS D'ERREURS
+		traiter le cas d'un fichier dans un tar
 
 */
 
 int main(int argc, char *argv[]){
 	if(argc == 0){
 		errno = EINVAL;
-		perror("erreur du programmee");
+		perror("erreur du programme");
 	}
 	else{
 		if(argc == 1){
 			print_dir(".", "\0");
-		}else if(argc == 2){
-			print_dir(argv[1], "\0");
+		}else if(argc == 2){ // 2 cas - Options ou repertoire
+			if(is_options(argv[1])){
+				check_options(argv[1]);
+				print_dir(".", argv[1]);
+			}else{
+				print_dir(argv[1], "\0");
+			}
+
 		}else if(argc == 3){
-			//check_options(argv[2]);
-			print_dir(argv[1], argv[2]);
+			check_options(argv[1]);
+			print_dir(argv[2], argv[1]);
 		}
 
 	}
@@ -112,16 +119,16 @@ int print_rep(char *file, char *options){
 			exit(1); //fixme mettre la valeur d'erreur
 		}
 		print_normal_dir(dir);
+		printf("\n");
 		closedir(dir);
 	}else{
 		if((dir = opendir(file)) == NULL){
 			perror("erreur");
 			exit(1); //fixme mettre la valeur d'erreur
 		}
-		print_inoeud_normal_dir(dir);
+		print_complete_normal_dir(dir);
 		closedir(dir);
 	}
-	printf("\n");
 	return 0;
 }
 
@@ -165,13 +172,26 @@ int print_normal_dir(DIR* dirp){
 	return 0;
 }
 
-int print_inoeud_normal_dir(DIR* dirp){
+int print_complete_normal_dir(DIR* dirp){
 	struct dirent *entry;
 	while((entry = readdir(dirp)) != NULL){
 		if(entry->d_name[0] != '.'){
 			//fixme printf
-			printf("%ld %s  ", entry->d_ino, entry->d_name);
+			printf(" x user user date %s\n",entry->d_name);
 		}
 	}
 	return 0;
+}
+
+int is_options(char *options){
+	return (options[0] == '-');
+}
+
+int check_options(char *options){
+	if((strcmp(options, "-l") == 0)|| (strcmp(options, "\0") == 0)){
+		return 0;
+	}else{
+		printf("ls : option invalide -- '%s'\n", options);
+		exit(EXIT_FAILURE);
+	}
 }
