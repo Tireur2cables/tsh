@@ -16,9 +16,10 @@ int print_normal_dir(DIR*);
 int print_complete_normal_dir(DIR*);
 int print_dir(char *, char *);
 int print_tar(char *, char *);
+int print_inside_tar(char *, char *);
 int print_rep(char *, char *);
 int is_tar(char *);
-//fixme implémenter
+int contains_tar(char *);
 int check_options(char *);
 int is_options(char *);
 
@@ -26,10 +27,11 @@ int is_options(char *);
 /*TODO : REMPLACER TOUT LES PRINTF PAR DES WRITE
 		 Afficher les droits correctement - nombre de references - createur - date
 		 traiter le cas d'un fichier dans un tar
-
+		 gerer la cas ou on donne repertoire/fichier
 */
 
 int main(int argc, char *argv[]){
+	print_tar("tonton.tar/somedir", "\0");
 	if(argc == 0){
 		errno = EINVAL;
 		perror("erreur du programme");
@@ -38,14 +40,13 @@ int main(int argc, char *argv[]){
 	else{
 		if(argc == 1){
 			print_dir(".", "\0");
-		}else if(argc == 2){ // 2 cas - Options ou repertoire
+		}else if(argc == 2){ // 2 cas - Options et repertoire =  . ou repertoire et pas d'options
 			if(is_options(argv[1])){
 				check_options(argv[1]);
 				print_dir(".", argv[1]);
 			}else{
 				print_dir(argv[1], "\0");
 			}
-
 		}else if(argc == 3){
 			check_options(argv[1]);
 			print_dir(argv[2], argv[1]);
@@ -59,11 +60,22 @@ int print_dir(char *file, char *options){
 	char *cp = malloc(sizeof(file)+1);
 	assert(cp);
 	strcpy(cp, file);
-	if(is_tar(cp) == 0){
+	if(is_tar(cp)){
 		print_tar(file, options);
+	}else if(contains_tar(cp)){
+		print_inside_tar(file, options);
 	}else{
 		print_rep(file, options);
 	}
+	return 0;
+}
+
+int print_inside_tar(char *file, char *options){
+	//RECUPERER LE TAR
+	//RECUPERER LE FICHIER A AFFICHER
+	//ENUMERER LE HEADER DU TAR
+	//SI FICHIER EST UN FICHIER -> AFFICHER LE CHEMIN
+	//SI FICHIER EST UN REPERTOIRE -> AFFICHER LES FICHIERS DE CE REPERTOIRE
 	return 0;
 }
 
@@ -138,17 +150,6 @@ int print_rep(char *file, char *options){
 	return 0;
 }
 
-int is_tar(char *file){
-	char *token, *last;
-	last = token = strtok(file, ".");
-	while(token != NULL){
-		last = token;
-		token = strtok(NULL, ".");
-	}
-	if(last == NULL) return -1;
-	return strcmp(last, "tar");
-}
-
 void show_complete_header_infos(struct posix_header *header, int *read_size){
 	int taille = 0;
 	int mode = 0;
@@ -187,6 +188,29 @@ int print_complete_normal_dir(DIR* dirp){
 		}
 	}
 	return 0;
+}
+
+int contains_tar(char *file){
+	char *token;
+	token = strtok(file, "/");
+	while(token != NULL){
+		if(is_tar(token)){
+			return 1;
+		}
+		token = strtok(NULL, ".");
+	}
+	return 0;
+}
+
+int is_tar(char *file){
+	char *token, *last;
+	last = token = strtok(file, ".");
+	while(token != NULL){
+		last = token;
+		token = strtok(NULL, ".");
+	}
+	if(last == NULL) return -1;
+	return (strcmp(last, "tar") == 0);
 }
 
 int is_options(char *options){
