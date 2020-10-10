@@ -1,27 +1,4 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <string.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <dirent.h>
-#include "tar.h"
-
-void show_simple_header_infos(struct posix_header *, int *);
-void show_complete_header_infos(struct posix_header *, int *);
-int print_normal_dir(DIR*);
-int print_complete_normal_dir(DIR*);
-int print_dir(char *, char *);
-int print_tar(char *, char *);
-int print_inside_tar(char *, char *);
-int print_rep(char *, char *);
-int is_tar(char *);
-int contains_tar(char *);
-int check_options(char *);
-int is_options(char *);
+#include "ls.h"
 
 //FONCTION LS
 /*TODO : REMPLACER TOUT LES PRINTF PAR DES WRITE
@@ -31,7 +8,6 @@ int is_options(char *);
 */
 
 int ls(int argc, char *argv[]){
-	print_tar("tonton.tar/somedir", "\0");
 	if(argc == 0){
 		errno = EINVAL;
 		perror("erreur du programme");
@@ -85,8 +61,8 @@ int print_tar(char *file, char *options){
 		assert(header);
 		int fd = open(file, O_RDONLY);
 		if(fd == -1){
-		  perror("erreur d'ouverture du fichier");
-		  exit(EXIT_FAILURE);
+		  perror("erreur d'ouverture de l'archiiive");
+		  return -1;
 		}
 
 		int n = 0;
@@ -98,7 +74,7 @@ int print_tar(char *file, char *options){
 			show_simple_header_infos(header, &read_size);
 			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
 				perror("erreur de lecture de l'archive");
-				exit(EXIT_FAILURE);
+				return -1;
 			}
 		}
 		printf("\n");
@@ -108,7 +84,7 @@ int print_tar(char *file, char *options){
 		assert(header);
 		int fd = open(file, O_RDONLY);
 		if(fd == -1){
-		  perror("erreur d'ouverture du fichier");
+		  perror("erreur d'ouverture de l'archive");
 		  return -1;
 		}
 
@@ -203,6 +179,9 @@ int contains_tar(char *file){
 }
 
 int is_tar(char *file){
+	if(strcmp(file, ".") == 0){
+		return 0;
+	}
 	char *token, *last;
 	last = token = strtok(file, ".");
 	while(token != NULL){

@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include "mycat.h"
-//#include "ls.h"
+#include "ls.h"
 
 int is_ls(char *);
 int is_help(char *);
@@ -46,11 +46,17 @@ int main(int argc, char const *argv[]) {
 			strtok(mycat_buf, " ");
 			char *fic;
 			if (strtok(NULL, " ") == NULL) {
-				printf("ls sans arguments\n"); // FIXME: temporaire
+				char *argv2[2];
+				argv2[0]="ls";
+				argv2[1]=".";
+				ls(1, argv2);
 			}else {
 				strtok(mycat_buf_copy, " ");
 				fic = strtok(NULL, "\n");
-				printf("ls avec arguments : %s\n", fic); // FIXME: temporaire
+				char *argv2[2];
+				argv2[0]="ls";
+				argv2[1]=fic;
+				ls(2, argv2);
 			}
 		}else if (is_help(mycat_buf)) {
 			char *help = "Voici une liste non exhaustive des commandes implémentées:ǹ\nexit : quitte le tsh\nls : wip\nhelp : obtenir la liste des commandes\n";
