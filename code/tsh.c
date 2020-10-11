@@ -14,6 +14,7 @@
 int iscmd(char *, char *);
 void selectCommand(int, char *);
 
+char *pwd = ".";
 
 int main(int argc, char const *argv[]) {
 	if (argc > 1) {
@@ -52,7 +53,6 @@ void selectCommand(int readen, char *mycat_buf) {
 		}
 		exit(EXIT_SUCCESS);
 	}else if (iscmd(mycat_buf, "ls")) {
-		//lancer en tant que processus fils
 		int status;
 		char mycat_buf_copy[readen+1];
 		int pid = fork();
@@ -68,7 +68,7 @@ void selectCommand(int readen, char *mycat_buf) {
 				if (strtok(NULL, " ") == NULL) {
 					char *argv2[2];
 					argv2[0]="ls";
-					argv2[1]=".";
+					argv2[1]=pwd;
 					ls(1, argv2);
 				}else {
 					char *args;
@@ -94,7 +94,7 @@ void selectCommand(int readen, char *mycat_buf) {
 					}
 				}
 	    }
-	}else if (iscmd(mycat_buf, "help")) {//lancer en tant que processus fils?
+	}else if (iscmd(mycat_buf, "help")) {
 		char *help = "Voici une liste non exhaustive des commandes implémentées:ǹ\nexit : quitte le tsh\nls : wip\nhelp : obtenir la liste des commandes\n\n";
 		int help_len = strlen(help);
 		if (write(STDOUT_FILENO, help, help_len) < help_len) {
