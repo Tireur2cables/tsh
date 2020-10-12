@@ -12,6 +12,7 @@
 #include "ls.h"
 
 int iscmd(char *, char *);
+int isOnlySpace(char *, int);
 void selectCommand(int, char *);
 
 char *pwd = ".";
@@ -35,7 +36,7 @@ int main(int argc, char const *argv[]) {
 			perror("Erreur de lecture dans le shell!");
 			exit(EXIT_FAILURE);
 		}
-		if (readen > 1) {
+		if (readen > 1 && !isOnlySpace(mycat_buf, readen)) {
 			selectCommand(readen, mycat_buf);
 		}
 	}
@@ -101,7 +102,7 @@ void selectCommand(int readen, char *mycat_buf) {
 			perror("Erreur d'écriture dans les shell!");
 			exit(EXIT_FAILURE);
 		}
-	}else {
+	}else { // lancer la commande avec exec
 		char *fini = "Commande inconnue!\nEssayez \'help\' pour connaître les commandes disponibles.\n\n";
 		int fini_len = strlen(fini);
 		if (write(STDOUT_FILENO, fini, fini_len) < fini_len) {
@@ -109,6 +110,13 @@ void selectCommand(int readen, char *mycat_buf) {
 			exit(EXIT_FAILURE);
 		}
 	}
+}
+
+int isOnlySpace(char *mycat_buf, int readen) {
+	for(int i = 0; i < readen; i++) {
+		if (!isspace(mycat_buf[i])) return 0;
+	}
+	return 1;
 }
 
 
