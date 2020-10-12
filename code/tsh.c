@@ -8,8 +8,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include "mycat.h"
 #include "ls.h"
+
+#define BUFSIZE 512
+
+char mycat_buf[BUFSIZE];
 
 int iscmd(char *, char *);
 int isOnlySpace(char *, int);
