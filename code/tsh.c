@@ -106,7 +106,7 @@ void selectCommand(int readen, char *mycat_buf) {
 					}
 				}
 			}
-	    }
+		}
 	}else if (iscmd(mycat_buf, "help")) {
 		char *help = "Voici une liste non exhaustive des commandes implémentées:ǹ\nexit : quitte le tsh\nls : wip\nhelp : obtenir la liste des commandes\n\n";
 		int help_len = strlen(help);
@@ -114,13 +114,48 @@ void selectCommand(int readen, char *mycat_buf) {
 			perror("Erreur d'écriture dans les shell!");
 			exit(EXIT_FAILURE);
 		}
-	}else { // lancer la commande avec exec
-		//execl(".", mycat_buf, NULL);
-		char *fini = "Commande inconnue!\nEssayez \'help\' pour connaître les commandes disponibles.\n\n";
-		int fini_len = strlen(fini);
-		if (write(STDOUT_FILENO, fini, fini_len) < fini_len) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
+	}else { // lancer la commande avec exec dans precessus fils
+		int status;
+		int pid = fork();
+	    switch(pid) {
+	    	case -1: {//erreur
+				perror("Erreur de fork!");
+	     		exit(EXIT_FAILURE);
+			}
+	    	case 0: {//fils
+				char mycat_buf_copy[readen+1];
+				strncpy(mycat_buf_copy, mycat_buf, readen);
+				mycat_buf_copy[readen] = '\0';
+				char *cmd;
+				cmd = strtok(mycat_buf, " ");
+				if (readen == strlen(cmd) || isOnlySpace(&mycat_buf_copy[strlen(cmd)], readen-strlen(cmd))) {
+					if (execlp(cmd, "", NULL) < 0) {
+						perror("Commande inconnue!\nEssayez \'help\' pour connaître les commandes disponibles.\n");
+						exit(EXIT_FAILURE);
+					}
+				}else {
+					printf("%s\n", &mycat_buf_copy[strlen(cmd)+1]); //FIXME les commandes avec parametre ne marche pas
+					if (execlp(cmd, &mycat_buf_copy[strlen(cmd)+1], NULL) < 0) {
+						perror("Commande inconnue!\nEssayez \'help\' pour connaître les commandes disponibles.\n");
+						exit(EXIT_FAILURE);
+					}
+				}
+				exit(EXIT_SUCCESS);
+	    	}
+			default: {//pere
+				if (waitpid(pid, &status, 0) < 0) {
+					perror("Erreur de wait!");
+					exit(EXIT_FAILURE);
+				}
+				if (!WIFEXITED(status)) {
+					char *erreur = "Erreur lors l'execution de la commande!\n";
+					int erreur_len = strlen(erreur);
+					if (write(STDOUT_FILENO, erreur, erreur_len) < erreur_len) {
+						perror("Erreur d'écriture dans le shell!");
+						exit(EXIT_FAILURE);
+					}
+				}
+			}
 		}
 	}
 }
