@@ -11,7 +11,8 @@
 #include <readline/readline.h>
 #include "ls.h"
 
-char *pwd = ".";
+char *home; // à mettre dans cd.h
+char *pwd; // à mettre dans cd .h
 
 int iscmd(char *, char *);
 int isOnlySpace(char *, int);
@@ -27,6 +28,7 @@ int main(int argc, char const *argv[]) {
 	char *prompt = "$ ";
 	int prompt_len = strlen(prompt);
 	while (1) {
+		pwd = getcwd(NULL, 0);
 		char new_prompt[strlen(pwd) + 1 + prompt_len + 1];
 		strcpy(new_prompt, pwd);
 		new_prompt[strlen(pwd)] = ' ';
@@ -48,7 +50,8 @@ int main(int argc, char const *argv[]) {
 				exit(EXIT_FAILURE);
 			}
 		}
-		free(mycat_buf); // FIXME : les exit font-ils free
+		free(mycat_buf);
+		free(pwd);
 	}
 
 	return 0;
@@ -112,6 +115,7 @@ void selectCommand(int readen, char *mycat_buf) {
 			exit(EXIT_FAILURE);
 		}
 	}else { // lancer la commande avec exec
+		//execl(".", mycat_buf, NULL);
 		char *fini = "Commande inconnue!\nEssayez \'help\' pour connaître les commandes disponibles.\n\n";
 		int fini_len = strlen(fini);
 		if (write(STDOUT_FILENO, fini, fini_len) < fini_len) {
