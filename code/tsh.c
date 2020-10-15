@@ -58,7 +58,7 @@ int main(int argc, char const *argv[]) {
 }
 
 void selectCommand(int readen, char *mycat_buf) {
-	if (iscmd(mycat_buf, "exit")) {
+	if (iscmd(mycat_buf, "exit")) { //cmd = exit
 		char *fini = "Arrivederci mio signore!\n\n";
 		int fini_len = strlen(fini);
 		if (write(STDOUT_FILENO, fini, fini_len) < fini_len) {
@@ -66,7 +66,7 @@ void selectCommand(int readen, char *mycat_buf) {
 			exit(EXIT_FAILURE);
 		}
 		exit(EXIT_SUCCESS);
-	}else if (iscmd(mycat_buf, "ls")) {
+	}else if (iscmd(mycat_buf, "ls")) { //cmd = ls
 		int status;
 		int pid = fork();
 	    switch(pid) {
@@ -107,14 +107,14 @@ void selectCommand(int readen, char *mycat_buf) {
 				}
 			}
 		}
-	}else if (iscmd(mycat_buf, "help")) {
+	}else if (iscmd(mycat_buf, "help")) { // cmd = help
 		char *help = "Voici une liste non exhaustive des commandes implémentées:ǹ\nexit : quitte le tsh\nls : wip\nhelp : obtenir la liste des commandes\n\n";
 		int help_len = strlen(help);
 		if (write(STDOUT_FILENO, help, help_len) < help_len) {
 			perror("Erreur d'écriture dans les shell!");
 			exit(EXIT_FAILURE);
 		}
-	}else { // lancer la commande avec exec dans precessus fils
+	}else { // lancer la commande avec exec
 		int status;
 		int pid = fork();
 	    switch(pid) {
@@ -147,7 +147,7 @@ void selectCommand(int readen, char *mycat_buf) {
 					perror("Erreur de wait!");
 					exit(EXIT_FAILURE);
 				}
-				if (!WIFEXITED(status)) {
+				if (!WIFEXITED(status)) { // jamais atteint!
 					char *erreur = "Erreur lors l'execution de la commande!\n";
 					int erreur_len = strlen(erreur);
 					if (write(STDOUT_FILENO, erreur, erreur_len) < erreur_len) {
