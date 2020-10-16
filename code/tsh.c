@@ -17,6 +17,7 @@ char *pwd; // à mettre dans cd .h
 int iscmd(char *, char *);
 int isOnlySpace(char *, int);
 void selectCommand(int, char *);
+int getNbArgs(const char *, int);
 
 int main(int argc, char const *argv[]) {
 	if (argc > 1) {
@@ -128,17 +129,16 @@ void selectCommand(int readen, char *mycat_buf) {
 				mycat_buf_copy[readen] = '\0';
 				char *cmd;
 				cmd = strtok(mycat_buf, " ");
-				if (readen == strlen(cmd) || isOnlySpace(&mycat_buf_copy[strlen(cmd)], readen-strlen(cmd))) {
-					if (execlp(cmd, "", NULL) < 0) {
-						perror("Commande inconnue!\nEssayez \'help\' pour connaître les commandes disponibles.\n");
-						exit(EXIT_FAILURE);
-					}
-				}else {
-					printf("%s\n", &mycat_buf_copy[strlen(cmd)+1]); //FIXME les commandes avec parametre ne marche pas
-					if (execlp(cmd, &mycat_buf_copy[strlen(cmd)+1], NULL) < 0) {
-						perror("Commande inconnue!\nEssayez \'help\' pour connaître les commandes disponibles.\n");
-						exit(EXIT_FAILURE);
-					}
+				int args_len = getNbArgs(mycat_buf_copy, readen) + 1;
+				char *args[args_len];
+
+				args[0] = strtok(mycat_buf_copy, " ");
+				for (int i = 1; i < args_len; i++) {
+					args[i] = strtok(NULL, " ");
+				}
+				if (execvp(cmd, args) < 0) { // probleme pour cd et surement d'autres
+					perror("Erreur d'execution de la commande!");
+					exit(EXIT_FAILURE);
 				}
 				exit(EXIT_SUCCESS);
 	    	}
@@ -147,7 +147,7 @@ void selectCommand(int readen, char *mycat_buf) {
 					perror("Erreur de wait!");
 					exit(EXIT_FAILURE);
 				}
-				if (!WIFEXITED(status)) { // jamais atteint!
+				if (!WIFEXITED(status)) { // jamais atteint
 					char *erreur = "Erreur lors l'execution de la commande!\n";
 					int erreur_len = strlen(erreur);
 					if (write(STDOUT_FILENO, erreur, erreur_len) < erreur_len) {
@@ -158,6 +158,22 @@ void selectCommand(int readen, char *mycat_buf) {
 			}
 		}
 	}
+}
+
+int getNbArgs(const char *mycat_buf, int len) {
+	char mycat_buf_copy[len+1];
+	strncpy(mycat_buf_copy, mycat_buf, len);
+	mycat_buf_copy[len] = '\0';
+
+	int res = 0;
+	char *args;
+	if ((args = strtok(mycat_buf_copy, " ")) != NULL) {
+		res++;
+		while ((args = strtok(NULL, " ")) != NULL) {
+			res++;
+		}
+	}
+	return res;
 }
 
 int isOnlySpace(char *mycat_buf, int readen) {
