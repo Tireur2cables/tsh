@@ -10,8 +10,9 @@
 #include <sys/wait.h>
 #include <readline/readline.h>
 #include "ls.h"
+#include "cd.h"
+#include "pwd.h"
 
-char *home; // à mettre dans cd.h
 char *pwd; // à mettre dans cd .h
 
 int iscmd(char *, char *);
@@ -91,6 +92,35 @@ void selectCommand(int readen, char *mycat_buf) {
 					argv2[1]=&mycat_buf_copy[3]; //cmd without "ls "
 					ls(2, argv2);
 				}
+				exit(EXIT_SUCCESS);
+	    	}
+			default: {//pere
+				if (waitpid(pid, &status, 0) < 0) {
+					perror("Erreur de wait!");
+					exit(EXIT_FAILURE);
+				}
+				if (!WIFEXITED(status)) {
+					char *erreur = "Erreur lors l'execution de la commande!\n";
+					int erreur_len = strlen(erreur);
+					if (write(STDOUT_FILENO, erreur, erreur_len) < erreur_len) {
+						perror("Erreur d'écriture dans le shell!");
+						exit(EXIT_FAILURE);
+					}
+				}
+			}
+		}
+	}else if (iscmd(mycat_buf, "pwd")) { //cmd = ls
+		int status;
+		int pid = fork();
+	    switch(pid) {
+	    	case -1: {//erreur
+				perror("Erreur de fork!");
+	     		exit(EXIT_FAILURE);
+			}
+	    	case 0: {
+				char *tab[1];
+				tab[0] = "yolo"; //FIXME temporaire
+				pwd_func(1,tab);
 				exit(EXIT_SUCCESS);
 	    	}
 			default: {//pere
