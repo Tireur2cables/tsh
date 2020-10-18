@@ -13,16 +13,12 @@
 #include "cd.h"
 
 
-char * home=NULL;
-char * buff=NULL; //sera conservé (répertoire a partir duquel on lance la commande)
-
-
 int cd(int argc,char **argv) {
 	
 	path_initialisation();     
 	
-	DIR*courant=opendir(home); 
-	assert(courant && home);
+	DIR*courant=opendir(pwd); 
+	assert(courant && pwd);
 	
 	if(argc==0 || argc==1) {
 		errno = EINVAL;
@@ -61,15 +57,15 @@ int cd(int argc,char **argv) {
 
 void actuPath(char * new) {
 	
-	char * newpath=malloc(sizeof(char)*strlen(home)+strlen(new)+1);
+	char * newpath=malloc(sizeof(char)*strlen(pwd)+strlen(new)+1);
 	char * to_add=malloc(sizeof(char)*strlen(new));
 
 	strcpy(to_add,new);
-	strcpy(newpath,home);
+	strcpy(newpath,pwd);
 	strcat(newpath,"/");
 	strcat(newpath,to_add);
 	
-	home=newpath;
+	pwd=newpath;
 }
 
 char * isTAR(char * dirTAR) {
@@ -77,6 +73,6 @@ char * isTAR(char * dirTAR) {
 }
 
 void path_initialisation() {
-	buff=malloc(sizeof(char)*PATH_MAX);
-	home=getcwd(buff,PATH_MAX);
+	home=malloc(sizeof(char)*PATH_MAX);
+	pwd=getcwd(home,PATH_MAX);
 }
