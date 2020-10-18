@@ -27,5 +27,6 @@ int is_tar(char *);
 int contains_tar(char *);
 int check_options(char *);
 int is_options(char *);
+int is_curr_or_parent_rep(char *);
 
 #endif

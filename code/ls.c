@@ -178,8 +178,14 @@ int contains_tar(char *file){
 	return 0;
 }
 
+int is_curr_or_parent_rep(char *file){
+	if( (strcmp(file, ".") == 0) || (strcmp(file, "..") == 0) ){
+		return 1;
+	}
+	return 0;
+}
 int is_tar(char *file){
-	if(strcmp(file, ".") == 0){
+	if(is_curr_or_parent_rep(file)){
 		return 0;
 	}
 	char *token, *last;
