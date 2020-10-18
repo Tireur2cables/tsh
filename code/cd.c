@@ -10,55 +10,72 @@
 #include <dirent.h>
 #include "tar.h"
 #include "cd.h"
-//#include <linux/limits.h>
+#include <limits.h>
 
-//char * home=NULL;
-//char * buff=NULL;
-
+char * home=NULL;
+char * buff=NULL; //sera conservé (répertoire a partir duquel on lance la commande)
 
 
 int cd(int argc,char **argv) {
 	
-	/*path_initialisation();     
-	enlevez les coms quand vous compilez et enlevez le char home d'après du coup ça 
-	marche juste pas pour moi pour l'instant */
-	
-	char*home=getcwd(NULL,0); //pour moi
+	path_initialisation();     
 	
 	DIR*courant=opendir(home); 
 	assert(courant && home);
 	
-	if(argc==0 || argc==1) printf("Aucun répertoire indiqué");
-		else {
-			char *dirTAR;
+	if(argc==0 || argc==1) {
+		errno = EINVAL;
+		perror("Aucun répertoire indiqué");
+		exit(EXIT_FAILURE);
+	}	else {
+			char * dir_argument;
 			if(argc==2) {
-				dirTAR=argv[1];
+				dir_argument=argv[1];
 				while(1) {
 					struct dirent *d=readdir(courant);  
 					if(d==NULL) break;
-					if(strcmp(d->d_name,dirTAR)==0) {  
-						if(isTAR(dirTAR)!=NULL) {
+					if(strcmp(d->d_name,dir_argument)==0) {  
+						if(isTAR(d->d_name)!=NULL) {      
 							
-					} else {
+							actuPath(dir_argument);
+							chdir(home);
+	
 						
-					} // TODO :autres cas : repertoires non tar
+							break;
+					} else { // autres cas : repertoire normal ; .. ; . 
+						
+					} 
 				}
-			}
+				
+			} // fin while
 				
 				
 		}
 			
 	}
 	
-	
+	closedir(courant);
+	return 0;
 }
 
+void actuPath(char * new) {
+	
+	char * newpath=malloc(sizeof(char)*strlen(home)+strlen(new)+1);
+	char * to_add=malloc(sizeof(char)*strlen(new));
+
+	strcpy(to_add,new);
+	strcpy(newpath,home);
+	strcat(newpath,"/");
+	strcat(newpath,to_add);
+	
+	home=newpath;
+}
 
 char * isTAR(char * dirTAR) {
 	return strstr(dirTAR,".tar");
 }
 
 void path_initialisation() {
-	//buff=malloc(sizeof(char)*PATH_MAX);
-	//home=getcwd(buff,PATH_MAX);
+	buff=malloc(sizeof(char)*PATH_MAX);
+	home=getcwd(buff,PATH_MAX);
 }
