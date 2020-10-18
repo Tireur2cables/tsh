@@ -109,7 +109,7 @@ void selectCommand(int readen, char *mycat_buf) {
 				}
 			}
 		}
-	}else if (iscmd(mycat_buf, "pwd")) { //cmd = ls
+	}else if (iscmd(mycat_buf, "pwd")) { //cmd = pwd
 		int status;
 		int pid = fork();
 	    switch(pid) {
@@ -121,6 +121,47 @@ void selectCommand(int readen, char *mycat_buf) {
 				char *tab[1];
 				tab[0] = "yolo"; //FIXME temporaire
 				pwd_func(1,tab);
+				exit(EXIT_SUCCESS);
+	    	}
+			default: {//pere
+				if (waitpid(pid, &status, 0) < 0) {
+					perror("Erreur de wait!");
+					exit(EXIT_FAILURE);
+				}
+				if (!WIFEXITED(status)) {
+					char *erreur = "Erreur lors l'execution de la commande!\n";
+					int erreur_len = strlen(erreur);
+					if (write(STDOUT_FILENO, erreur, erreur_len) < erreur_len) {
+						perror("Erreur d'écriture dans le shell!");
+						exit(EXIT_FAILURE);
+					}
+				}
+			}
+		}
+	}else if (iscmd(mycat_buf, "cd")) { //cmd = cd
+		int status;
+		int pid = fork();
+	    switch(pid) {
+	    	case -1: {//erreur
+				perror("Erreur de fork!");
+	     		exit(EXIT_FAILURE);
+			}
+	    	case 0: {//fils FIXME: c'est cd qui devrait gérer les différents cas? ou alors dans une fonction différente ? + ça marhce pas ?
+				char mycat_buf_copy[readen+1];
+				strncpy(mycat_buf_copy, mycat_buf, readen);
+				mycat_buf_copy[readen] = '\0';
+				strtok(mycat_buf, " ");
+				if (strtok(NULL, " ") == NULL) {
+					char *argv2[2];
+					argv2[0]="cd";
+					argv2[1]=pwd;
+					cd(1, argv2);
+				}else {
+					char *argv2[2];
+					argv2[0]="cd";
+					argv2[1]=&mycat_buf_copy[3]; //cmd without "cd "
+					cd(2, argv2);
+				}
 				exit(EXIT_SUCCESS);
 	    	}
 			default: {//pere
