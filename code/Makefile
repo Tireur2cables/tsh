@@ -1,11 +1,10 @@
 CC = gcc
 CFLAGS = -Wall -g -std=c11
-LDLIBS =
+LDLIBS = -lreadline
 all : tsh
-tsh : tsh.o ls.o mycat.o
-ls.o : ls.c ls.h tar.h
-tsh.o : tsh.c mycat.h ls.h
-mycat.o : mycat.c mycat.h
+tsh : tsh.o ls.o
+ls.o : ls.c tar.h ls.h
+tsh.o : tsh.c ls.h
 cleanall : clean
 	rm -rf tsh *.o
 clean :

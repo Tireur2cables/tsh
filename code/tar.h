@@ -4,6 +4,11 @@
 #define BLOCKSIZE 512
 #define BLOCKBITS 9
 
+
+/* Includes nécéssaires */
+#include <stdio.h>
+#include <string.h>
+
 /* POSIX header.  */
 
 /* Note that sizeof(struct posix_header) == BLOCKSIZE */
@@ -46,7 +51,7 @@ struct posix_header
    Then hd->chksum is set to contain the octal encoding of this
    sum (on 6 bytes), followed by '\0' and ' '.
 */
-/*
+
 void set_checksum(struct posix_header *hd) {
   memset(hd->chksum,' ',8);
   unsigned int sum = 0;
@@ -54,9 +59,9 @@ void set_checksum(struct posix_header *hd) {
   for (int i=0; i < BLOCKSIZE; i++) { sum += p[i]; }
   sprintf(hd->chksum,"%06o",sum);
 }
-*/
+
 /* Check that the checksum of a header is correct */
-/*
+
 int check_checksum(struct posix_header *hd) {
   unsigned int checksum;
   sscanf(hd->chksum,"%o ", &checksum);
@@ -66,4 +71,3 @@ int check_checksum(struct posix_header *hd) {
   for (int i=0;i<8;i++) { sum += ' ' - hd->chksum[i]; }
   return (checksum == sum);
 }
-*/
