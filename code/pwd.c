@@ -26,6 +26,8 @@ int pwd_func(int argc,char **argv) {
 			errno = EINTR;
 			perror("error 9999");
 			exit(EXIT_FAILURE);
+		} else {
+			write(1,"\n",1);
 		}
 
 	}
