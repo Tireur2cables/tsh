@@ -8,9 +8,10 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <dirent.h>
+#include <limits.h>
 #include "tar.h"
 #include "cd.h"
-#include <limits.h>
+
 
 char * home=NULL;
 char * buff=NULL; //sera conservé (répertoire a partir duquel on lance la commande)
@@ -38,8 +39,8 @@ int cd(int argc,char **argv) {
 						if(isTAR(d->d_name)!=NULL) {      
 							
 							actuPath(dir_argument);
-							chdir(home);
-	
+							chdir(dir_argument);
+						
 						
 							break;
 					} else { // autres cas : repertoire normal ; .. ; . 
