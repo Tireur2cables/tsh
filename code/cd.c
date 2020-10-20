@@ -12,11 +12,13 @@
 #include "tar.h"
 #include "cd.h"
 
-char *home = NULL;
+char *home = NULL;  // contient chemin du 1er rep
 char *pwd = NULL;
 
 int cd(int argc,char **argv) {
-
+	
+	int t=0;
+	
 	path_initialisation();
 
 	DIR*courant=opendir(pwd);
@@ -26,26 +28,30 @@ int cd(int argc,char **argv) {
 		errno = EINVAL;
 		perror("Aucun répertoire indiqué");
 		exit(EXIT_FAILURE);
-	}	else {
+		} else {
 			char * dir_argument;
 			if(argc==2) {
 				dir_argument=argv[1];
 				while(1) {
 					struct dirent *d=readdir(courant);
 					if(d==NULL) break;
+					t++;
 					if(strcmp(d->d_name,dir_argument)==0) {
+						
 						if(isTAR(d->d_name)!=NULL) {
 
 							actuPath(dir_argument);
 							chdir(dir_argument);
+							printf("%d : bien un tar\n",t);
 
-
-							break;
 					} else { // autres cas : repertoire normal ; .. ; .
-
+							printf("%d : pas tar\n",t); 
+							
 					}
+				} else {
+					printf("%d : non existant\n",t);
+					
 				}
-
 			} // fin while
 
 
@@ -75,6 +81,6 @@ char * isTAR(char * dirTAR) {
 }
 
 void path_initialisation() {
-	home=malloc(sizeof(char)*PATH_MAX);
+	home=malloc(sizeof(char)*PATH_MAX); 
 	pwd=getcwd(home,PATH_MAX);
 }
