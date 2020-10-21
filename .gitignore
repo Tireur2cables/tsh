@@ -1,9 +1,5 @@
-# Ignore tout
-*
+#Ignore les produit de compilation de make
+*.o
 
-# Unignore tout ce qui a une extension
-!*.*
-Makefile
-
-# Unignore tous les répertoires
-!*/
+#Ignore l'éxécutable de tsh
+code/tsh

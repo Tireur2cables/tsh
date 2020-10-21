@@ -13,14 +13,16 @@
 #include "cd.h"
 #include "pwd.h"
 
-char *pwd; // à mettre dans cd .h
+char *pwd; // utiliser une variable env
 
 int iscmd(char *, char *);
 int isOnlySpace(char *, int);
 void selectCommand(int, char *);
 int getNbArgs(const char *, int);
+int launchFunc(int (*)(int, char *[]), char *, int);
+int exec(int, char *[]);
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char const *argv[]) { //main
 	if (argc > 1) {
 		errno = E2BIG;
 		perror("Arguments non valides!");
@@ -30,7 +32,7 @@ int main(int argc, char const *argv[]) {
 	char *prompt = "$ ";
 	int prompt_len = strlen(prompt);
 	while (1) {
-		pwd = getcwd(NULL, 0);
+		pwd = getcwd(NULL, 0); // FIXME: à remplacer
 		char new_prompt[strlen(pwd) + 1 + prompt_len + 1];
 		strcpy(new_prompt, pwd);
 		new_prompt[strlen(pwd)] = ' ';
@@ -59,7 +61,7 @@ int main(int argc, char const *argv[]) {
 	return 0;
 }
 
-void selectCommand(int readen, char *mycat_buf) {
+void selectCommand(int readen, char *mycat_buf) { //lance la bonne commande ou lance avec exec
 	if (iscmd(mycat_buf, "exit")) { //cmd = exit
 		char *fini = "Arrivederci mio signore!\n\n";
 		int fini_len = strlen(fini);
@@ -68,170 +70,70 @@ void selectCommand(int readen, char *mycat_buf) {
 			exit(EXIT_FAILURE);
 		}
 		exit(EXIT_SUCCESS);
-	}else if (iscmd(mycat_buf, "ls")) { //cmd = ls
-		int status;
-		int pid = fork();
-	    switch(pid) {
-	    	case -1: {//erreur
-				perror("Erreur de fork!");
-	     		exit(EXIT_FAILURE);
-			}
-	    	case 0: {//fils FIXME: c'est ls qui devrait gérer les différents cas? ou alors dans une fonction différente ?
-				char mycat_buf_copy[readen+1];
-				strncpy(mycat_buf_copy, mycat_buf, readen);
-				mycat_buf_copy[readen] = '\0';
-				strtok(mycat_buf, " ");
-				if (strtok(NULL, " ") == NULL) {
-					char *argv2[2];
-					argv2[0]="ls";
-					argv2[1]=pwd;
-					ls(1, argv2);
-				}else {
-					char *argv2[2];
-					argv2[0]="ls";
-					argv2[1]=&mycat_buf_copy[3]; //cmd without "ls "
-					ls(2, argv2);
-				}
-				exit(EXIT_SUCCESS);
-	    	}
-			default: {//pere
-				if (waitpid(pid, &status, 0) < 0) {
-					perror("Erreur de wait!");
-					exit(EXIT_FAILURE);
-				}
-				if (!WIFEXITED(status)) {
-					char *erreur = "Erreur lors l'execution de la commande!\n";
-					int erreur_len = strlen(erreur);
-					if (write(STDOUT_FILENO, erreur, erreur_len) < erreur_len) {
-						perror("Erreur d'écriture dans le shell!");
-						exit(EXIT_FAILURE);
-					}
-				}
-			}
-		}
-	}else if (iscmd(mycat_buf, "pwd")) { //cmd = pwd
-		int status;
-		int pid = fork();
-	    switch(pid) {
-	    	case -1: {//erreur
-				perror("Erreur de fork!");
-	     		exit(EXIT_FAILURE);
-			}
-	    	case 0: {
-				char *tab[1];
-				tab[0] = "yolo"; //FIXME temporaire
-				pwd_func(1,tab);
-				exit(EXIT_SUCCESS);
-	    	}
-			default: {//pere
-				if (waitpid(pid, &status, 0) < 0) {
-					perror("Erreur de wait!");
-					exit(EXIT_FAILURE);
-				}
-				if (!WIFEXITED(status)) {
-					char *erreur = "Erreur lors l'execution de la commande!\n";
-					int erreur_len = strlen(erreur);
-					if (write(STDOUT_FILENO, erreur, erreur_len) < erreur_len) {
-						perror("Erreur d'écriture dans le shell!");
-						exit(EXIT_FAILURE);
-					}
-				}
-			}
-		}
-	}else if (iscmd(mycat_buf, "cd")) { //cmd = cd
-		int status;
-		int pid = fork();
-	    switch(pid) {
-	    	case -1: {//erreur
-				perror("Erreur de fork!");
-	     		exit(EXIT_FAILURE);
-			}
-	    	case 0: {//fils FIXME: c'est cd qui devrait gérer les différents cas? ou alors dans une fonction différente ? + ça marhce pas ?
-				char mycat_buf_copy[readen+1];
-				strncpy(mycat_buf_copy, mycat_buf, readen);
-				mycat_buf_copy[readen] = '\0';
-				strtok(mycat_buf, " ");
-				if (strtok(NULL, " ") == NULL) {
-					char *argv2[2];
-					argv2[0]="cd";
-					argv2[1]=pwd;
-					cd(1, argv2);
-				}else {
-					char *argv2[2];
-					argv2[0]="cd";
-					argv2[1]=&mycat_buf_copy[3]; //cmd without "cd "
-					cd(2, argv2);
-				}
-				exit(EXIT_SUCCESS);
-	    	}
-			default: {//pere
-				if (waitpid(pid, &status, 0) < 0) {
-					perror("Erreur de wait!");
-					exit(EXIT_FAILURE);
-				}
-				if (!WIFEXITED(status)) {
-					char *erreur = "Erreur lors l'execution de la commande!\n";
-					int erreur_len = strlen(erreur);
-					if (write(STDOUT_FILENO, erreur, erreur_len) < erreur_len) {
-						perror("Erreur d'écriture dans le shell!");
-						exit(EXIT_FAILURE);
-					}
-				}
-			}
-		}
-	}else if (iscmd(mycat_buf, "help")) { // cmd = help
+	}else if (iscmd(mycat_buf, "help")) { //cmd = help
 		char *help = "Voici une liste non exhaustive des commandes implémentées:ǹ\nexit : quitte le tsh\nls : wip\nhelp : obtenir la liste des commandes\n\n";
 		int help_len = strlen(help);
 		if (write(STDOUT_FILENO, help, help_len) < help_len) {
 			perror("Erreur d'écriture dans les shell!");
 			exit(EXIT_FAILURE);
 		}
-	}else { // lancer la commande avec exec
-		int status;
-		int pid = fork();
-	    switch(pid) {
-	    	case -1: {//erreur
-				perror("Erreur de fork!");
-	     		exit(EXIT_FAILURE);
-			}
-	    	case 0: {//fils
-				char mycat_buf_copy[readen+1];
-				strncpy(mycat_buf_copy, mycat_buf, readen);
-				mycat_buf_copy[readen] = '\0';
-				char *cmd;
-				cmd = strtok(mycat_buf, " ");
-				int args_len = getNbArgs(mycat_buf_copy, readen) + 1;
-				char *args[args_len];
+	}else if (iscmd(mycat_buf, "ls")) { //cmd = ls
+		launchFunc(ls, mycat_buf, readen);
+	}else if (iscmd(mycat_buf, "pwd")) { //cmd = pwd
+		launchFunc(pwd_func, mycat_buf, readen);
+	}else if (iscmd(mycat_buf, "cd")) { //cmd = cd
+		launchFunc(cd, mycat_buf, readen);
+	}else { //lancer la commande avec exec
+		launchFunc(exec, mycat_buf, readen);
+	}
+}
 
-				args[0] = strtok(mycat_buf_copy, " ");
-				for (int i = 1; i < args_len; i++) {
-					args[i] = strtok(NULL, " ");
-				}
-				if (execvp(cmd, args) < 0) { // probleme pour cd et surement d'autres
-					perror("Erreur d'execution de la commande!");
+int launchFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lance dans un nouveau processus la fonction demandée et attend qu'elle finisse
+	int argc = getNbArgs(mycat_buf, readen);
+	char *argv[argc+1];
+	argv[0] = strtok(mycat_buf, " ");
+	for (int i = 1; i <= argc; i++) {
+		argv[i] = strtok(NULL, " ");
+	}
+
+	int status;
+	int pid = fork();
+	switch(pid) {
+		case -1: {//erreur
+			perror("Erreur de fork!");
+			exit(EXIT_FAILURE);
+		}
+		case 0: {//fils
+			func(argc, argv);
+			exit(EXIT_SUCCESS);
+		}
+		default: {//pere
+			if (waitpid(pid, &status, 0) < 0) {
+				perror("Erreur de wait!");
+				exit(EXIT_FAILURE);
+			}
+			if (!WIFEXITED(status)) {
+				char *erreur = "Erreur lors l'execution de la commande!\n";
+				int erreur_len = strlen(erreur);
+				if (write(STDOUT_FILENO, erreur, erreur_len) < erreur_len) {
+					perror("Erreur d'écriture dans le shell!");
 					exit(EXIT_FAILURE);
-				}
-				exit(EXIT_SUCCESS);
-	    	}
-			default: {//pere
-				if (waitpid(pid, &status, 0) < 0) {
-					perror("Erreur de wait!");
-					exit(EXIT_FAILURE);
-				}
-				if (!WIFEXITED(status)) { // jamais atteint
-					char *erreur = "Erreur lors l'execution de la commande!\n";
-					int erreur_len = strlen(erreur);
-					if (write(STDOUT_FILENO, erreur, erreur_len) < erreur_len) {
-						perror("Erreur d'écriture dans le shell!");
-						exit(EXIT_FAILURE);
-					}
 				}
 			}
 		}
 	}
+	return 0;
 }
 
-int getNbArgs(const char *mycat_buf, int len) {
+int exec(int argc, char *argv[]) { //lance une commande
+	if (execvp(argv[0], argv) < 0) {
+		perror("Erreur d'execution de la commande!");
+		exit(EXIT_FAILURE);
+	}
+	return 0;
+}
+
+int getNbArgs(const char *mycat_buf, int len) { //compte le nombre de mots dans une phrase
 	char mycat_buf_copy[len+1];
 	strncpy(mycat_buf_copy, mycat_buf, len);
 	mycat_buf_copy[len] = '\0';
@@ -247,14 +149,14 @@ int getNbArgs(const char *mycat_buf, int len) {
 	return res;
 }
 
-int isOnlySpace(char *mycat_buf, int readen) {
+int isOnlySpace(char *mycat_buf, int readen) { //verifie si la phrase donnée est uniquement composée d'espaces (\n, ' ', etc...)
 	for(int i = 0; i < readen; i++) {
 		if (!isspace(mycat_buf[i])) return 0;
 	}
 	return 1;
 }
 
-
-int iscmd(char *mycat_buf, char *cmd) {
-	return (strncmp(mycat_buf, cmd, strlen(cmd)) == 0) && ((isspace(mycat_buf[strlen(cmd)])) || (mycat_buf[strlen(cmd)] == '\0'));
+int iscmd(char *mycat_buf, char *cmd) { //verifie qu'une phrase commence bien par la commande demandée suivie d'un espace (\n, ' ', etc...)
+	return (strncmp(mycat_buf, cmd, strlen(cmd)) == 0) &&
+	((isspace(mycat_buf[strlen(cmd)])) || (mycat_buf[strlen(cmd)] == '\0'));
 }
