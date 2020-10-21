@@ -44,7 +44,7 @@ int cd(int argc,char **argv) {
 
 					unsigned char type = d->d_type;
 
-					if (isTAR(dir_argument, type) == 2) { // FIXME : isTar n'est pas bon
+					if (isTAR(dir_argument, type) == 0) { 
 						printf("OK TAR\n");
 						exist_or_not=1;
 						if (actuPath(dir_argument) < 0) return -1;
@@ -121,10 +121,8 @@ int actuPath(char * new) {
 }
 
 int isTAR(char * dirTAR,unsigned char type) {
-	int c=0;
-	if(strstr(dirTAR,".tar")) c++;
-	if(type==0) c++;
-	return c;
+	char * ext = ".tar";
+	return strcmp(&dirTAR[strlen(dirTAR)-strlen(ext)],ext);
 }
 
 void path_initialisation() {
