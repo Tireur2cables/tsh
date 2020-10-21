@@ -18,8 +18,6 @@ char *pwd = NULL;
 	
 int cd(int argc,char **argv) {
 	
-	printf("%s\n",getenv("PWD"));
-	
 	path_initialisation();
 	errorDetect(argc);
 	
@@ -117,7 +115,7 @@ void actuPath(char * new) {
 
 	pwd=newpath;
 	
-	char * newENV=malloc(sizeof(char)*strlen(pwd)+4);
+	char * newENV=malloc(sizeof(char)*(strlen(pwd)+4));
 	strcpy(newENV,"PWD=");
 	strcat(newENV,pwd);
 	int c=putenv(newENV);
