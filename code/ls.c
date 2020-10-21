@@ -153,7 +153,7 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 	sscanf(header->size, "%o", &taille);
 	sscanf(header->mode, "%o", &mode);
 	*read_size = ((taille + 512-1)/512);
-	int filename_len = strlen(header->name) + 3;
+	int filename_len = strlen(header->name) + 3; //Les 4 prochaines lignes sont très laides, il faudrait changer ça
 	char filename[filename_len];
 	strcpy(filename, header->name);
 	strcat(filename, "  ");
@@ -166,8 +166,14 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 int print_normal_dir(DIR* dirp){
 	struct dirent *entry;
 	while((entry = readdir(dirp)) != NULL){
-		//fixme printf
-		printf("%s  ", entry->d_name);
+		int filename_len = strlen(entry->d_name) + 3; //Les 4 prochaines lignes sont très laides, il faudrait changer ça
+		char filename[filename_len];
+		strcpy(filename, entry->d_name);
+		strcat(filename, "  ");
+		if (write(STDOUT_FILENO, filename, filename_len) < filename_len) {
+			perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
 	}
 	return 0;
 }
