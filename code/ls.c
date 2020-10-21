@@ -155,9 +155,9 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	char *pw_name = getpwuid(uid)->pw_name;
 	char *gr_name = getgrgid(gid)->gr_name;
 	char *date= ctime(&mtime);
-	date[strlen(date) - 1] = '\0';
+	date[strlen(date) - 1] = '\0'; // ctime renvoit une string se terminant par \n ...
 	*read_size = ((taille + 512-1)/512);
-	//fixme Afficher les droits correctement - nombre de references - date
+	//fixme Afficher les droits correctement - nombre de references
 	//fixme printf
 	printf("%c%o x %s %s %d %s %s\n", ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-'), mode, pw_name ,gr_name, taille, date, header->name);
 }
