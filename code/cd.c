@@ -22,59 +22,52 @@ int cd(int argc,char **argv) {
 	path_initialisation();
 	if (errorDetect(argc) < 0) return -1;
 
-	int exist_or_not=0;
+	int exist_or_not = 0;
 	struct stat st;
-	DIR*courant=opendir(pwd);
+	DIR *courant = opendir(pwd);
 
-	if(courant==NULL) {
+	if (courant == NULL) {
 		char * error1= "erreur d'ouverture du repertoire\n";
-		write(2,error1,strlen(error1));
+		write(STDERR_FILENO,error1,strlen(error1));
 		return -1;
 	}
 
 
 
-	if(argc==2) {
-		char * dir_argument=argv[1];
+	if (argc == 2) {
+		char *dir_argument = argv[1];
 		struct dirent *d;
 
-		while((d=readdir(courant))!=NULL) {
+		while ((d = readdir(courant)) != NULL) {
 
-				if(d==NULL) {
-					char * error2="erreur de lecture du repertoire\n";
-					write(2,error2,strlen(error2));
-					return -1;
-				}
+				if (strcmp(d->d_name, dir_argument) == 0) {
 
+					unsigned char type = d->d_type;
 
-				if(strcmp(d->d_name,dir_argument)==0) {
-
-					unsigned char type=d->d_type;
-
-					if(isTAR(dir_argument,type)==2) {
+					if (isTAR(dir_argument, type) == 2) { // FIXME : isTar n'est pas bon
 						printf("OK TAR\n");
 						exist_or_not=1;
 						if (actuPath(dir_argument) < 0) return -1;
 						break;
 					}
 
-					if(stat(dir_argument,&st)==0) {
-						if(S_ISDIR(st.st_mode)!=0){
+					if (stat(dir_argument, &st) == 0) {
+						if (S_ISDIR(st.st_mode) != 0){
 							exist_or_not=1;
 							chdir(dir_argument);
 							printf("OK REP\n");
 							//printf("%s\n",getcwd(NULL,0));
 							break;
 
-						} else {
+						}else {
 
 							exist_or_not=1;
 							char * tmp = " n'est pas un répertoire";
-							char * error3=malloc(sizeof(char)*(strlen(dir_argument)+strlen(tmp)));
-							strcpy(error3,dir_argument);
-							strcat(error3,tmp);
-							write(2,error3,strlen(error3));
-							write(1,"\n",2);
+							char * error3 = malloc(sizeof(char)*(strlen(dir_argument)+strlen(tmp)));
+							strcpy(error3, dir_argument);
+							strcat(error3, tmp);
+							write(STDERR_FILENO, error3, strlen(error3));
+							write(STDOUT_FILENO, "\n", 1);
 							return -1;
 						}
 
@@ -84,13 +77,12 @@ int cd(int argc,char **argv) {
 
 			} // fin while
 
-				if(!exist_or_not) {
-					char * error4= "fichier ou répertoire non existant !\n";
-					write(2,error4,strlen(error4));
-					write(1,"\n",2);
-					return -1;
-				}
-
+			if (!exist_or_not) {
+				char * error4 = "fichier ou répertoire non existant !\n";
+				write(STDERR_FILENO, error4, strlen(error4));
+				write(STDOUT_FILENO,"\n",1);
+				return -1;
+			}
 
 		}
 
