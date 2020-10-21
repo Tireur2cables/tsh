@@ -70,7 +70,7 @@ void selectCommand(int readen, char *mycat_buf) { //lance la bonne commande ou l
 			exit(EXIT_FAILURE);
 		}
 		exit(EXIT_SUCCESS);
-	}else if (iscmd(mycat_buf, "help")) { //cmd = help
+	}else if (iscmd(mycat_buf, "help")) { //cmd = help //FIXME : A faire comme une fonction / commande a part
 		char *help = "Voici une liste non exhaustive des commandes implémentées:ǹ\nexit : quitte le tsh\nls : wip\nhelp : obtenir la liste des commandes\n\n";
 		int help_len = strlen(help);
 		if (write(STDOUT_FILENO, help, help_len) < help_len) {
