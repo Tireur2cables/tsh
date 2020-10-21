@@ -20,6 +20,7 @@ int isOnlySpace(char *, int);
 void selectCommand(int, char *);
 int getNbArgs(const char *, int);
 int launchFunc(int (*)(int, char *[]), char *, int);
+int launchBuiltInFunc(int (*)(int, char *[]), char *, int);
 int exec(int, char *[]);
 
 int main(int argc, char const *argv[]) { //main
@@ -71,21 +72,32 @@ void selectCommand(int readen, char *mycat_buf) { //lance la bonne commande ou l
 		}
 		exit(EXIT_SUCCESS);
 	}else if (iscmd(mycat_buf, "help")) { //cmd = help //FIXME : A faire comme une fonction / commande a part
-		char *help = "Voici une liste non exhaustive des commandes implémentées:ǹ\nexit : quitte le tsh\nls : wip\nhelp : obtenir la liste des commandes\n\n";
+		char *help = "Voici une liste non exhaustive des commandes implémentées:\nexit : quitte le tsh\nls : wip\ncd : wip\npwd : wip\nhelp : obtenir la liste des commandes\n\n";
 		int help_len = strlen(help);
 		if (write(STDOUT_FILENO, help, help_len) < help_len) {
 			perror("Erreur d'écriture dans les shell!");
 			exit(EXIT_FAILURE);
 		}
+	}else if (iscmd(mycat_buf, "cd")) { //cmd = cd must be built-in func
+		launchBuiltInFunc(cd, mycat_buf, readen);
 	}else if (iscmd(mycat_buf, "ls")) { //cmd = ls
 		launchFunc(ls, mycat_buf, readen);
 	}else if (iscmd(mycat_buf, "pwd")) { //cmd = pwd
 		launchFunc(pwd_func, mycat_buf, readen);
-	}else if (iscmd(mycat_buf, "cd")) { //cmd = cd
-		launchFunc(cd, mycat_buf, readen);
 	}else { //lancer la commande avec exec
 		launchFunc(exec, mycat_buf, readen);
 	}
+}
+
+int launchBuiltInFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lance la fonction demandée directement en processus principal
+	int argc = getNbArgs(mycat_buf, readen);
+	char *argv[argc+1];
+	argv[0] = strtok(mycat_buf, " ");
+	for (int i = 1; i <= argc; i++) {
+		argv[i] = strtok(NULL, " ");
+	}
+	func(argc, argv);
+	return 0;
 }
 
 int launchFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lance dans un nouveau processus la fonction demandée et attend qu'elle finisse
