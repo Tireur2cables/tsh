@@ -15,8 +15,6 @@
 char *home = NULL;  // contient chemin du 1er rep
 char *pwd = NULL;
 
-	//TODO : changer isTar car fichiers normaux.tar et repertoires.tar 
-	//  pris pour des tar !!
 	
 int cd(int argc,char **argv) {
 	
