@@ -1,4 +1,4 @@
-#define _XOPEN_SOURCE
+//#define _XOPEN_SOURCE
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -9,51 +9,60 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <dirent.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "tar.h"
 #include "cd.h"
 
 char *home = NULL;  // contient chemin du 1er rep
 char *pwd = NULL;
+const char * PWDenv=NULL;
 
 
-int cd(int argc,char **argv) {
+int main(int argc,char **argv) {
 
 	path_initialisation();
 	if (errorDetect(argc) < 0) return -1;
 
 	int exist_or_not = 0;
 	struct stat st;
-	DIR *courant = opendir(pwd);
-
-	if (courant == NULL) {
-		char * error1= "erreur d'ouverture du repertoire\n";
-		write(STDERR_FILENO,error1,strlen(error1));
-		return -1;
-	}
-
-
+	DIR *courant;
+	struct dirent *d;
+	
 
 	if (argc == 2) {
+		
 		char *dir_argument = argv[1];
-		struct dirent *d;
+		char copy[]="rep1/rep2";
+		const char * separator = "/";
+		char * chemin = strtok(copy,separator);
+		
+		while(chemin!=NULL) {
+			printf("%s\n",chemin);
+			courant=opendir(pwd);
+			
+			if (courant == NULL) {
+				char * error1= "erreur d'ouverture du repertoire\n";
+				write(STDERR_FILENO,error1,strlen(error1));
+				return -1;
+			}
+		
+			while ((d = readdir(courant)) != NULL) {
 
-		while ((d = readdir(courant)) != NULL) {
+				if (strcmp(d->d_name, chemin) == 0) {
 
-				if (strcmp(d->d_name, dir_argument) == 0) {
+					unsigned char type = d->d_type;
 
-
-					if (isTAR(dir_argument)== 0) {
+					if (isTAR(chemin, type) == 0) { 
 						printf("OK TAR\n");
 						exist_or_not=1;
-						if (actuPath(dir_argument) < 0) return -1;
+						if (actuPath(chemin) < 0) return -1;
 						break;
 					}
 
-					if (stat(dir_argument, &st) == 0) {
+					if (stat(chemin, &st) == 0) {
 						if (S_ISDIR(st.st_mode) != 0){
 							exist_or_not=1;
-							chdir(dir_argument);
+							chdir(chemin);
 							pwd=getcwd(NULL,0);
 							printf("OK REP\n");
 							break;
@@ -62,8 +71,8 @@ int cd(int argc,char **argv) {
 
 							exist_or_not=1;
 							char * tmp = " n'est pas un répertoire";
-							char * error3 = malloc(sizeof(char)*(strlen(dir_argument)+strlen(tmp)));
-							strcpy(error3, dir_argument);
+							char * error3 = malloc(sizeof(char)*(strlen(chemin)+strlen(tmp)));
+							strcpy(error3, chemin);
 							strcat(error3, tmp);
 							write(STDERR_FILENO, error3, strlen(error3));
 							write(STDOUT_FILENO, "\n", 1);
@@ -74,7 +83,7 @@ int cd(int argc,char **argv) {
 
 				}
 
-			} // fin while
+			} // fin while 1
 
 			if (!exist_or_not) {
 				char * error4 = "fichier ou répertoire non existant !\n";
@@ -82,7 +91,10 @@ int cd(int argc,char **argv) {
 				write(STDOUT_FILENO,"\n",1);
 				return -1;
 			}
-
+			
+			chemin=strtok(NULL,separator);
+		} // fin while 2
+			
 		}
 
 	closedir(courant);
@@ -105,21 +117,12 @@ int actuPath(char * new) {
 	strcat(newpath,to_add);
 
 	pwd=newpath;
-
-	char * newENV=malloc(sizeof(char)*(strlen(pwd)+4));
-	strcpy(newENV,"PWD=");
-	strcat(newENV,pwd);
-	int c=putenv(newENV);
-
-	if(c) {
-		errno = ENOMEM;
-		perror("changement de variable impossible");
-		return -1;
-	}
+	
+	
 	return 0;
 }
 
-int isTAR(char * dirTAR) {
+int isTAR(char * dirTAR,unsigned char type) {
 	char * ext = ".tar";
 	return strcmp(&dirTAR[strlen(dirTAR)-strlen(ext)],ext);
 }
@@ -127,6 +130,7 @@ int isTAR(char * dirTAR) {
 void path_initialisation() {
 	home=malloc(sizeof(char)*PATH_MAX);
 	pwd=getcwd(home,PATH_MAX);
+	PWDenv=getenv("PWD");
 }
 
 int errorDetect(int argc) {
