@@ -18,6 +18,7 @@ char *pwd = NULL;
 	
 int cd(int argc,char **argv) {
 	
+	printf("%s\n",getenv("PWD"));
 	
 	path_initialisation();
 	errorDetect(argc);
@@ -115,6 +116,17 @@ void actuPath(char * new) {
 	strcat(newpath,to_add);
 
 	pwd=newpath;
+	
+	char * newENV=malloc(sizeof(char)*strlen(pwd)+4);
+	strcpy(newENV,"PWD=");
+	strcat(newENV,pwd);
+	int c=putenv(newENV);
+	
+	if(c) {
+		errno = ENOMEM;
+		perror("changement de variable impossible");
+		exit(EXIT_FAILURE);	
+	}
 }
 
 int isTAR(char * dirTAR,unsigned char type) {
