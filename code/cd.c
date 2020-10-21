@@ -15,53 +15,102 @@
 char *home = NULL;  // contient chemin du 1er rep
 char *pwd = NULL;
 
+	//TODO : changer isTar car fichiers normaux.tar et repertoires.tar 
+	//  pris pour des tar !!
+	
 int cd(int argc,char **argv) {
 	
-	int t=0;
 	
 	path_initialisation();
-
+	
+	int exist_or_not=0;
+	struct stat st;
 	DIR*courant=opendir(pwd);
-	assert(courant && pwd);
+	
+	if(courant==NULL) {
+		char * error1= "erreur d'ouverture du repertoire\n";
+		write(2,error1,strlen(error1));
+		exit(EXIT_FAILURE);
+	}
 
 	if(argc==0 || argc==1) {
 		errno = EINVAL;
 		perror("Aucun répertoire indiqué");
 		exit(EXIT_FAILURE);
-		} else {
-			char * dir_argument;
-			if(argc==2) {
-				dir_argument=argv[1];
-				while(1) {
-					struct dirent *d=readdir(courant);
-					if(d==NULL) break;
-					t++;
-					if(strcmp(d->d_name,dir_argument)==0) {
+	}
+	
+	if(argc>2) {
+		errno = EINVAL;
+		perror("trop d'arguments !");
+		exit(EXIT_FAILURE);	
+	}
+	
+			
+	if(argc==2) {
+		char * dir_argument=argv[1];
+		struct dirent *d;
+				
+		while((d=readdir(courant))!=NULL) {
+	
+				if(d==NULL) {
+					char * error2="erreur de lecture du repertoire\n";
+					write(2,error2,strlen(error2));
+					exit(EXIT_FAILURE);
+				}
+					
+					
+				if(strcmp(d->d_name,dir_argument)==0) {  
 						
-						if(isTAR(d->d_name)!=NULL) {
-
-							actuPath(dir_argument);
+					if(isTAR(dir_argument)!=NULL) { 
+						//printf("OK TAR\n");
+						exist_or_not=1;
+						actuPath(dir_argument);
+						break;
+					}  
+						
+					if(stat(dir_argument,&st)==0) {			
+						if(S_ISDIR(st.st_mode)!=0){
+							exist_or_not=1;
 							chdir(dir_argument);
-							printf("%d : bien un tar\n",t);
-
-					} else { // autres cas : repertoire normal ; .. ; .
-							printf("%d : pas tar\n",t); 
+							//printf("OK REP\n");
+							//printf("%s\n",getcwd(NULL,0));
+							break;
+							
+						} else {
+							
+							exist_or_not=1;
+							char * tmp = " n'est pas un répertoire";
+							char * error3=malloc(sizeof(char)*(strlen(dir_argument)+strlen(tmp)));
+							strcpy(error3,dir_argument);
+							strcat(error3,tmp);
+							write(2,error3,strlen(error3));
+							exit(EXIT_FAILURE);
+						}
 							
 					}
-				} else {
-					printf("%d : non existant\n",t);
 					
 				}
+				
 			} // fin while
+			
+				if(exist_or_not==0) {
+					char * error4= "fichier ou répertoire non existant !\n";
+					write(2,error4,strlen(error4));
+					exit(EXIT_FAILURE);
+				}
+				
 
-
-		}
-
-	}
+		} 
 
 	closedir(courant);
 	return 0;
 }
+
+
+
+
+
+
 
 void actuPath(char * new) {
 
