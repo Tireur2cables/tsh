@@ -22,6 +22,7 @@ int cd(int argc,char **argv) {
 	
 	
 	path_initialisation();
+	errorDetect(argc);
 	
 	int exist_or_not=0;
 	struct stat st;
@@ -32,18 +33,7 @@ int cd(int argc,char **argv) {
 		write(2,error1,strlen(error1));
 		exit(EXIT_FAILURE);
 	}
-
-	if(argc==0 || argc==1) {
-		errno = EINVAL;
-		perror("Aucun répertoire indiqué");
-		exit(EXIT_FAILURE);
-	}
 	
-	if(argc>2) {
-		errno = EINVAL;
-		perror("trop d'arguments !");
-		exit(EXIT_FAILURE);	
-	}
 	
 			
 	if(argc==2) {
@@ -51,7 +41,7 @@ int cd(int argc,char **argv) {
 		struct dirent *d;
 				
 		while((d=readdir(courant))!=NULL) {
-	
+
 				if(d==NULL) {
 					char * error2="erreur de lecture du repertoire\n";
 					write(2,error2,strlen(error2));
@@ -60,9 +50,11 @@ int cd(int argc,char **argv) {
 					
 					
 				if(strcmp(d->d_name,dir_argument)==0) {  
-						
-					if(isTAR(dir_argument)!=NULL) { 
-						//printf("OK TAR\n");
+				
+					unsigned char type=d->d_type;
+
+					if(isTAR(dir_argument,type)==2) { 
+						printf("OK TAR\n");
 						exist_or_not=1;
 						actuPath(dir_argument);
 						break;
@@ -72,7 +64,7 @@ int cd(int argc,char **argv) {
 						if(S_ISDIR(st.st_mode)!=0){
 							exist_or_not=1;
 							chdir(dir_argument);
-							//printf("OK REP\n");
+							printf("OK REP\n");
 							//printf("%s\n",getcwd(NULL,0));
 							break;
 							
@@ -84,6 +76,7 @@ int cd(int argc,char **argv) {
 							strcpy(error3,dir_argument);
 							strcat(error3,tmp);
 							write(2,error3,strlen(error3));
+							write(1,"\n",2);
 							exit(EXIT_FAILURE);
 						}
 							
@@ -93,9 +86,10 @@ int cd(int argc,char **argv) {
 				
 			} // fin while
 			
-				if(exist_or_not==0) {
+				if(!exist_or_not) {
 					char * error4= "fichier ou répertoire non existant !\n";
 					write(2,error4,strlen(error4));
+					write(1,"\n",2);
 					exit(EXIT_FAILURE);
 				}
 				
@@ -125,11 +119,32 @@ void actuPath(char * new) {
 	pwd=newpath;
 }
 
-char * isTAR(char * dirTAR) {
-	return strstr(dirTAR,".tar");
+int isTAR(char * dirTAR,unsigned char type) {
+	int c=0;
+	if(strstr(dirTAR,".tar")) c++;
+	if(type==0) c++;
+	return c;
 }
 
 void path_initialisation() {
 	home=malloc(sizeof(char)*PATH_MAX); 
 	pwd=getcwd(home,PATH_MAX);
+}
+
+void errorDetect(int argc) {
+
+	if(argc==0 || argc==1) {
+		errno = EINVAL;
+		perror("Aucun répertoire indiqué");
+		exit(EXIT_FAILURE);
+	}
+	
+	if(argc>2) {
+		errno = EINVAL;
+		perror("trop d'arguments !");
+		exit(EXIT_FAILURE);	
+	}
+	
+	
+	
 }
