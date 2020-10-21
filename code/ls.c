@@ -57,6 +57,7 @@ int print_dir(char *file, char *options){
 }
 
 int print_inside_tar(char *file, char *options){
+	printf("print inside tar");
 	//RECUPERER LE TAR
 	//RECUPERER LE FICHIER A AFFICHER
 	//ENUMERER LE HEADER DU TAR
@@ -71,7 +72,7 @@ int print_tar(char *file, char *options){
 		assert(header);
 		int fd = open(file, O_RDONLY);
 		if(fd == -1){
-		  perror("erreur d'ouverture de l'archiiive");
+		  perror("erreur d'ouverture de l'archive");
 		  return -1;
 		}
 
@@ -177,35 +178,15 @@ int print_complete_normal_dir(DIR* dirp){
 }
 
 int contains_tar(char *file){
-	char *token;
-	token = strtok(file, "/");
-	while(token != NULL){
-		if(is_tar(token)){
-			return 1;
-		}
-		token = strtok(NULL, ".");
-	}
-	return 0;
+	return (strstr(file,".tar") != NULL);
 }
 
-int is_curr_or_parent_rep(char *file){
-	if( (strcmp(file, ".") == 0) || (strcmp(file, "..") == 0) ){
-		return 1;
-	}
-	return 0;
+int is_ext(char *file, char *ext){
+	return (strcmp(&file[strlen(file)-strlen(ext)], ext) == 0);
 }
+
 int is_tar(char *file){
-	if(is_curr_or_parent_rep(file)){
-		return 0;
-	}
-	char *token, *last;
-	last = token = strtok(file, ".");
-	while(token != NULL){
-		last = token;
-		token = strtok(NULL, ".");
-	}
-	if(last == NULL) return -1;
-	return (strcmp(last, "tar") == 0);
+	return is_ext(file, ".tar");
 }
 
 int is_options(char *options){
