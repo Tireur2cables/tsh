@@ -153,8 +153,14 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 	sscanf(header->size, "%o", &taille);
 	sscanf(header->mode, "%o", &mode);
 	*read_size = ((taille + 512-1)/512);
-	//fixme printf
-	printf("%s  ", header->name);
+	int filename_len = strlen(header->name) + 3;
+	char filename[filename_len];
+	strcpy(filename, header->name);
+	strcat(filename, "  ");
+	if (write(STDOUT_FILENO, filename, filename_len) < filename_len) {
+		perror("Erreur d'écriture dans le shell!");
+		exit(EXIT_FAILURE);
+	}
 }
 
 int print_normal_dir(DIR* dirp){
