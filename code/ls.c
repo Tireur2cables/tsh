@@ -7,6 +7,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <pwd.h>
+#include <grp.h>
+#include <time.h>
 #include "tar.h"
 #include "ls.h"
 
@@ -15,6 +18,7 @@
 		 Afficher les droits correctement - nombre de references - createur - date
 		 traiter le cas d'un fichier dans un tar
 		 gerer la cas ou on donne repertoire/fichier
+		 getpwuid et getgrgid utilisable ?
 */
 
 int ls(int argc, char *argv[]){
@@ -140,12 +144,22 @@ int print_rep(char *file, char *options){
 void show_complete_header_infos(struct posix_header *header, int *read_size){
 	int taille = 0;
 	int mode = 0;
+	int uid;
+	int gid;
+	long int mtime;
 	sscanf(header->size, "%o", &taille);
 	sscanf(header->mode, "%o", &mode);
+	sscanf(header->uid, "%o", &uid);
+	sscanf(header->gid, "%o", &gid);
+	sscanf(header->mtime, "%lo", &mtime);
+	char *pw_name = getpwuid(uid)->pw_name;
+	char *gr_name = getgrgid(gid)->gr_name;
+	char *date= ctime(&mtime);
+	date[strlen(date) - 1] = '\0';
 	*read_size = ((taille + 512-1)/512);
-	//fixme Afficher les droits correctement - nombre de references - createur - date
+	//fixme Afficher les droits correctement - nombre de references - date
 	//fixme printf
-	printf("%c%o x user user %d date %s\n", ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-'), mode, taille, header->name);
+	printf("%c%o x %s %s %d %s %s\n", ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-'), mode, pw_name ,gr_name, taille, date, header->name);
 }
 void show_simple_header_infos(struct posix_header *header, int *read_size){
 	int taille = 0;
