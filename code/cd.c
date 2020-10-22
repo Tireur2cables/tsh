@@ -9,14 +9,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dirent.h>
-#include <assert.h>
 #include <linux/limits.h>
 #include "tar.h"
 #include "cd.h"
 
 /*
 TODO LIST :
-- Gérer le cas . et .. et - et ~
+- bug de realpath pour .. car en fonction de pwd ?
 - Prendre en compte les dossiers meme avec '/' à la fin
 - Prendre en compte les chemins
 */
@@ -36,9 +35,13 @@ int cd(int argc,char **argv) {
 	char pwd[strlen(twd) + 1];
 	strcpy(pwd, twd);
 
-	char *dir_argument;
 	char tmp[strlen(argv[1]) + 1];
 	strcpy(tmp, argv[1]);
+
+	return selectNewPath(tmp, pwd);
+}
+
+int selectNewPath(char *tmp, char *pwd) {
 	if (strcmp(tmp, "-") == 0) {
 		char const *oldtwd = getenv("OLDTWD");
 		if (oldtwd == NULL) {
@@ -48,8 +51,7 @@ int cd(int argc,char **argv) {
 			}
 			return -1;
 		}
-		dir_argument = malloc(strlen(oldtwd)+1);
-		assert(dir_argument);
+		char dir_argument[strlen(oldtwd) + 1];
 		strcpy(dir_argument, oldtwd);
 		setPath(dir_argument, pwd);
 	}else if ((strcmp(tmp, "~/") == 0) || (strcmp(tmp, "~") == 0)) {
@@ -61,14 +63,9 @@ int cd(int argc,char **argv) {
 			}
 			return -1;
 		}
-		dir_argument = malloc(strlen(home)+1);
-		assert(dir_argument);
+		char dir_argument[strlen(home) + 1];
 		strcpy(dir_argument, home);
 		setPath(dir_argument, pwd);
-	}else if ((strcmp(tmp, "./") == 0) || (strcmp(tmp, ".") == 0)) {
-		return 0;
-	}else if ((strcmp(tmp, "../") == 0) || (strcmp(tmp, "..")) == 0) {
-		//aller vers le pere
 	}else {
 		DIR *courant = opendir(pwd);
 		if (courant == NULL) {
@@ -79,8 +76,7 @@ int cd(int argc,char **argv) {
 			return -1;
 		}
 
-		dir_argument = malloc(strlen(tmp) + 1);
-		assert(dir_argument);
+		char dir_argument[strlen(tmp) + 1];
 		strcpy(dir_argument, tmp);
 		int found = 0;
 		struct stat st;
@@ -89,31 +85,37 @@ int cd(int argc,char **argv) {
 		while ((d = readdir(courant)) != NULL) {
 			if (strcmp(d->d_name, dir_argument) == 0) {
 				found = 1;
-				if (isTAR(dir_argument) == 0) { //tar
-					if (actuPath(dir_argument, pwd) < 0) return -1;
-					break;
-				}
-				if (stat(dir_argument, &st) < 0) {
-					perror("Erreur de stat!");
-					return -1;
-				}
-				if (S_ISDIR(st.st_mode) != 0) { // dossier
-					if (actuPath(dir_argument, pwd) < 0) return -1;
-					break;
+				if ((strcmp(dir_argument, "./") == 0) || (strcmp(dir_argument, ".") == 0)) {
+					//do nothing
+				}else if ((strcmp(dir_argument, "../") == 0) || (strcmp(dir_argument, "..")) == 0)
+					char *pere = realpath(dir_argument, NULL);
+					if (setPath(pere, pwd) < 0) return -1;
+					free(pere);
 				}else {
-					char *tmp = " n'est pas un répertoire!\n";
-					char error3[strlen(dir_argument)+strlen(tmp)+1];
-					strcpy(error3, dir_argument);
-					strcat(error3, tmp);
-					if (write(STDERR_FILENO, error3, strlen(error3)) < strlen(error3)) {
-						perror("Erreur d'écriture dans le shell!");
+					if (isTAR(dir_argument) == 0) { //tar
+						if (actuPath(dir_argument, pwd) < 0) return -1;
+						break;
 					}
-					return -1;
+					if (stat(dir_argument, &st) < 0) {
+						perror("Erreur de stat!");
+						return -1;
+					}
+					if (S_ISDIR(st.st_mode) != 0) { // dossier
+						if (actuPath(dir_argument, pwd) < 0) return -1;
+						break;
+					}else {
+						char *tmp = " n'est pas un répertoire!\n";
+						char error3[strlen(dir_argument)+strlen(tmp)+1];
+						strcpy(error3, dir_argument);
+						strcat(error3, tmp);
+						if (write(STDERR_FILENO, error3, strlen(error3)) < strlen(error3)) {
+							perror("Erreur d'écriture dans le shell!");
+						}
+						return -1;
+					}
 				}
 			}
-
 		}
-
 		if (!found) {
 			char *error4 = "fichier ou répertoire non existant !\n";
 			if (write(STDERR_FILENO, error4, strlen(error4)) < strlen(error4)) {
@@ -123,9 +125,6 @@ int cd(int argc,char **argv) {
 		}
 		closedir(courant);
 	}
-
-
-	free(dir_argument);
 	return 0;
 }
 
