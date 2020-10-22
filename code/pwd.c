@@ -1,39 +1,37 @@
 #include <stdio.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-#include <assert.h>
-#include <dirent.h>
 #include "pwd.h"
 
 
-int pwd_func(int argc,char **argv) {
-
-	if(argc==0) {
+int pwd_func(int argc, char *argv[]) {
+	if (argc == 0) {
 		errno = EINVAL;
-		perror("error 404");
+		perror("Pas assez d'arguments!");
 		exit(EXIT_FAILURE);
-
-	} else {
-
-		char *home=getcwd(NULL,0); //FIXME ajouter retour à la ligne
-
-		if(write(1,home,strlen(home))==-1) {
-			errno = EINTR;
-			perror("error 9999");
-			exit(EXIT_FAILURE);
-		} else {
-			write(1,"\n",1);
-		}
-
 	}
 
+	char const *twd = getenv("TWD");
+	if (twd == NULL) {
+		char *error = "Erreur de lecture de TWD!\n";
+		if (write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
+			perror("Erreur d'écriture dans le shell");
+			exit(EXIT_FAILURE);
+		}
+		exit(EXIT_FAILURE);
+	}
+	int len = strlen(twd);
+	char wd[len + 1 + 1];
+	strcpy(wd, twd);
+	wd[len] = '\n';
+	wd[++len] = '\0';
+
+	if(write(STDOUT_FILENO, wd, len) < len) {
+		perror("Erreur d'écriture dans le shell!");
+		exit(EXIT_FAILURE);
+	}
 
 	return 0;
-
-
 }

@@ -35,7 +35,7 @@ int cd(int argc,char **argv) {
 		}
 		return -1;
 	}
-	char pwd[strlen(twd)];
+	char pwd[strlen(twd) + 1];
 	strcpy(pwd, twd);
 
 	DIR *courant = opendir(pwd);
@@ -52,7 +52,7 @@ int cd(int argc,char **argv) {
 	struct stat st;
 
 	if (argc == 2) { //test inutile par rapport au test de errorDetect ?
-		char dir_argument[strlen(argv[1])];
+		char dir_argument[strlen(argv[1]) + 1];
 		strcpy(dir_argument, argv[1]);
 		struct dirent *d;
 
