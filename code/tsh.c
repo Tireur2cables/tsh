@@ -10,12 +10,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <linux/limits.h>
 #include <readline/readline.h>
 #include "ls.h"
 #include "cd.h"
 #include "pwd.h"
 
 /* utiliser un tableau des commandes implémentées pour facotriser encore plus ? */
+
+//char pwd[PATH_MAX];
 
 int iscmd(char *, char *);
 int isOnlySpace(char *, int);
@@ -32,17 +35,28 @@ int main(int argc, char const *argv[]) { //main
 		perror("Arguments non valides!");
 		exit(EXIT_FAILURE);
 	}
-	setEnv();
+	//setEnv();
 
+	char *oldtwd = "TWD=";
+	char *oldpwd = getcwd(NULL, 0);
+	char setTWD[strlen(oldpwd) + strlen(oldtwd) + 1];
+	strcpy(setTWD, oldtwd);
+	strcat(setTWD, oldpwd);
+	if (putenv(setTWD) != 0) {
+		perror("Erreur de création de TWD!");
+		exit(EXIT_FAILURE);
+	}
+	free(oldpwd);
+
+	char const *twd;
 	char *prompt = "$ ";
 	int prompt_len = strlen(prompt);
 	while (1) {
-		char const *pwd = getenv("TWD");
-
-		char new_prompt[strlen(pwd) + 1 + prompt_len + 1];
-		strcpy(new_prompt, pwd);
-		new_prompt[strlen(pwd)] = ' ';
-		new_prompt[strlen(pwd)+1] = '\0';
+		twd = getenv("TWD");
+		char new_prompt[strlen(twd) + 1 + prompt_len + 1];
+		strcpy(new_prompt, twd);
+		new_prompt[strlen(twd)] = ' ';
+		new_prompt[strlen(twd)+1] = '\0';
 		strcat(new_prompt, prompt);
 
 		int readen;

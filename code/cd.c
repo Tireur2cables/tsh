@@ -13,11 +13,8 @@
 #include "tar.h"
 #include "cd.h"
 
-char const *pwd;
-
 /*
 TODO LIST :
-- Modifier la variable TWD au lieu d'utiliser PWD
 - Modifier pwd.c pour qu'il passe aussi par TWD
 - Modifier aussi la variable OLDTWD pour la commande 'cd -' qui revient en arriève
 - Prendre en compte les dossiers meme avec '/' à la fin
@@ -29,8 +26,8 @@ int cd(int argc,char **argv) {
 
 	if (errorDetect(argc)) return -1;
 
-	pwd = getenv("TWD");
-	if (pwd == NULL) {
+	char const *twd = getenv("TWD");
+	if (twd == NULL) {
 		char *error = "Erreur de lecture de TWD!\n";
 		if (write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
 			perror("Erreur d'écriture dans le shell");
@@ -38,6 +35,8 @@ int cd(int argc,char **argv) {
 		}
 		return -1;
 	}
+	char pwd[strlen(twd)];
+	strcpy(pwd, twd);
 
 	DIR *courant = opendir(pwd);
 	if (courant == NULL) {
@@ -63,7 +62,19 @@ int cd(int argc,char **argv) {
 					found = 1;
 					if (isTAR(dir_argument) == 0) {
 						printf("OK TAR\n");
-						if (actuPath(dir_argument) < 0) return -1;
+						char newpwd[strlen(pwd) + 1 + strlen(dir_argument) + 1];
+						strcpy(newpwd, pwd);
+						strcat(newpwd, "/");
+						strcat(newpwd, dir_argument);
+
+						char newENV[strlen(newpwd)+4+1];
+						strcpy(newENV, "TWD=");
+						strcat(newENV, newpwd);
+
+						if(putenv(newENV) != 0) {
+							perror("Changement de variable impossible");
+							return -1;
+						}
 						break;
 					}
 
@@ -73,7 +84,19 @@ int cd(int argc,char **argv) {
 					}
 					if (S_ISDIR(st.st_mode) != 0) {
 						printf("OK REP\n");
-						if (actuPath(dir_argument) < 0) return -1;
+						char newpwd[strlen(pwd) + 1 + strlen(dir_argument) + 1];
+						strcpy(newpwd, pwd);
+						strcat(newpwd, "/");
+						strcat(newpwd, dir_argument);
+
+						char newENV[strlen(newpwd)+4+1];
+						strcpy(newENV, "TWD=");
+						strcat(newENV, newpwd);
+
+						if(putenv(newENV) != 0) {
+							perror("Changement de variable impossible");
+							return -1;
+						}
 						break;
 					}else {
 						char *tmp = " n'est pas un répertoire!\n";
@@ -99,29 +122,6 @@ int cd(int argc,char **argv) {
 		}
 
 	closedir(courant);
-	return 0;
-}
-
-
-
-
-
-
-
-int actuPath(char *new) {
-	char newpwd[strlen(pwd) + 1 + strlen(new) + 1];
-	strcpy(newpwd, pwd);
-	strcat(newpwd, "/");
-	strcat(newpwd, new);
-
-	char newENV[strlen(newpwd)+4+1];
-	strcpy(newENV, "TWD=");
-	strcat(newENV, newpwd);
-
-	if(putenv(newENV) != 0) {
-		perror("Changement de variable impossible");
-		return -1;
-	}
 	return 0;
 }
 
