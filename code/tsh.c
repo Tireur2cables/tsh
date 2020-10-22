@@ -1,4 +1,4 @@
-#define _XOPEN_SOURCE
+#define _DEFAULT_SOURCE // utile pour setenv
 
 #include <stdio.h>
 #include <errno.h>
@@ -35,18 +35,7 @@ int main(int argc, char const *argv[]) { //main
 		perror("Arguments non valides!");
 		exit(EXIT_FAILURE);
 	}
-	//setEnv();
-
-	char *oldtwd = "TWD=";
-	char *oldpwd = getcwd(NULL, 0);
-	char setTWD[strlen(oldpwd) + strlen(oldtwd) + 1];
-	strcpy(setTWD, oldtwd);
-	strcat(setTWD, oldpwd);
-	if (putenv(setTWD) != 0) {
-		perror("Erreur de création de TWD!");
-		exit(EXIT_FAILURE);
-	}
-	free(oldpwd);
+	setEnv();
 
 	char const *twd;
 	char *prompt = "$ ";
@@ -192,12 +181,8 @@ int iscmd(char *mycat_buf, char *cmd) { //verifie qu'une phrase commence bien pa
 }
 
 void setEnv() {
-	char *twd = "TWD=";
 	char *oldpwd = getcwd(NULL, 0);
-	char setTWD[strlen(oldpwd) + strlen(twd) + 1];
-	strcpy(setTWD, twd);
-	strcat(setTWD, oldpwd);
-	if (putenv(setTWD) != 0) {
+	if (setenv("TWD", oldpwd, 1) < 0) {
 		perror("Erreur de création de TWD!");
 		exit(EXIT_FAILURE);
 	}
