@@ -16,11 +16,18 @@
 char *home = NULL;  // contient chemin du 1er rep
 char *pwd = NULL;
 
+/*
+TODO LIST :
+- Modifier la variable TWD au lieu d'utiliser pwd
+- Modifier aussi la variable OLDTWD pour la commande 'cd -' qui revient en arriève
+- Prendre en compte les dossiers meme avec '/' à la fin
+- Prendre en compte les chemins
+*/
 
 int cd(int argc,char **argv) {
 
+	if (errorDetect(argc)) return -1;
 	path_initialisation();
-	if (errorDetect(argc) < 0) return -1;
 
 	int exist_or_not = 0;
 	struct stat st;
@@ -137,7 +144,7 @@ int errorDetect(int argc) {
 	}
 
 	if(argc>2) {
-		errno = EINVAL;
+		errno = E2BIG;
 		perror("trop d'arguments !");
 		return -1;
 	}

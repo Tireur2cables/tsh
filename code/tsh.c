@@ -127,7 +127,7 @@ int launchFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lanc
 			if (!WIFEXITED(status)) {
 				char *erreur = "Erreur lors l'execution de la commande!\n";
 				int erreur_len = strlen(erreur);
-				if (write(STDOUT_FILENO, erreur, erreur_len) < erreur_len) {
+				if (write(STDERR_FILENO, erreur, erreur_len) < erreur_len) {
 					perror("Erreur d'écriture dans le shell!");
 					exit(EXIT_FAILURE);
 				}
