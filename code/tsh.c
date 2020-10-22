@@ -1,3 +1,5 @@
+#define _XOPEN_SOURCE
+
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -13,7 +15,7 @@
 #include "cd.h"
 #include "pwd.h"
 
-char *pwd; // utiliser une variable env
+/* utiliser un tableau des commandes implémentées pour facotriser encore plus ? */
 
 int iscmd(char *, char *);
 int isOnlySpace(char *, int);
@@ -22,6 +24,7 @@ int getNbArgs(const char *, int);
 int launchFunc(int (*)(int, char *[]), char *, int);
 int launchBuiltInFunc(int (*)(int, char *[]), char *, int);
 int exec(int, char *[]);
+void setEnv();
 
 int main(int argc, char const *argv[]) { //main
 	if (argc > 1) {
@@ -29,11 +32,13 @@ int main(int argc, char const *argv[]) { //main
 		perror("Arguments non valides!");
 		exit(EXIT_FAILURE);
 	}
+	setEnv();
 
 	char *prompt = "$ ";
 	int prompt_len = strlen(prompt);
 	while (1) {
-		pwd = getcwd(NULL, 0); // FIXME: à remplacer
+		char const *pwd = getenv("TWD");
+
 		char new_prompt[strlen(pwd) + 1 + prompt_len + 1];
 		strcpy(new_prompt, pwd);
 		new_prompt[strlen(pwd)] = ' ';
@@ -56,7 +61,6 @@ int main(int argc, char const *argv[]) { //main
 			}
 		}
 		free(mycat_buf);
-		free(pwd);
 	}
 
 	return 0;
@@ -171,4 +175,17 @@ int isOnlySpace(char *mycat_buf, int readen) { //verifie si la phrase donnée es
 int iscmd(char *mycat_buf, char *cmd) { //verifie qu'une phrase commence bien par la commande demandée suivie d'un espace (\n, ' ', etc...)
 	return (strncmp(mycat_buf, cmd, strlen(cmd)) == 0) &&
 	((isspace(mycat_buf[strlen(cmd)])) || (mycat_buf[strlen(cmd)] == '\0'));
+}
+
+void setEnv() {
+	char *twd = "TWD=";
+	char *oldpwd = getcwd(NULL, 0);
+	char setTWD[strlen(oldpwd) + strlen(twd) + 1];
+	strcpy(setTWD, twd);
+	strcat(setTWD, oldpwd);
+	if (putenv(setTWD) != 0) {
+		perror("Erreur de création de TWD!");
+		exit(EXIT_FAILURE);
+	}
+	free(oldpwd);
 }

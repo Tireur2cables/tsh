@@ -4,7 +4,6 @@
 
 extern int cd(int, char *[]);
 
-void path_initialisation();
 int isTAR(char *);
 int actuPath(char *);
 int errorDetect(int);
