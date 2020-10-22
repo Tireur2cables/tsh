@@ -60,6 +60,7 @@ int cd(int argc,char **argv) {
 		dir_argument = malloc(strlen(oldtwd)+1);
 		assert(dir_argument);
 		strcpy(dir_argument, oldtwd);
+		setPath(dir_argument, pwd);
 	}else if ((strcmp(tmp, "~/") == 0) || (strcmp(tmp, "~") == 0)) {
 		char const *home = getenv("HOME");
 		if (home == NULL) {
@@ -72,57 +73,57 @@ int cd(int argc,char **argv) {
 		dir_argument = malloc(strlen(home)+1);
 		assert(dir_argument);
 		strcpy(dir_argument, home);
+		setPath(dir_argument, pwd);
 	}else if ((strcmp(tmp, "./") == 0) || (strcmp(tmp, ".") == 0)) {
-		dir_argument = malloc(strlen(pwd) + 1);
-		assert(dir_argument);
-		strcpy(dir_argument, pwd);
+		return 0;
 	}else if ((strcmp(tmp, "../") == 0) || (strcmp(tmp, "..")) == 0) {
 		//aller vers le pere
 	}else {
 		dir_argument = malloc(strlen(tmp) + 1);
 		assert(dir_argument);
 		strcpy(dir_argument, tmp);
-	}
+		int found = 0;
+		struct stat st;
+		struct dirent *d;
 
-	int found = 0;
-	struct stat st;
-	struct dirent *d;
-
-	while ((d = readdir(courant)) != NULL) {
-		if (strcmp(d->d_name, dir_argument) == 0) {
-			found = 1;
-			if (isTAR(dir_argument) == 0) { //tar
-				if (actuPath(dir_argument, pwd) < 0) return -1;
-				break;
-			}
-			if (stat(dir_argument, &st) < 0) {
-				perror("Erreur de stat!");
-				return -1;
-			}
-			if (S_ISDIR(st.st_mode) != 0) { // dossier
-				if (actuPath(dir_argument, pwd) < 0) return -1;
-				break;
-			}else {
-				char *tmp = " n'est pas un répertoire!\n";
-				char error3[strlen(dir_argument)+strlen(tmp)+1];
-				strcpy(error3, dir_argument);
-				strcat(error3, tmp);
-				if (write(STDERR_FILENO, error3, strlen(error3)) < strlen(error3)) {
-					perror("Erreur d'écriture dans le shell!");
+		while ((d = readdir(courant)) != NULL) {
+			if (strcmp(d->d_name, dir_argument) == 0) {
+				found = 1;
+				if (isTAR(dir_argument) == 0) { //tar
+					if (actuPath(dir_argument, pwd) < 0) return -1;
+					break;
 				}
-				return -1;
+				if (stat(dir_argument, &st) < 0) {
+					perror("Erreur de stat!");
+					return -1;
+				}
+				if (S_ISDIR(st.st_mode) != 0) { // dossier
+					if (actuPath(dir_argument, pwd) < 0) return -1;
+					break;
+				}else {
+					char *tmp = " n'est pas un répertoire!\n";
+					char error3[strlen(dir_argument)+strlen(tmp)+1];
+					strcpy(error3, dir_argument);
+					strcat(error3, tmp);
+					if (write(STDERR_FILENO, error3, strlen(error3)) < strlen(error3)) {
+						perror("Erreur d'écriture dans le shell!");
+					}
+					return -1;
+				}
 			}
+
 		}
 
+		if (!found) {
+			char *error4 = "fichier ou répertoire non existant !\n";
+			if (write(STDERR_FILENO, error4, strlen(error4)) < strlen(error4)) {
+				perror("Erreur d'écriture dans le shell!");
+			}
+			return -1;
+		}
 	}
 
-	if (!found) {
-		char *error4 = "fichier ou répertoire non existant !\n";
-		if (write(STDERR_FILENO, error4, strlen(error4)) < strlen(error4)) {
-			perror("Erreur d'écriture dans le shell!");
-		}
-		return -1;
-	}
+
 	free(dir_argument);
 	closedir(courant);
 	return 0;
@@ -133,11 +134,15 @@ int actuPath(char *new, char *pwd) {
 	strcpy(newpwd, pwd);
 	strcat(newpwd, "/");
 	strcat(newpwd, new);
-	if(setenv("OLDTWD", pwd, 1) < 0) {
+	return setPath(newpwd, pwd);
+}
+
+int setPath(char *new, char *old) {
+	if(setenv("OLDTWD", old, 1) < 0) {
 		perror("Changement de variable impossible");
 		return -1;
 	}
-	if(setenv("TWD", newpwd, 1) < 0) {
+	if(setenv("TWD", new, 1) < 0) {
 		perror("Changement de variable impossible");
 		return -1;
 	}
