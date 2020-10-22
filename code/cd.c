@@ -36,15 +36,6 @@ int cd(int argc,char **argv) {
 	char pwd[strlen(twd) + 1];
 	strcpy(pwd, twd);
 
-	DIR *courant = opendir(pwd);
-	if (courant == NULL) {
-		char *error1 = "erreur d'ouverture du repertoire\n";
-		if (write(STDERR_FILENO, error1, strlen(error1)) < strlen(error1)) {
-			perror("Erreur d'écriture dans le shell");
-		}
-		return -1;
-	}
-
 	char *dir_argument;
 	char tmp[strlen(argv[1]) + 1];
 	strcpy(tmp, argv[1]);
@@ -79,6 +70,15 @@ int cd(int argc,char **argv) {
 	}else if ((strcmp(tmp, "../") == 0) || (strcmp(tmp, "..")) == 0) {
 		//aller vers le pere
 	}else {
+		DIR *courant = opendir(pwd);
+		if (courant == NULL) {
+			char *error1 = "erreur d'ouverture du repertoire\n";
+			if (write(STDERR_FILENO, error1, strlen(error1)) < strlen(error1)) {
+				perror("Erreur d'écriture dans le shell");
+			}
+			return -1;
+		}
+
 		dir_argument = malloc(strlen(tmp) + 1);
 		assert(dir_argument);
 		strcpy(dir_argument, tmp);
@@ -121,11 +121,11 @@ int cd(int argc,char **argv) {
 			}
 			return -1;
 		}
+		closedir(courant);
 	}
 
 
 	free(dir_argument);
-	closedir(courant);
 	return 0;
 }
 
