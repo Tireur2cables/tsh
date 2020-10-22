@@ -14,7 +14,8 @@ Si l'utilisateur n'a rentré aucune de ces commandes alors sa commande sera éx�
 ### Implémentations des commandes spéciales
 
 Chaque commande nécéssitant d'être implémentée pour pouvoir gérer de façon spécifique les fichier `.tar` sont dans un fichier à part du main (`tsh.c`).  
-chacune de ces commandes est implémentée comme si elle était une fonction main (renvoit un entier et prend en arguments `argc`, nombre d'éléments dans `argv`, et `argv`, tableau de string finissant par un pointeur NULL).  
+Chacune de ces commandes est implémentée comme si elle était une fonction main (renvoit un entier et prend en arguments `argc`, nombre d'éléments dans `argv`, et `argv`, tableau de string finissant par un pointeur NULL).  
+Le fichier `tar.h` contient les structures nécéssaires à la gestion des fichier `.tar`.  
 
 ### Gestion du working directory
 
