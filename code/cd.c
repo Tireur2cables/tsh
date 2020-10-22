@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dirent.h>
+#include <assert.h>
 #include <linux/limits.h>
 #include "tar.h"
 #include "cd.h"
@@ -61,7 +62,7 @@ int cd(int argc,char **argv) {
 		strcpy(dir_argument, oldtwd);
 	}else if ((strcmp(tmp, "~/") == 0) || (strcmp(tmp, "~") == 0)) {
 		char const *home = getenv("HOME");
-		if (oldtwd == NULL) {
+		if (home == NULL) {
 			char *error = "La variables HOME n'est pas définie!\n";
 			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
 				perror("Erreur d'écriture dans le shell");
@@ -75,7 +76,7 @@ int cd(int argc,char **argv) {
 		dir_argument = malloc(strlen(pwd) + 1);
 		assert(dir_argument);
 		strcpy(dir_argument, pwd);
-	}else if ((strcmp(tmp, "../") == 0) || (strcmp(tmp, "..") == 0) {
+	}else if ((strcmp(tmp, "../") == 0) || (strcmp(tmp, "..")) == 0) {
 		//aller vers le pere
 	}else {
 		dir_argument = malloc(strlen(tmp) + 1);
