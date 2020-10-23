@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <dirent.h>
 #include <linux/limits.h>
 #include "tar.h"
@@ -15,9 +16,9 @@
 
 /*
 TODO LIST :
-- bug de realpath pour .. car en fonction de pwd ?
-- Prendre en compte les dossiers meme avec '/' à la fin
-- Prendre en compte les chemins
+- Ne pas setenv à chaque itération mais seulement à a fin
+- reconnaitre un chemin comprenant des .. (voir FIXME plus bas)
+- Prendre en compte des chemins une fois dans un tar
 */
 
 int cd(int argc,char **argv) {
@@ -35,10 +36,23 @@ int cd(int argc,char **argv) {
 	char pwd[strlen(twd) + 1];
 	strcpy(pwd, twd);
 
-	char tmp[strlen(argv[1]) + 1];
-	strcpy(tmp, argv[1]);
+	char chemin[strlen(argv[1]) + 1];
+	strcpy(chemin, argv[1]);
 
-	return selectNewPath(tmp, pwd);
+	return parcoursChemin(chemin, pwd);
+}
+
+int parcoursChemin(char *chemin, char *pwd) {
+	char *tmp = strtok(chemin, "/");
+	if (tmp != NULL && !isOnlySpaceString(tmp)) {
+		if (selectNewPath(tmp, pwd) < 0) return -1;
+	}
+	if (strlen(tmp)+1 >= strlen(chemin)) { //FIXME boucle une fois de trop ??????????
+		while ((tmp = strtok(NULL, "/")) != NULL && !isOnlySpaceString(tmp)) {
+			if (selectNewPath(tmp, pwd) < 0) return -1;
+		}
+	}
+	return 0;
 }
 
 int selectNewPath(char *tmp, char *pwd) {
@@ -54,7 +68,7 @@ int selectNewPath(char *tmp, char *pwd) {
 		char dir_argument[strlen(oldtwd) + 1];
 		strcpy(dir_argument, oldtwd);
 		setPath(dir_argument, pwd);
-	}else if ((strcmp(tmp, "~/") == 0) || (strcmp(tmp, "~") == 0)) {
+	}else if (strcmp(tmp, "~") == 0) {
 		char const *home = getenv("HOME");
 		if (home == NULL) {
 			char *error = "La variables HOME n'est pas définie!\n";
@@ -85,12 +99,13 @@ int selectNewPath(char *tmp, char *pwd) {
 		while ((d = readdir(courant)) != NULL) {
 			if (strcmp(d->d_name, dir_argument) == 0) {
 				found = 1;
-				if ((strcmp(dir_argument, "./") == 0) || (strcmp(dir_argument, ".") == 0)) {
-					//do nothing
-				}else if ((strcmp(dir_argument, "../") == 0) || (strcmp(dir_argument, "..")) == 0)
-					char *pere = realpath(dir_argument, NULL);
-					if (setPath(pere, pwd) < 0) return -1;
+				if (strcmp(dir_argument, ".") == 0) {
+					break;
+				}else if (strcmp(dir_argument, "..") == 0) {
+					char *pere = findpere(pwd);
+					setPath(pere, pwd);
 					free(pere);
+					break;
 				}else {
 					if (isTAR(dir_argument) == 0) { //tar
 						if (actuPath(dir_argument, pwd) < 0) return -1;
@@ -128,6 +143,24 @@ int selectNewPath(char *tmp, char *pwd) {
 	return 0;
 }
 
+char *findpere(char *pwd) {
+	char pwd_copy[strlen(pwd)+1];
+	strcpy(pwd_copy, pwd);
+
+	int len;
+	char *tmp = strtok(pwd_copy, "/");
+	if (tmp != NULL) {
+		len = strlen(tmp);
+	}
+	while ((tmp = strtok(NULL, "/")) != NULL) {
+		len = strlen(tmp);
+	}
+	char *pere = malloc(strlen(pwd) - len - 1 + 1);
+	strncpy(pere, pwd, strlen(pwd) - len - 1);
+	pere[strlen(pwd) - len - 1] = '\0';
+	return pere;
+}
+
 int actuPath(char *new, char *pwd) {
 	char newpwd[strlen(pwd) + 1 + strlen(new) + 1];
 	strcpy(newpwd, pwd);
@@ -152,6 +185,13 @@ int setPath(char *new, char *old) {
 int isTAR(char * dirTAR) {
 	char *ext = ".tar";
 	return strcmp(&dirTAR[strlen(dirTAR)-strlen(ext)], ext);
+}
+
+int isOnlySpaceString(char *mycat_buf) { //verifie si la phrase donnée est uniquement composée d'espaces (\n, ' ', etc...)
+	for(int i = 0; i < strlen(mycat_buf); i++) {
+		if (!isspace(mycat_buf[i])) return 0;
+	}
+	return 1;
 }
 
 int errorDetect(int argc) {
