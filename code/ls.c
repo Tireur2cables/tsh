@@ -15,7 +15,7 @@
 
 //FONCTION LS
 /*TODO :
-		 nombre de references
+		 nombre de references dans un tar
 		 traiter le cas d'un fichier dans un tar
 		 gerer la cas ou on donne repertoire/fichier
 */
@@ -275,9 +275,11 @@ int print_complete_normal_dir(char* file){
 		exit(EXIT_FAILURE);
 	}
 	struct dirent *entry;
+	struct stat statbuf;
 	while((entry = readdir(dirp)) != NULL){
 		if(entry->d_name[0] != '.'){
-			//fixme printf
+			stat(file, &statbuf);
+			printf("%ld", statbuf.st_ino);
 			printf(" x user user date %s\n",entry->d_name);
 		}
 	}
