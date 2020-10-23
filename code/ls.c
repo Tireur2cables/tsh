@@ -14,11 +14,10 @@
 #include "ls.h"
 
 //FONCTION LS
-/*TODO : REMPLACER TOUT LES PRINTF PAR DES WRITE
-		 Afficher les droits correctement - nombre de references - createur - date
+/*TODO :
+		 nombre de references
 		 traiter le cas d'un fichier dans un tar
 		 gerer la cas ou on donne repertoire/fichier
-		 getpwuid et getgrgid utilisable ?
 */
 
 int ls(int argc, char *argv[]){
@@ -121,22 +120,11 @@ int print_tar(char *file, char *options){
 }
 
 int print_rep(char *file, char *options){
-	DIR* dir;
 	if(strcmp(options, "\0") == 0){ //pas d'options
-		if((dir = opendir(file)) == NULL){
-			perror("erreur");
-			exit(EXIT_FAILURE); //fixme mettre la valeur d'erreur
-		}
-		print_normal_dir(dir);
-		closedir(dir);
+		print_normal_dir(file);
 		printf("\n");
 	}else{
-		if((dir = opendir(file)) == NULL){
-			perror("erreur");
-			exit(EXIT_FAILURE); //fixme mettre la valeur d'erreur
-		}
-		print_complete_normal_dir(dir);
-		closedir(dir);
+		print_complete_normal_dir(file);
 	}
 	return 0;
 }
@@ -257,22 +245,35 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 	}
 }
 
-int print_normal_dir(DIR* dirp){
+int print_normal_dir(char* file){
+	DIR * dirp;
+	if((dirp = opendir(file)) == NULL){
+		perror("erreur");
+		exit(EXIT_FAILURE);
+	}
 	struct dirent *entry;
 	while((entry = readdir(dirp)) != NULL){
-		int filename_len = strlen(entry->d_name) + 3; //Les 4 prochaines lignes sont très laides, il faudrait changer ça
-		char filename[filename_len];
-		strcpy(filename, entry->d_name);
-		strcat(filename, "  ");
-		if (write(STDOUT_FILENO, filename, filename_len) < filename_len) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
+		if(entry->d_name[0] != '.'){
+			int filename_len = strlen(entry->d_name) + 3; //Les 4 prochaines lignes sont très laides, il faudrait changer ça
+			char filename[filename_len];
+			strcpy(filename, entry->d_name);
+			strcat(filename, "  ");
+			if (write(STDOUT_FILENO, filename, filename_len) < filename_len) {
+				perror("Erreur d'écriture dans le shell!");
+				exit(EXIT_FAILURE);
+			}
 		}
 	}
+	closedir(dirp);
 	return 0;
 }
 
-int print_complete_normal_dir(DIR* dirp){
+int print_complete_normal_dir(char* file){
+	DIR *dirp;
+	if((dirp = opendir(file)) == NULL){
+		perror("erreur");
+		exit(EXIT_FAILURE);
+	}
 	struct dirent *entry;
 	while((entry = readdir(dirp)) != NULL){
 		if(entry->d_name[0] != '.'){
@@ -280,6 +281,7 @@ int print_complete_normal_dir(DIR* dirp){
 			printf(" x user user date %s\n",entry->d_name);
 		}
 	}
+	closedir(dirp);
 	return 0;
 }
 
