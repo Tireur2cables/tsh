@@ -6,7 +6,7 @@
 #include "pwd.h"
 
 
-int pwd_func(int argc, char *argv[]) {
+int pwd(int argc, char *argv[]) {
 	if (argc == 0) {
 		errno = EINVAL;
 		perror("Pas assez d'arguments!");

@@ -90,7 +90,7 @@ void selectCommand(int readen, char *mycat_buf) { //lance la bonne commande ou l
 	}else if (iscmd(mycat_buf, "ls")) { //cmd = ls
 		launchFunc(ls, mycat_buf, readen);
 	}else if (iscmd(mycat_buf, "pwd")) { //cmd = pwd
-		launchFunc(pwd_func, mycat_buf, readen);
+		launchFunc(pwd, mycat_buf, readen);
 	}else { //lancer la commande avec exec
 		launchFunc(exec, mycat_buf, readen);
 	}
