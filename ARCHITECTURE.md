@@ -16,7 +16,7 @@ Si l'utilisateur n'a rentré aucune de ces commandes alors sa commande sera éx�
 Chaque commande nécéssitant d'être implémentée pour pouvoir gérer de façon spécifique les fichier `.tar` sont dans un fichier à part du main (`tsh.c`).  
 Chacune de ces commandes est implémentée comme si elle était une fonction main (renvoit un entier et prend en arguments `argc`, nombre d'éléments dans `argv`, et `argv`, tableau de string finissant par un pointeur NULL).  
 Le fichier `tar.h` contient les structures nécéssaires à la gestion des fichier `.tar`.  
-# Implémentations de cd & ls :  
+#### Implémentations de cd & ls :  
 Ces fonctions différencient le travail dans un repertoire classique, du travail dans une archive tar. Ainsi on effectue un parcours récursif du chemin passé en   
 paramètre en vérifiant si on est dans une archive ou non. Ce parcours permet de séparer les différents cas que l'on peut rencontrer, c'est à dire :
  - Archive simple : cd archive.tar  
