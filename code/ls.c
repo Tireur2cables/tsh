@@ -141,25 +141,105 @@ int print_rep(char *file, char *options){
 	return 0;
 }
 
+int nbdigit(int n){
+	int count = 1;
+	while(n >= 9){
+		count++;
+		n/=10;
+	}
+	return count;
+}
+
+void convert_mode(mode_t mode, char* res){
+	//UTILISATEUR
+	if (mode & S_IRUSR)
+		*res++ = 'r';
+	else
+		*res++ = '-';
+	if (mode & S_IWUSR)
+		*res++ = 'w';
+	else
+		*res++ = '-';
+	if (mode & S_IXUSR)
+		*res++ = 'x';
+	else
+		*res++ = '-';
+	//GROUPE
+	if (mode & S_IRGRP)
+		*res++ = 'r';
+	else
+		*res++ = '-';
+	if (mode & S_IWGRP)
+		*res++ = 'w';
+	else
+		*res++ = '-';
+	if (mode & S_IXGRP)
+		*res++ = 'x';
+	else
+		*res++ = '-';
+
+	//OTHER
+	if (mode & S_IROTH)
+		*res++ = 'r';
+	else
+		*res++ = '-';
+	if (mode & S_IWOTH)
+		*res++ = 'w';
+	else
+		*res++ = '-';
+	if (mode & S_IXOTH)
+		*res++ = 'x';
+	else
+		*res++ = '-';
+	*res = '\0';
+}
+
 void show_complete_header_infos(struct posix_header *header, int *read_size){
-	int taille = 0;
-	int mode = 0;
-	int uid;
-	int gid;
+	int taille, mode, uid, gid;
+	char name[strlen(header->name)];
+	char mode_str[10];
+	char typeformat;
 	long int mtime;
+	sscanf(header->name, "%s", name);
 	sscanf(header->size, "%o", &taille);
+	char taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1):6]; //Les tailles ne sont plus alignés au dessus de 6 chiffres
+	sprintf(taille_str, "%d", taille);
+	for(int i = nbdigit(taille); i < 6; i++){ //On complète la string avec des espaces afin d'avoir un alignement
+		taille_str[i] = ' ';
+	}
+	taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1):6] = '\0';
+
 	sscanf(header->mode, "%o", &mode);
+	convert_mode(mode, mode_str);
 	sscanf(header->uid, "%o", &uid);
 	sscanf(header->gid, "%o", &gid);
 	sscanf(header->mtime, "%lo", &mtime);
 	char *pw_name = getpwuid(uid)->pw_name;
 	char *gr_name = getgrgid(gid)->gr_name;
 	char *date= ctime(&mtime);
+	typeformat = ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-');
 	date[strlen(date) - 1] = '\0'; // ctime renvoit une string se terminant par \n ...
+
 	*read_size = ((taille + 512-1)/512);
-	//fixme Afficher les droits correctement - nombre de references
-	//fixme printf
-	printf("%c%o x %s %s %d %s %s\n", ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-'), mode, pw_name ,gr_name, taille, date, header->name);
+	char format[2*sizeof(int) + 1 + strlen(name) + strlen(date) + strlen(pw_name) + strlen(gr_name)+ 1];
+	strncat(format, &typeformat, 1);
+	strcat(format, mode_str);
+	strcat(format, " ");
+	strcat(format, pw_name);
+	strcat(format, " ");
+	strcat(format, gr_name);
+	strcat(format, " ");
+	strcat(format, taille_str);
+	strcat(format, " ");
+	strcat(format, date);
+	strcat(format, " ");
+	strcat(format, name);
+	strcat(format, "\n");
+	//fixme nombre de references
+	if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
+		perror("Erreur d'écriture dans le shell!");
+		exit(EXIT_FAILURE);
+	}
 }
 void show_simple_header_infos(struct posix_header *header, int *read_size){
 	int taille = 0;

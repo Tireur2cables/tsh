@@ -19,5 +19,6 @@ int check_options(char *);
 int is_options(char *);
 int is_curr_or_parent_rep(char *);
 int is_ext(char *, char *);
+int nbdigit(int);
 
 #endif
