@@ -8,7 +8,7 @@ Le script `tsh.sh` permet de lancer l'executable `tsh` du dossier `code/`.
 
 Le programme principal se situe dans le ficier `tsh.c`.  
 Dans ce programme on trouvera une boucle lisant les commandes entrées par l'utilisateur. La librairie `readline` a été utilisée afin de pouvoir gérer toutes les tailles de commandes.  
-La commande entrée par l'utilisateur est ensuite comparée d'abord aux commandes dites `built-in` (qui ne seront pas lancées dans un processus fils, par exemple `cd` ou `exit`). Si elle ne correspond pas à l'une de ces commandes elle est ensuite comparée aux autres commandes qui ont été réimplémentées (ces commandes seront lancées dans un processus fils le cas échéant).  
+La commande entrée par l'utilisateur est ensuite comparée d'abord aux commandes dites `built-in` ([cf. Commandes built-in](#-Commande-built-in)) (qui ne seront pas lancées dans un processus fils, par exemple `cd` ou `exit`). Si elle ne correspond pas à l'une de ces commandes elle est ensuite comparée aux autres commandes qui ont été réimplémentées (ces commandes seront lancées dans un processus fils le cas échéant).  
 Si l'utilisateur n'a rentré aucune de ces commandes alors sa commande sera éxécutée dans un processus fils avec la fonction `exec`.  
 
 ### Implémentations des commandes spéciales
