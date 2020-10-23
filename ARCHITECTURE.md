@@ -21,7 +21,7 @@ Ces fonctions différencient le travail dans un repertoire classique, du travail
 paramètre en vérifiant si on est dans une archive ou non. Ce parcours permet de séparer les différents cas que l'on peut rencontrer, c'est à dire :
  - Archive simple : cd archive.tar  
  - Repertoire simple : cd dossier  
-  Dossier dans une archive : cd archive.tar/dossier  
+ - Dossier dans une archive : cd archive.tar/dossier  
 
 en problème plus simple, trouver le dossier suivant dans le chemin, vérifier qu'il est accessible, puis l'ouvrir / l'afficher.
 
