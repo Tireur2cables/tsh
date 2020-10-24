@@ -31,8 +31,67 @@ int cd(int argc,char **argv) {
 	char newtwd[strlen(twd) + 1];
 	strcpy(newtwd, twd);
 
+	if (argc == 1) { //cd sans arguments
+		char const *home = getenv("HOME");
+		if (home == NULL) {
+			char *error = "La variables HOME n'est pas définie!\n";
+			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
+				perror("Erreur d'écriture dans le shell");
+			}
+			return -1;
+		}
+		char copy[strlen(home) + 1];
+		strcpy(copy, home);
+		return setPath(copy, twd);
+	}
+
 	char chemin[strlen(argv[1]) + 1];
 	strcpy(chemin, argv[1]);
+
+/*
+Détéction des chemins spéciaux
+*/
+	if (strncmp(chemin, "~/", 2) == 0) {
+		char const *home = getenv("HOME");
+		if (home == NULL) {
+			char *error = "La variables HOME n'est pas définie!\n";
+			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
+				perror("Erreur d'écriture dans le shell");
+			}
+			return -1;
+		}
+		char copy[strlen(home) + 1];
+		strcpy(copy, home);
+		char copycopy[strlen(copy) + 1];
+		strcpy(copycopy, copy);
+		return parcoursChemin(&chemin[2], copy, copycopy);
+	}
+	if (strcmp(chemin, "~") == 0) {
+		char const *home = getenv("HOME");
+		if (home == NULL) {
+			char *error = "La variables HOME n'est pas définie!\n";
+			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
+				perror("Erreur d'écriture dans le shell");
+			}
+			return -1;
+		}
+		char copy[strlen(home) + 1];
+		strcpy(copy, home);
+		return setPath(copy, twd);
+	}
+	if (strcmp(chemin, "-") == 0) {
+		char const *oldtwd = getenv("OLDTWD");
+		if (oldtwd == NULL) {
+			char *error = "La variables OLDTWD n'est pas définie!\n";
+			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
+				perror("Erreur d'écriture dans le shell");
+			}
+			return -1;
+		}
+		char copy[strlen(oldtwd) + 1];
+		strcpy(copy, oldtwd);
+		return setPath(copy, twd);
+	}
 
 	if (strstr(twd, ".tar") != NULL) return appelSurTar(twd, newtwd, chemin);
 	return parcoursChemin(chemin, twd, newtwd);
@@ -46,7 +105,25 @@ int parcoursChemin(char *chemin, char *twd, char *res) {
 
 	char *doss = strtok(chemin_cpy, "/");
 	int lendoss = strlen(doss);
-// FIXME : check les cas spéciaux . .. ~ -
+
+/*
+Detection des cas spéciaux
+*/
+	if (strcmp(doss, ".") == 0) {
+		if (lendoss >= lenchemin) return parcoursChemin(NULL, twd, res);
+		return parcoursChemin(&chemin[lendoss+1], twd, res);
+	}
+	if (strcmp(doss, "..") == 0) {
+		int lenlast = getLenLast(res);
+		if (lenlast < 0) return -1;
+		char newres[strlen(res) - lenlast - 1 + 1];
+		strncpy(newres, res, strlen(res) - lenlast - 1);
+		newres[strlen(res) - lenlast - 1] = '\0';
+		if (lendoss+1 >= lenchemin) return parcoursChemin(NULL, twd, newres);
+		return parcoursChemin(&chemin[lendoss+1], twd, newres);
+	}
+
+
 	if (isAccessibleFrom(doss, res)) {
 		int lenres = strlen(res);
 		char newtwd[lenres + 1 + lendoss + 1];
@@ -55,7 +132,7 @@ int parcoursChemin(char *chemin, char *twd, char *res) {
 		newtwd[lenres+1] = '\0';
 		strcat(newtwd, doss);
 
-		if (lendoss >= lenchemin) return parcoursChemin(NULL, twd, newtwd);
+		if (lendoss+1 >= lenchemin) return parcoursChemin(NULL, twd, newtwd);
 
 		if (isTar(doss)) return parcoursTar(&chemin[lendoss+1], twd, newtwd);
 		return parcoursChemin(&chemin[lendoss+1], twd, newtwd);
@@ -63,6 +140,18 @@ int parcoursChemin(char *chemin, char *twd, char *res) {
 }
 
 int parcoursTar(char *chemin, char *twd, char *tar) {
+	/*
+	Detection des cas spéciaux
+	*/
+	/*
+	if (strcmp(doss, ".") == 0) {
+		if (lendoss >= lenchemin) return parcoursChemin(NULL, twd, res);
+		return parcoursChemin(&chemin[lendoss+1], twd, res);
+	}
+	if (strcmp(doss, "..") == 0) {
+
+	}
+	*/
 	int fd = open(tar, O_RDONLY);
 	if (fd == -1) {
 		perror("Erreur d'ouverture du tar!");
@@ -115,7 +204,12 @@ int isAccessibleFrom(char *doss, char *dir) {
 		if (strcmp(d->d_name, doss) == 0) {
 			found = 1;
 			if (!isTar(doss)) { //not tar so should be directory
-				if (stat(doss, &st) < 0) {
+				char absolutedoss[strlen(dir) + 1 + strlen(doss) + 1];
+				strcpy(absolutedoss, dir);
+				absolutedoss[strlen(dir)] = '/';
+				absolutedoss[strlen(dir)+1] = '\0';
+				strcat(absolutedoss, doss);
+				if (stat(absolutedoss, &st) < 0) {
 					perror("Erreur de stat!");
 					return -1;
 				}
@@ -154,7 +248,7 @@ int setPath(char *new, char *old) {
 }
 
 int errorDetect(int argc) {
-	if(argc <= 1) {
+	if(argc < 1) {
 		errno = EINVAL;
 		perror("Aucun répertoire indiqué");
 		return -1;
@@ -214,34 +308,27 @@ int appelSurTar(char *twd, char *newtwd, char *chemin) {
 	return parcoursTar(newchemin, twd, tarchemin);
 }
 
+int getLenLast(char const *chemin) {
+	char copy[strlen(chemin) + 1];
+	strcpy(copy, chemin);
+
+	char *arg = strtok(copy, "/");
+	if (arg == NULL) {
+		errno = ENOENT;
+		perror("Erreur pour obtenir la taille du pere!");
+		return -1;
+	}
+	int len = strlen(arg);
+	while ((arg = strtok(NULL, "/")) != NULL) {
+		len = strlen(arg);
+	}
+	return len;
+}
+
 /*
 
 int selectNewPath(char *tmp, char *pwd) {
-	if (strcmp(tmp, "-") == 0) {
-		char const *oldtwd = getenv("OLDTWD");
-		if (oldtwd == NULL) {
-			char *error = "La variables OLDTWD n'est pas définie!\n";
-			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
-				perror("Erreur d'écriture dans le shell");
-			}
-			return -1;
-		}
-		char dir_argument[strlen(oldtwd) + 1];
-		strcpy(dir_argument, oldtwd);
-		setPath(dir_argument, pwd);
-	}else if (strcmp(tmp, "~") == 0) {
-		char const *home = getenv("HOME");
-		if (home == NULL) {
-			char *error = "La variables HOME n'est pas définie!\n";
-			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
-				perror("Erreur d'écriture dans le shell");
-			}
-			return -1;
-		}
-		char dir_argument[strlen(home) + 1];
-		strcpy(dir_argument, home);
-		setPath(dir_argument, pwd);
-	}else {
+	else {
 
 
 		char dir_argument[strlen(tmp) + 1];

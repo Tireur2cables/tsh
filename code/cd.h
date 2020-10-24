@@ -13,6 +13,7 @@ int isTar(char *);
 int isSameDir(char *, char *);
 int findTarIn(char *, int);
 int appelSurTar(char *, char *, char *);
+int getLenLast(char const *);
 
 char *findpere(char *);
 int isOnlySpaceString(char *);
