@@ -4,12 +4,15 @@
 
 extern int cd(int, char *[]);
 
-int isTAR(char *);
-int parcoursChemin(char *, char *);
-int selectNewPath(char *, char *);
-int actuPath(char *, char *);
+int parcoursChemin(char *, char *, char *);
+int parcoursTar(char *, char *, char *);
+int isAccessibleFrom(char *, char *);
 int setPath(char *, char *);
 int errorDetect(int);
+int isTar(char *);
+int isSameDir(char *, char *);
+int findTarIn(char *, int);
+
 char *findpere(char *);
 int isOnlySpaceString(char *);
 
