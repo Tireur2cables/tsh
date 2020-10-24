@@ -22,6 +22,7 @@ int main(int argc, char const *argv[]) {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 	char in_str[64];
 	char out_str[64];
 =======
@@ -44,12 +45,19 @@ int main(int argc, char const *argv[]) {
 	char in_str[64];
 	char out_str[64];
 >>>>>>> ca avance mais je comprend toujours pas tout
+=======
+	char in_str[64];
+	char out_str[64];
+>>>>>>> dd96c94d11c40d5618ba750c0c5c04d5dff3a66b
 	//write(output, "test_rep  ..  test_fic  test_exe2  .  test_exe1  test_lien  test_fifo  \n", strlen("test_rep  ..  test_fic  test_exe2  .  test_exe1  test_lien  test_fifo  \n"));
 	//printf("o : %d, i : %d ", output, input);
 	int save = dup(1);
 	//printf("%d", save_out);
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dd96c94d11c40d5618ba750c0c5c04d5dff3a66b
 	dup2(output, STDOUT_FILENO);
 	char *arg[2];
 	arg[0] = "ls";
@@ -60,6 +68,7 @@ int main(int argc, char const *argv[]) {
 	close(save);
 
 	int output2 = open("../test/test_out",  O_RDONLY);
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -101,11 +110,16 @@ int main(int argc, char const *argv[]) {
 	printf(in_str);
 >>>>>>> avancement du test de fonctionnement de ls
 =======
+=======
+>>>>>>> dd96c94d11c40d5618ba750c0c5c04d5dff3a66b
 	read(output2, out_str, 64);
 	read(input, in_str, 64);
 	printf(out_str);
 	printf("IN : %s\n", in_str);
+<<<<<<< HEAD
 >>>>>>> ca avance mais je comprend toujours pas tout
+=======
+>>>>>>> dd96c94d11c40d5618ba750c0c5c04d5dff3a66b
 	if(strcmp(out_str, in_str) == 0){
 		printf("Les fichiers sont les mêmes");
 	}else{
