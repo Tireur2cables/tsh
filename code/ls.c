@@ -120,6 +120,17 @@ int print_tar(char *file, char *options){
 }
 
 int print_rep(char *file, char *options){
+	DIR *dirp;
+	if((dirp = opendir(file)) == NULL){
+		char format[strlen(file) + 2];
+		strcpy(format, file);
+		strcat(format, "\n");
+		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
+			perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
+		return 0;
+	}
 	if(strcmp(options, "\0") == 0){ //pas d'options
 		print_normal_dir(file);
 	}else{
@@ -310,14 +321,16 @@ int print_complete_normal_dir(char* file){
 			char *gr_name = getgrgid(gid)->gr_name;
 			char mode_str[10]; //taille prédéfinie
 			convert_mode(mode, mode_str);
-
+			long int time = statbuf.st_mtime;
+			char *date= ctime(&time);
+			date[strlen(date) - 1] = '\0';
 			char taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1):6]; //Les tailles ne sont plus alignés au dessus de 6 chiffres
 			sprintf(taille_str, "%d", taille);
 			for(int i = nbdigit(taille); i < 6; i++){ //On complète la string avec des espaces afin d'avoir un alignement
 				taille_str[i] = ' ';
 			}
 			taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1)-1:5] = '\0';
-			char *date = "date";
+			//char *date = "date";
 			typeformat[0] = ((S_ISDIR(mode))?'d':'-');
 			typeformat[1] = '\0';
 			char format[2*sizeof(int) + 1 + strlen(name) + strlen(date) + strlen(nlink_str) + strlen(pw_name) + strlen(gr_name)+ 1];
