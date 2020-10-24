@@ -275,12 +275,54 @@ int print_complete_normal_dir(char* file){
 		exit(EXIT_FAILURE);
 	}
 	struct dirent *entry;
-	struct stat statbuf;
 	while((entry = readdir(dirp)) != NULL){
 		if(entry->d_name[0] != '.'){
+			struct stat statbuf;
+			char name[strlen(entry->d_name)];
+			sscanf(entry->d_name, "%s", name);
 			stat(file, &statbuf);
-			printf("%ld", statbuf.st_ino);
-			printf(" x user user date %s\n",entry->d_name);
+			char typeformat;
+			int uid, gid, mode, taille;
+			uid = statbuf.st_uid;
+			gid = statbuf.st_gid;
+			mode = statbuf.st_mode;
+			taille = statbuf.st_size;
+			printf("%ld", statbuf.st_size);
+			char *pw_name = getpwuid(uid)->pw_name;
+			char *gr_name = getgrgid(gid)->gr_name;
+			char mode_str[10]; //taille prédéfinie
+			convert_mode(mode, mode_str);
+
+			char taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1):6]; //Les tailles ne sont plus alignés au dessus de 6 chiffres
+			sprintf(taille_str, "%d", taille);
+			for(int i = nbdigit(taille); i < 6; i++){ //On complète la string avec des espaces afin d'avoir un alignement
+				taille_str[i] = ' ';
+			}
+			taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1):6] = '\0';
+			char *date = "date";
+			typeformat = ((S_ISDIR(mode))?'d':'-');
+			//printf("- %s -", date);
+			//printf("%s\n", mode_str);
+			char format[2*sizeof(int) + 1 + strlen(name) + strlen(date) + strlen(pw_name) + strlen(gr_name)+ 1];
+			strncat(format, &typeformat, 1);
+			strcat(format, mode_str);
+			strcat(format, " ");
+			strcat(format, pw_name);
+			strcat(format, " ");
+			strcat(format, gr_name);
+			strcat(format, " ");
+			strcat(format, taille_str);
+			strcat(format, " ");
+			strcat(format, date);
+			strcat(format, " ");
+			strcat(format, name);
+			strcat(format, "\n");
+			//printf("%c\n", format[1]);
+			//printf(format);
+			if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
+				perror("Erreur d'écriture dans le shell!");
+				exit(EXIT_FAILURE);
+			}
 		}
 	}
 	closedir(dirp);
