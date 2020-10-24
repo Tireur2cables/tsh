@@ -261,7 +261,6 @@ int print_normal_dir(char* file){
 	closedir(dirp);
 	char format[taille_totale];
 	format[0] = '\0';
-	format[taille_totale-1] = '\0';
 	if((dirp = opendir(file)) == NULL){
 		perror("erreur");
 		exit(EXIT_FAILURE);

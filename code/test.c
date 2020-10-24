@@ -18,46 +18,12 @@ int main(int argc, char const *argv[]) {
 	generate_files();
 	int output = open("../test/test_out",  O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU);
 	int input = open("../test/test_in",  O_RDONLY);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 	char in_str[64];
 	char out_str[64];
-=======
-	char in_str[71];
-<<<<<<< HEAD
-	char out_str[4];
->>>>>>> début de la redaction des testsé
-=======
-	char out_str[71];
->>>>>>> avancement du test de fonctionnement de ls
-=======
-	char in_str[61];
-	char out_str[61];
->>>>>>> on avance sur les tests
-=======
-	char in_str[65];
-	char out_str[65];
->>>>>>> jarrive pas a comprendre ce qui ne fonctionne pas
-=======
-	char in_str[64];
-	char out_str[64];
->>>>>>> ca avance mais je comprend toujours pas tout
-=======
-	char in_str[64];
-	char out_str[64];
->>>>>>> dd96c94d11c40d5618ba750c0c5c04d5dff3a66b
 	//write(output, "test_rep  ..  test_fic  test_exe2  .  test_exe1  test_lien  test_fifo  \n", strlen("test_rep  ..  test_fic  test_exe2  .  test_exe1  test_lien  test_fifo  \n"));
 	//printf("o : %d, i : %d ", output, input);
 	int save = dup(1);
 	//printf("%d", save_out);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> dd96c94d11c40d5618ba750c0c5c04d5dff3a66b
 	dup2(output, STDOUT_FILENO);
 	char *arg[2];
 	arg[0] = "ls";
@@ -68,58 +34,10 @@ int main(int argc, char const *argv[]) {
 	close(save);
 
 	int output2 = open("../test/test_out",  O_RDONLY);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-	read(output2, out_str, 64);
-	read(input, in_str, 64);
-	printf(out_str);
-	printf("IN : %s\n", in_str);
-=======
-	printf("%d", dup2(output, STDOUT_FILENO));
-	printf("aled");
-	/*
-=======
-	dup2(output, STDOUT_FILENO);
->>>>>>> avancement du test de fonctionnement de ls
-	char *arg[2];
-	arg[0] = "ls";
-	arg[1] = "tests";
-	ls(2,arg);
-	close(output);
-	dup2(save, STDOUT_FILENO);
-	close(save);
-
-	int output2 = open("../test/test_out",  O_RDONLY);
-	read(output2, out_str, 70);
-	read(input, in_str, 70);
-=======
-	read(output2, out_str, 61);
-	read(input, in_str, 61);
->>>>>>> on avance sur les tests
-=======
-	read(output2, out_str, 65);
-	read(input, in_str, 65);
->>>>>>> jarrive pas a comprendre ce qui ne fonctionne pas
-	printf(out_str);
-<<<<<<< HEAD
-	//printf(in_str);
->>>>>>> début de la redaction des testsé
-=======
-	printf(in_str);
->>>>>>> avancement du test de fonctionnement de ls
-=======
-=======
->>>>>>> dd96c94d11c40d5618ba750c0c5c04d5dff3a66b
-	read(output2, out_str, 64);
-	read(input, in_str, 64);
-	printf(out_str);
-	printf("IN : %s\n", in_str);
-<<<<<<< HEAD
->>>>>>> ca avance mais je comprend toujours pas tout
-=======
->>>>>>> dd96c94d11c40d5618ba750c0c5c04d5dff3a66b
+	read(output2, out_str, 63);
+	read(input, in_str, 63);
+	//printf(out_str);
+	//printf("%s", in_str);
 	if(strcmp(out_str, in_str) == 0){
 		printf("Les fichiers sont les mêmes");
 	}else{
