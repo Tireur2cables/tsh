@@ -254,7 +254,7 @@ int print_normal_dir(char* file){
 	struct dirent *entry;
 	while((entry = readdir(dirp)) != NULL){
 		if(entry->d_name[0] != '.'){
-			int filename_len = strlen(entry->d_name) + 3; //Les 4 prochaines lignes sont très laides, il faudrait changer ça
+			int filename_len = strlen(entry->d_name) + 3;
 			char filename[filename_len];
 			strcpy(filename, entry->d_name);
 			strcat(filename, "  ");
