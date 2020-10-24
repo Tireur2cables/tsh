@@ -23,12 +23,17 @@ int main(int argc, char const *argv[]) {
 	char out_str[64];
 =======
 	char in_str[71];
+<<<<<<< HEAD
 	char out_str[4];
 >>>>>>> début de la redaction des testsé
+=======
+	char out_str[71];
+>>>>>>> avancement du test de fonctionnement de ls
 	//write(output, "test_rep  ..  test_fic  test_exe2  .  test_exe1  test_lien  test_fifo  \n", strlen("test_rep  ..  test_fic  test_exe2  .  test_exe1  test_lien  test_fifo  \n"));
 	//printf("o : %d, i : %d ", output, input);
 	int save = dup(1);
 	//printf("%d", save_out);
+<<<<<<< HEAD
 <<<<<<< HEAD
 	dup2(output, STDOUT_FILENO);
 	char *arg[2];
@@ -48,20 +53,27 @@ int main(int argc, char const *argv[]) {
 	printf("%d", dup2(output, STDOUT_FILENO));
 	printf("aled");
 	/*
+=======
+	dup2(output, STDOUT_FILENO);
+>>>>>>> avancement du test de fonctionnement de ls
 	char *arg[2];
 	arg[0] = "ls";
 	arg[1] = "tests";
-	ls(2,arg);*/
+	ls(2,arg);
 	close(output);
-	printf("%d", dup2(STDOUT_FILENO, save));
-	//close(save_out);
+	dup2(save, STDOUT_FILENO);
+	close(save);
 
 	int output2 = open("../test/test_out",  O_RDONLY);
-	read(output2, out_str, 4);
-	//read(input, in_str, 70);
+	read(output2, out_str, 70);
+	read(input, in_str, 70);
 	printf(out_str);
+<<<<<<< HEAD
 	//printf(in_str);
 >>>>>>> début de la redaction des testsé
+=======
+	printf(in_str);
+>>>>>>> avancement du test de fonctionnement de ls
 	if(strcmp(out_str, in_str) == 0){
 		printf("Les fichiers sont les mêmes");
 	}else{
