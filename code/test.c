@@ -20,6 +20,7 @@ int main(int argc, char const *argv[]) {
 	int input = open("../test/test_in",  O_RDONLY);
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 	char in_str[64];
 	char out_str[64];
 =======
@@ -34,6 +35,10 @@ int main(int argc, char const *argv[]) {
 	char in_str[61];
 	char out_str[61];
 >>>>>>> on avance sur les tests
+=======
+	char in_str[65];
+	char out_str[65];
+>>>>>>> jarrive pas a comprendre ce qui ne fonctionne pas
 	//write(output, "test_rep  ..  test_fic  test_exe2  .  test_exe1  test_lien  test_fifo  \n", strlen("test_rep  ..  test_fic  test_exe2  .  test_exe1  test_lien  test_fifo  \n"));
 	//printf("o : %d, i : %d ", output, input);
 	int save = dup(1);
@@ -50,6 +55,7 @@ int main(int argc, char const *argv[]) {
 	close(save);
 
 	int output2 = open("../test/test_out",  O_RDONLY);
+<<<<<<< HEAD
 <<<<<<< HEAD
 	read(output2, out_str, 64);
 	read(input, in_str, 64);
@@ -77,6 +83,10 @@ int main(int argc, char const *argv[]) {
 	read(output2, out_str, 61);
 	read(input, in_str, 61);
 >>>>>>> on avance sur les tests
+=======
+	read(output2, out_str, 65);
+	read(input, in_str, 65);
+>>>>>>> jarrive pas a comprendre ce qui ne fonctionne pas
 	printf(out_str);
 <<<<<<< HEAD
 	//printf(in_str);
