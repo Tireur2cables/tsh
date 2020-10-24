@@ -12,6 +12,7 @@ int errorDetect(int);
 int isTar(char *);
 int isSameDir(char *, char *);
 int findTarIn(char *, int);
+int appelSurTar(char *, char *, char *);
 
 char *findpere(char *);
 int isOnlySpaceString(char *);

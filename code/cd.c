@@ -34,22 +34,7 @@ int cd(int argc,char **argv) {
 	char chemin[strlen(argv[1]) + 1];
 	strcpy(chemin, argv[1]);
 
-	if (strstr(twd, ".tar") != NULL) {
-		int indice = findTarIn(twd, 1);
-		char *tar = strtok(&newtwd[indice], "/");
-		int len = strlen(tar);
-		char newchemin[strlen(&twd[indice+len]) + 1 + strlen(chemin) + 1];
-		strcpy(newchemin, &twd[indice+len]);
-		newchemin[strlen(&twd[indice+len])] = '/';
-		newchemin[strlen(&twd[indice+len])+1] = '\0';
-		strcat(newchemin, chemin);
-
-		char t[strlen(twd) -(len+strlen(newchemin)) + 1];
-		//strncpy(tar, twd, strlen(twd) - strlen(&twd[indice+len]) + 1); //FIXME:bug
-		printf("%s %s\n", &newchemin[1], tar);
-		return 0;
-		//return parcoursTar(&newchemin[1], twd, tar);
-	}
+	if (strstr(twd, ".tar") != NULL) return appelSurTar(twd, newtwd, chemin);
 	return parcoursChemin(chemin, twd, newtwd);
 }
 
@@ -205,6 +190,28 @@ int findTarIn(char *chemin, int res) {
 	if (isTar(doss)) return res;
 	int lendoss = strlen(doss);
 	return findTarIn(&chemin[lendoss], res+lendoss);
+}
+
+int appelSurTar(char *twd, char *newtwd, char *chemin) {
+	int indice = findTarIn(twd, 1);
+	char *tar = strtok(&newtwd[indice], "/");
+	int lentar = strlen(tar);
+	int len = strlen(&twd[indice+lentar]);
+	if(len != 0) len = strlen(&twd[indice+lentar+1]) + 1;
+	char newchemin[len + strlen(chemin) + 1];
+	if (len != 0) {
+		strcpy(newchemin, &twd[indice+lentar+1]);
+		newchemin[len-1] = '/';
+		newchemin[len] = '\0';
+		strcat(newchemin, chemin);
+	}else {
+		strcpy(newchemin, chemin);
+	}
+
+	char tarchemin[strlen(twd) - len + 1];
+	strncpy(tarchemin, twd, strlen(twd) - len);
+	tarchemin[strlen(twd) - len] = '\0';
+	return parcoursTar(newchemin, twd, tarchemin);
 }
 
 /*
