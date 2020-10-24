@@ -122,7 +122,6 @@ int print_tar(char *file, char *options){
 int print_rep(char *file, char *options){
 	if(strcmp(options, "\0") == 0){ //pas d'options
 		print_normal_dir(file);
-		printf("\n");
 	}else{
 		print_complete_normal_dir(file);
 	}
@@ -251,7 +250,7 @@ int print_normal_dir(char* file){
 		perror("erreur");
 		exit(EXIT_FAILURE);
 	}
-	int taille_totale = 1;
+	int taille_totale = 2;
 	struct dirent *entry;
 	while((entry = readdir(dirp)) != NULL){
 		if(entry->d_name[0] != '.'){
@@ -270,6 +269,7 @@ int print_normal_dir(char* file){
 			strcat(format, "  ");
 		}
 	}
+	strcat(format, "\n");
 	if (write(STDOUT_FILENO, format, taille_totale) < taille_totale) {
 		perror("Erreur d'écriture dans le shell!");
 		exit(EXIT_FAILURE);
