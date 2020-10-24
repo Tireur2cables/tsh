@@ -130,7 +130,7 @@ int print_rep(char *file, char *options){
 
 int nbdigit(int n){
 	int count = 1;
-	while(n >= 9){
+	while(n > 9){
 		count++;
 		n/=10;
 	}
@@ -185,7 +185,7 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	int taille, mode, uid, gid;
 	char name[strlen(header->name)];
 	char mode_str[10];
-	char typeformat;
+	char typeformat[2];
 	long int mtime;
 	sscanf(header->name, "%s", name);
 	sscanf(header->size, "%o", &taille);
@@ -194,7 +194,7 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	for(int i = nbdigit(taille); i < 6; i++){ //On complète la string avec des espaces afin d'avoir un alignement
 		taille_str[i] = ' ';
 	}
-	taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1):6] = '\0';
+	taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1)-1:5] = '\0';
 
 	sscanf(header->mode, "%o", &mode);
 	convert_mode(mode, mode_str);
@@ -204,12 +204,13 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	char *pw_name = getpwuid(uid)->pw_name;
 	char *gr_name = getgrgid(gid)->gr_name;
 	char *date= ctime(&mtime);
-	typeformat = ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-');
+	typeformat[0] = ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-');
+	typeformat[1] = '\0';
 	date[strlen(date) - 1] = '\0'; // ctime renvoit une string se terminant par \n ...
 
 	*read_size = ((taille + 512-1)/512);
 	char format[2*sizeof(int) + 1 + strlen(name) + strlen(date) + strlen(pw_name) + strlen(gr_name)+ 1];
-	strncat(format, &typeformat, 1);
+	strcpy(format, typeformat);
 	strcat(format, mode_str);
 	strcat(format, " ");
 	strcat(format, pw_name);
@@ -259,6 +260,7 @@ int print_normal_dir(char* file){
 	}
 	closedir(dirp);
 	char format[taille_totale];
+	format[0] = '\0';
 	if((dirp = opendir(file)) == NULL){
 		perror("erreur");
 		exit(EXIT_FAILURE);
@@ -285,19 +287,25 @@ int print_complete_normal_dir(char* file){
 		exit(EXIT_FAILURE);
 	}
 	struct dirent *entry;
+	struct stat statbuf;
 	while((entry = readdir(dirp)) != NULL){
 		if(entry->d_name[0] != '.'){
-			struct stat statbuf;
 			char name[strlen(entry->d_name)];
 			sscanf(entry->d_name, "%s", name);
-			stat(file, &statbuf);
-			char typeformat;
-			int uid, gid, mode, taille;
+			char savefile[strlen(file) + strlen(name)+ 2];
+			strcpy(savefile, file);
+			strcat(savefile, "/");
+			strcat(savefile, name);
+			stat(savefile, &statbuf);
+			char typeformat[2];
+			int uid, gid, mode, taille, nlink;
 			uid = statbuf.st_uid;
 			gid = statbuf.st_gid;
 			mode = statbuf.st_mode;
 			taille = statbuf.st_size;
-			printf("%ld", statbuf.st_size);
+			nlink = statbuf.st_nlink;
+			char nlink_str[nbdigit(nlink)];
+			sprintf(nlink_str, "%d", nlink);
 			char *pw_name = getpwuid(uid)->pw_name;
 			char *gr_name = getgrgid(gid)->gr_name;
 			char mode_str[10]; //taille prédéfinie
@@ -308,14 +316,15 @@ int print_complete_normal_dir(char* file){
 			for(int i = nbdigit(taille); i < 6; i++){ //On complète la string avec des espaces afin d'avoir un alignement
 				taille_str[i] = ' ';
 			}
-			taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1):6] = '\0';
+			taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1)-1:5] = '\0';
 			char *date = "date";
-			typeformat = ((S_ISDIR(mode))?'d':'-');
-			//printf("- %s -", date);
-			//printf("%s\n", mode_str);
-			char format[2*sizeof(int) + 1 + strlen(name) + strlen(date) + strlen(pw_name) + strlen(gr_name)+ 1];
-			strncat(format, &typeformat, 1);
+			typeformat[0] = ((S_ISDIR(mode))?'d':'-');
+			typeformat[1] = '\0';
+			char format[2*sizeof(int) + 1 + strlen(name) + strlen(date) + strlen(nlink_str) + strlen(pw_name) + strlen(gr_name)+ 1];
+			strcpy(format, typeformat);
 			strcat(format, mode_str);
+			strcat(format, " ");
+			strcat(format, nlink_str);
 			strcat(format, " ");
 			strcat(format, pw_name);
 			strcat(format, " ");
@@ -327,8 +336,6 @@ int print_complete_normal_dir(char* file){
 			strcat(format, " ");
 			strcat(format, name);
 			strcat(format, "\n");
-			//printf("%c\n", format[1]);
-			//printf(format);
 			if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
 				perror("Erreur d'écriture dans le shell!");
 				exit(EXIT_FAILURE);
