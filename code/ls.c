@@ -17,7 +17,6 @@
 /*TODO :
 		 nombre de references dans un tar
 		 traiter le cas d'un fichier dans un tar
-		 gerer la cas ou on donne repertoire/fichier
 */
 
 int ls(int argc, char *argv[]){
@@ -246,7 +245,7 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 	sscanf(header->size, "%o", &taille);
 	sscanf(header->mode, "%o", &mode);
 	*read_size = ((taille + 512-1)/512);
-	int filename_len = strlen(header->name) + 3; //Les 4 prochaines lignes sont très laides, il faudrait changer ça
+	int filename_len = strlen(header->name) + 3;
 	char filename[filename_len];
 	strcpy(filename, header->name);
 	strcat(filename, "  ");
@@ -319,7 +318,7 @@ int print_complete_normal_dir(char* file){
 			sprintf(nlink_str, "%d", nlink);
 			char *pw_name = getpwuid(uid)->pw_name;
 			char *gr_name = getgrgid(gid)->gr_name;
-			char mode_str[10]; //taille prédéfinie
+			char mode_str[10]; //taille prédéfinie (drwxrwxrwx)
 			convert_mode(mode, mode_str);
 			long int time = statbuf.st_mtime;
 			char *date= ctime(&time);
@@ -330,7 +329,6 @@ int print_complete_normal_dir(char* file){
 				taille_str[i] = ' ';
 			}
 			taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1)-1:5] = '\0';
-			//char *date = "date";
 			typeformat[0] = ((S_ISDIR(mode))?'d':'-');
 			typeformat[1] = '\0';
 			char format[2*sizeof(int) + 1 + strlen(name) + strlen(date) + strlen(nlink_str) + strlen(pw_name) + strlen(gr_name)+ 1];
