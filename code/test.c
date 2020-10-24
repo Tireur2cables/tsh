@@ -19,6 +19,7 @@ int main(int argc, char const *argv[]) {
 	int output = open("../test/test_out",  O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU);
 	int input = open("../test/test_in",  O_RDONLY);
 <<<<<<< HEAD
+<<<<<<< HEAD
 	char in_str[64];
 	char out_str[64];
 =======
@@ -29,6 +30,10 @@ int main(int argc, char const *argv[]) {
 =======
 	char out_str[71];
 >>>>>>> avancement du test de fonctionnement de ls
+=======
+	char in_str[61];
+	char out_str[61];
+>>>>>>> on avance sur les tests
 	//write(output, "test_rep  ..  test_fic  test_exe2  .  test_exe1  test_lien  test_fifo  \n", strlen("test_rep  ..  test_fic  test_exe2  .  test_exe1  test_lien  test_fifo  \n"));
 	//printf("o : %d, i : %d ", output, input);
 	int save = dup(1);
@@ -45,6 +50,7 @@ int main(int argc, char const *argv[]) {
 	close(save);
 
 	int output2 = open("../test/test_out",  O_RDONLY);
+<<<<<<< HEAD
 	read(output2, out_str, 64);
 	read(input, in_str, 64);
 	printf(out_str);
@@ -67,6 +73,10 @@ int main(int argc, char const *argv[]) {
 	int output2 = open("../test/test_out",  O_RDONLY);
 	read(output2, out_str, 70);
 	read(input, in_str, 70);
+=======
+	read(output2, out_str, 61);
+	read(input, in_str, 61);
+>>>>>>> on avance sur les tests
 	printf(out_str);
 <<<<<<< HEAD
 	//printf(in_str);
