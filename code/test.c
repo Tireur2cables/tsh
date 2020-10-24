@@ -21,6 +21,7 @@ int main(int argc, char const *argv[]) {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 	char in_str[64];
 	char out_str[64];
 =======
@@ -39,6 +40,10 @@ int main(int argc, char const *argv[]) {
 	char in_str[65];
 	char out_str[65];
 >>>>>>> jarrive pas a comprendre ce qui ne fonctionne pas
+=======
+	char in_str[64];
+	char out_str[64];
+>>>>>>> ca avance mais je comprend toujours pas tout
 	//write(output, "test_rep  ..  test_fic  test_exe2  .  test_exe1  test_lien  test_fifo  \n", strlen("test_rep  ..  test_fic  test_exe2  .  test_exe1  test_lien  test_fifo  \n"));
 	//printf("o : %d, i : %d ", output, input);
 	int save = dup(1);
@@ -55,6 +60,7 @@ int main(int argc, char const *argv[]) {
 	close(save);
 
 	int output2 = open("../test/test_out",  O_RDONLY);
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 	read(output2, out_str, 64);
@@ -94,6 +100,12 @@ int main(int argc, char const *argv[]) {
 =======
 	printf(in_str);
 >>>>>>> avancement du test de fonctionnement de ls
+=======
+	read(output2, out_str, 64);
+	read(input, in_str, 64);
+	printf(out_str);
+	printf("IN : %s\n", in_str);
+>>>>>>> ca avance mais je comprend toujours pas tout
 	if(strcmp(out_str, in_str) == 0){
 		printf("Les fichiers sont les mêmes");
 	}else{

@@ -257,9 +257,11 @@ int print_normal_dir(char* file){
 			taille_totale += strlen(entry->d_name) + 2;
 		}
 	}
-	printf("%d", taille_totale);
+	//printf("%d", taille_totale);
 	closedir(dirp);
 	char format[taille_totale];
+	format[0] = '\0';
+	format[taille_totale-1] = '\0';
 	if((dirp = opendir(file)) == NULL){
 		perror("erreur");
 		exit(EXIT_FAILURE);
