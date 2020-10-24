@@ -251,18 +251,28 @@ int print_normal_dir(char* file){
 		perror("erreur");
 		exit(EXIT_FAILURE);
 	}
+	int taille_totale = 1;
 	struct dirent *entry;
 	while((entry = readdir(dirp)) != NULL){
 		if(entry->d_name[0] != '.'){
-			int filename_len = strlen(entry->d_name) + 3;
-			char filename[filename_len];
-			strcpy(filename, entry->d_name);
-			strcat(filename, "  ");
-			if (write(STDOUT_FILENO, filename, filename_len) < filename_len) {
-				perror("Erreur d'écriture dans le shell!");
-				exit(EXIT_FAILURE);
-			}
+			taille_totale += strlen(entry->d_name) + 2;
 		}
+	}
+	closedir(dirp);
+	char format[taille_totale];
+	if((dirp = opendir(file)) == NULL){
+		perror("erreur");
+		exit(EXIT_FAILURE);
+	}
+	while((entry = readdir(dirp)) != NULL){
+		if(entry->d_name[0] != '.'){
+			strcat(format, entry->d_name);
+			strcat(format, "  ");
+		}
+	}
+	if (write(STDOUT_FILENO, format, taille_totale) < taille_totale) {
+		perror("Erreur d'écriture dans le shell!");
+		exit(EXIT_FAILURE);
 	}
 	closedir(dirp);
 	return 0;
