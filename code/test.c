@@ -18,8 +18,8 @@ int main(int argc, char const *argv[]) {
 	generate_files();
 	int output = open("../test/test_out",  O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU);
 	int input = open("../test/test_in",  O_RDONLY);
-	char in_str[61];
-	char out_str[61];
+	char in_str[65];
+	char out_str[65];
 	//write(output, "test_rep  ..  test_fic  test_exe2  .  test_exe1  test_lien  test_fifo  \n", strlen("test_rep  ..  test_fic  test_exe2  .  test_exe1  test_lien  test_fifo  \n"));
 	//printf("o : %d, i : %d ", output, input);
 	int save = dup(1);
@@ -34,8 +34,8 @@ int main(int argc, char const *argv[]) {
 	close(save);
 
 	int output2 = open("../test/test_out",  O_RDONLY);
-	read(output2, out_str, 61);
-	read(input, in_str, 61);
+	read(output2, out_str, 65);
+	read(input, in_str, 65);
 	printf(out_str);
 	printf(in_str);
 	if(strcmp(out_str, in_str) == 0){
