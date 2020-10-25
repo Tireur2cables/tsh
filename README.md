@@ -15,6 +15,7 @@ Les commandes `pwd`, `cd` et `exit` fonctionnent sans problème. Nous avons auss
 Le fichier test.c utilise pour le moment la fonction system() pour appeler un script construisant une architecture de fichier, mais sera rapidement remplacé par 
 un autre système de test.  
   
+Dans le dossier tests, le script `test.sh` permet de contruire une arboresence de fichier pour tester les commandes, et le script `testrm.sh` de la supprimer.
 
 ## Test with Docker container
 
