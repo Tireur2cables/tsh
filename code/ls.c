@@ -18,7 +18,7 @@
 		 nombre de references dans un tar
 		 ls -l sur un fichier classique
 		 affichage d'un dossier dans un tar par parfait
-		 ls -l dans un dossier dans un tar
+		 fichier dans un tar qui n'existe pas : Pour le moment on affiche rien -> Ecrire une erreur : ce fichier n'existe pas
 */
 
 int ls(int argc, char *argv[]){
@@ -95,10 +95,10 @@ int print_inside_tar(char *file, char *options){
 		}
 		printf("\n");
 		close(fd);
-	}else{ //WIP
+	}else{
 		struct posix_header * header = malloc(sizeof(struct posix_header));
 		assert(header);
-		int fd = open(file, O_RDONLY);
+		int fd = open(tarfile, O_RDONLY);
 		if(fd == -1){
 		  perror("erreur d'ouverture de l'archive");
 		  return -1;
@@ -109,7 +109,11 @@ int print_inside_tar(char *file, char *options){
 			if(strcmp(header->name, "\0") == 0){
 				break;
 			}
-			show_complete_header_infos(header, &read_size);
+			if(strstr(header->name, namefile) != NULL && (strncmp(header->name, namefile, strlen(header->name)-1) != 0)) {
+				show_complete_header_infos(header, &read_size);
+			}else{
+				get_header_size(header, &read_size);
+			}
 			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
 				perror("erreur de lecture de l'archive");
 				exit(EXIT_FAILURE);
