@@ -2,12 +2,14 @@ CC = gcc
 CFLAGS = -Wall -g -std=c11
 LDLIBS = -lreadline
 all : tsh test
-tsh : tsh.o cd.o ls.o pwd.o
+tsh : tsh.o cd.o ls.o pwd.o help.o exit.o
 test : test.c ls.o pwd.o cd.o
 cd.o : cd.c tar.h cd.h
 ls.o : ls.c tar.h ls.h
-tsh.o : tsh.c ls.h cd.h pwd.h
+tsh.o : tsh.c ls.h cd.h pwd.h help.h exit.h
 pwd.o : pwd.c pwd.h
+help.o : help.c help.h
+exit.o : exit.c exit.h
 cleanall : clean
 	rm -rf tsh *.o
 clean :
