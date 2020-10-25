@@ -29,11 +29,11 @@ int ls(int argc, char *argv[]){
 	}
 	else{
 		if(argc == 1){
-			print_dir(".", "\0");
+			print_dir(getenv("TWD"), "\0");
 		}else if(argc == 2){ // 2 cas - Options et repertoire =  . ou repertoire et pas d'options
 			if(is_options(argv[1])){
 				check_options(argv[1]);
-				print_dir(".", argv[1]);
+				print_dir(getenv("TWD"), argv[1]);
 			}else{
 				print_dir(argv[1], "\0");
 			}
