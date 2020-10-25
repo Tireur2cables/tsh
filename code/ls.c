@@ -90,7 +90,11 @@ int print_inside_tar(char *file, char *options){
 				return -1;
 			}
 		}
-		printf("\n");
+		char format = "\n";
+		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
+			perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
 		close(fd);
 	}else{
 		struct posix_header header;
@@ -141,7 +145,11 @@ int print_tar(char *file, char *options){
 				return -1;
 			}
 		}
-		printf("\n");
+		char format = "\n";
+		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
+			perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
 		close(fd);
 	}else{ //ls -l
 		struct posix_header header;
