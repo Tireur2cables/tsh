@@ -5,7 +5,7 @@
 #include <errno.h>
 #include "help.h"
 
-int help(int argc, char const *argv[]) {
+int help(int argc, char *argv[]) {
 	if (argc != 1) {
 		errno = E2BIG;
 		perror("Trop d'arguments!");

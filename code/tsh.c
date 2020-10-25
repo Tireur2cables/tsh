@@ -15,6 +15,7 @@
 #include "cd.h"
 #include "pwd.h"
 #include "help.h"
+#include "exit.h"
 
 /* utiliser un tableau des commandes implémentées pour facotriser encore plus ? */
 
@@ -68,18 +69,12 @@ int main(int argc, char const *argv[]) { //main
 }
 
 void selectCommand(int readen, char *mycat_buf) { //lance la bonne commande ou lance avec exec
-	if (iscmd(mycat_buf, "exit")) { //cmd = exit
-		char *fini = "Arrivederci mio signore!\n\n";
-		int fini_len = strlen(fini);
-		if (write(STDOUT_FILENO, fini, fini_len) < fini_len) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
-		}
-		exit(EXIT_SUCCESS);
-	}else if (iscmd(mycat_buf, "help")) { //cmd = help
-		launchFunc(help, mycat_buf, readen);
+	if (iscmd(mycat_buf, "exit")) { //cmd = exit must be built-in func
+		launchBuiltInFunc(exit_tsh, mycat_buf, readen);
 	}else if (iscmd(mycat_buf, "cd")) { //cmd = cd must be built-in func
 		launchBuiltInFunc(cd, mycat_buf, readen);
+	}else if (iscmd(mycat_buf, "help")) { //cmd = help
+		launchFunc(help, mycat_buf, readen);
 	}else if (iscmd(mycat_buf, "ls")) { //cmd = ls
 		launchFunc(ls, mycat_buf, readen);
 	}else if (iscmd(mycat_buf, "pwd")) { //cmd = pwd
