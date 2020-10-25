@@ -11,7 +11,6 @@
 #include "tar.h"
 #include "rmdir.h"
 
-char * courant = NULL;
 int error_or_not = 1;
 
 int main(int argc,char **argv) {
@@ -23,8 +22,6 @@ int main(int argc,char **argv) {
 	}
 	free(oldpwd);
 
-	courant = getcwd(NULL,0);
-	assert(courant);
 	
 	if(argc <= 1 ) {
 		errno = EINVAL;
@@ -55,7 +52,7 @@ int main(int argc,char **argv) {
 		
 		found=0;
 		
-		dir_courant=opendir(courant);
+		dir_courant=opendir(getenv("TWD"));
 		if(openDetectError(dir_courant)!=0) return -1;
 		
 			while((d=readdir(dir_courant))!=NULL) {
@@ -77,16 +74,24 @@ int main(int argc,char **argv) {
 		
 		
 			} // fin while2
-		
+			
 		if(fileFound(found)!=0)  { passage=0; error_or_not = 0; };
+		if(part!=NULL)  { lastRep=part; actuDir(part); }
 		part=strtok(NULL,separator);
-		if(part!=NULL) lastRep=part;
-		actuDir(part);
+		
+		
 		
 		} // fin while1
 		
 		
-		//if(lastRep!=NULL && error_or_not) DeletingDirectory(lastRep);
+		if(lastRep!=NULL && error_or_not) {
+			
+			if(DeletingDirectory(lastRep)<0) {
+				perror("erreur de suppression du répertoire");
+				exit(EXIT_FAILURE);
+			}
+			
+		}
 		
 		error_or_not = 1 ;
 		
@@ -100,11 +105,46 @@ int main(int argc,char **argv) {
 	
 }
 
-int actuDir(char * part) {
+int DeletingDirectory(char * rep) {
+
+	DIR * c=opendir(getenv("TWD")); // normalement twd se finit par rep içi
+	assert(c);
+	struct dirent * d;
+	int nbFile=0;
 	
-	printf("%s\n",getenv("TWD"));
+	while((d=readdir(c))!=NULL) {
+		
+		if(nbFile>0) break;
+		nbFile++;
+		
+	}
+	
+	if(nbFile>0) {
+		
+		if(rmdir(rep)<0) {
+			return -1;
+		}
+		
+	}
 	
 	return 0;
+	
+}
+
+
+void actuDir(char * part) {
+	
+	char * newpath = malloc(sizeof(char)*(strlen(getenv("TWD"))+1+strlen(part)));
+	strcpy(newpath,getenv("TWD"));
+	strcat(newpath,"/");
+	strcat(newpath,part);
+	
+	if (setenv("TWD", newpath , 1) < 0) {
+		perror("Erreur de modification de TWD!");
+		exit(EXIT_FAILURE);
+	}
+	
+	
 }
 
 void NotDirectory(char * p ) {
