@@ -118,8 +118,11 @@ int print_tar(char *file, char *options){
 }
 
 int print_rep(char *file, char *options){
-	DIR *dirp;
-	if((dirp = opendir(file)) == NULL){ //Cas d'un fichier simple
+	struct stat statbuf;
+	if(stat(file, &statbuf) == -1){ //Cas d'un fichier simple
+		perror("Impossible d'ouvrir le fichier");
+		return -1;
+	}else if(S_ISREG(statbuf.st_mode)){
 		char format[strlen(file) + 2];
 		strcpy(format, file);
 		strcat(format, "\n");
