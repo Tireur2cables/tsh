@@ -94,7 +94,9 @@ Détéction des chemins spéciaux
 		return setPath(copy, twd);
 	}
 	if (strncmp(chemin, "/", 1) == 0) {
-		//FIXME : a faire
+		char *root = "/";
+		if (strlen(chemin) == 1) return parcoursChemin(NULL, twd, root);
+		return parcoursChemin(&chemin[1], twd, root);
 	}
 
 	if (strstr(twd, ".tar") != NULL) return appelSurTar(twd, newtwd, chemin);
@@ -118,6 +120,10 @@ Detection des cas spéciaux
 		return parcoursChemin(&chemin[lendoss+1], twd, res);
 	}
 	if (strcmp(doss, "..") == 0) {
+		if (strcmp(res, "/") == 0) {
+			if (lendoss+1 >= lenchemin) return parcoursChemin(NULL, twd, res);
+			return parcoursChemin(&chemin[lendoss+1], twd, res);
+		}
 		int lenlast = getLenLast(res);
 		if (lenlast < 0) return -1;
 		char newres[strlen(res) - lenlast - 1 + 1];
@@ -130,8 +136,9 @@ Detection des cas spéciaux
 
 	if (isAccessibleFrom(doss, res)) {
 		int lenres = strlen(res);
+		if (strcmp(res, "/") == 0) lenres--;
 		char newtwd[lenres + 1 + lendoss + 1];
-		strcpy(newtwd, res);
+		if (strcmp(res, "/") != 0) strcpy(newtwd, res);
 		newtwd[lenres] = '/';
 		newtwd[lenres+1] = '\0';
 		strcat(newtwd, doss);
