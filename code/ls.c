@@ -391,7 +391,15 @@ int check_options(char *options){
 	if((strcmp(options, "-l") == 0)|| (strcmp(options, "\0") == 0)){
 		return 0;
 	}else{
-		printf("ls : option invalide -- '%s'\n", options);
+		char *message = "ls : option invalide ";
+		char format[strlen(message) + strlen(options) + 1];
+		strcpy(format, message);
+		strcat(format, options);
+		strcat(format, "\n");
+		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
+			perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
 		exit(EXIT_FAILURE);
 	}
 }
