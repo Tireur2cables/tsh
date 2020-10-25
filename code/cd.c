@@ -27,8 +27,6 @@ int cd(int argc,char **argv) {
 	}
 	char twd[strlen(oldtwd) + 1];
 	strcpy(twd, oldtwd);
-	char newtwd[strlen(twd) + 1];
-	strcpy(newtwd, twd);
 
 	if (argc == 1) { //cd sans arguments
 		char const *home = getenv("HOME");
@@ -46,25 +44,12 @@ int cd(int argc,char **argv) {
 
 	char chemin[strlen(argv[1]) + 1];
 	strcpy(chemin, argv[1]);
-
+	char *realchemin;
+	int retour;
+	char *root = "/";
 /*
 Détéction des chemins spéciaux
 */
-	if (strncmp(chemin, "~/", 2) == 0) {
-		char const *home = getenv("HOME");
-		if (home == NULL) {
-			char *error = "La variables HOME n'est pas définie!\n";
-			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
-				perror("Erreur d'écriture dans le shell");
-			}
-			return -1;
-		}
-		char copy[strlen(home) + 1];
-		strcpy(copy, home);
-		char copycopy[strlen(copy) + 1];
-		strcpy(copycopy, copy);
-		return parcoursChemin(&chemin[2], copy, copycopy);
-	}
 	if (strcmp(chemin, "~") == 0) {
 		char const *home = getenv("HOME");
 		if (home == NULL) {
@@ -91,46 +76,57 @@ Détéction des chemins spéciaux
 		strcpy(copy, oldtwd);
 		return setPath(copy, twd);
 	}
+
+	if (strncmp(chemin, "~/", 2) == 0) {
+		char const *home = getenv("HOME");
+		if (home == NULL) {
+			char *error = "La variables HOME n'est pas définie!\n";
+			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
+				perror("Erreur d'écriture dans le shell");
+			}
+			return -1;
+		}
+		char copy[strlen(home) + 1];
+		strcpy(copy, home);
+		char copytmp[strlen(copy) + 1];
+		strcpy(copytmp, copy);
+		realchemin = getRealChemin(&chemin[2], copytmp);
+		if (realchemin == NULL) return -1;
+		retour = parcoursChemin(realchemin, copy, root);
+		free(realchemin);
+		return retour;
+	}
 	if (strncmp(chemin, "/", 1) == 0) {
-		char *root = "/";
-		if (strlen(chemin) == 1) return parcoursChemin(NULL, twd, root);
-		return parcoursChemin(&chemin[1], twd, root);
+		char *rootcopy = "/";
+		if (strlen(chemin) == 1) return setPath(root, twd);
+		realchemin = getRealChemin(&chemin[1], rootcopy);
+		if (realchemin == NULL) return -1;
+		retour = parcoursChemin(realchemin, twd, root);
+		free(realchemin);
+		return retour;
 	}
 
-	if (strstr(twd, ".tar") != NULL) return appelSurTar(twd, newtwd, chemin);
-	return parcoursChemin(chemin, twd, newtwd);
+	if (strstr(twd, ".tar") != NULL) return appelSurTar(twd, chemin);
+
+	char twdcopy[strlen(twd) + 1];
+	strcpy(twdcopy, twd);
+	realchemin = getRealChemin(chemin, twdcopy);
+	if (realchemin == NULL) return -1;
+
+	retour = parcoursChemin(realchemin, twd, root);
+	free(realchemin);
+	return retour;
 }
 
-int parcoursChemin(char *chemin, char *twd, char *res) {
-	if (chemin == NULL)	return setPath(res, twd);
+int parcoursChemin(char *chemin, char *oldtwd, char *res) {
+	if (chemin == NULL)	return setPath(res, oldtwd);
+	if (strcmp(chemin, "/") == 0) return setPath(res, oldtwd);
 	int lenchemin = strlen(chemin);
 	char chemin_cpy[lenchemin + 1];
 	strcpy(chemin_cpy, chemin);
 
 	char *doss = strtok(chemin_cpy, "/");
 	int lendoss = strlen(doss);
-
-/*
-Detection des cas spéciaux
-*/
-	if (strcmp(doss, ".") == 0) {
-		if (lendoss >= lenchemin) return parcoursChemin(NULL, twd, res);
-		return parcoursChemin(&chemin[lendoss+1], twd, res);
-	}
-	if (strcmp(doss, "..") == 0) {
-		if (strcmp(res, "/") == 0) {
-			if (lendoss+1 >= lenchemin) return parcoursChemin(NULL, twd, res);
-			return parcoursChemin(&chemin[lendoss+1], twd, res);
-		}
-		int lenlast = getLenLast(res);
-		if (lenlast < 0) return -1;
-		char newres[strlen(res) - lenlast - 1 + 1];
-		strncpy(newres, res, strlen(res) - lenlast - 1);
-		newres[strlen(res) - lenlast - 1] = '\0';
-		if (lendoss+1 >= lenchemin) return parcoursChemin(NULL, twd, newres);
-		return parcoursChemin(&chemin[lendoss+1], twd, newres);
-	}
-
 
 	if (isAccessibleFrom(doss, res)) {
 		int lenres = strlen(res);
@@ -140,19 +136,14 @@ Detection des cas spéciaux
 		newtwd[lenres] = '/';
 		newtwd[lenres+1] = '\0';
 		strcat(newtwd, doss);
+		if (lendoss+1 >= lenchemin) return parcoursChemin(NULL, oldtwd, newtwd);
 
-		if (lendoss+1 >= lenchemin) return parcoursChemin(NULL, twd, newtwd);
-
-		if (isTar(doss)) return parcoursTar(&chemin[lendoss+1], twd, newtwd);
-		return parcoursChemin(&chemin[lendoss+1], twd, newtwd);
+		if (isTar(doss)) return parcoursTar(&chemin[1+lendoss+1], oldtwd, newtwd);
+		return parcoursChemin(&chemin[lendoss+1], oldtwd, newtwd);
 	}else return -1;
 }
 
-int parcoursTar(char *chemin, char *twd, char *tar) {
-	char *realchemin = getRealCheminInTar(chemin, NULL);
-	if (realchemin == NULL) return -1;
-	if (strcmp(realchemin, "") == 0) return setPath(tar, twd);
-
+int parcoursTar(char *chemin, char *oldtwd, char *tar) {
 	int fd = open(tar, O_RDONLY);
 	if (fd == -1) {
 		perror("Erreur d'ouverture du tar!");
@@ -164,7 +155,7 @@ int parcoursTar(char *chemin, char *twd, char *tar) {
 		if (read(fd, &header, BLOCKSIZE) < BLOCKSIZE) break;
 		char nom[strlen(header.name)+1];
 		strcpy(nom, header.name);
-		if (isSameDir(realchemin, nom)) found = 1;
+		if (isSameDir(chemin, nom)) found = 1;
 		else {
 			if (strcmp(nom, "") == 0) break;
 			unsigned int taille;
@@ -179,15 +170,14 @@ int parcoursTar(char *chemin, char *twd, char *tar) {
 		errno = ENOENT;
 		perror("impossible de trouver le dossier dans le tar!");
 	}else {
-		int lenres = strlen(tar) + 1 + strlen(realchemin) + 1;
+		int lenres = strlen(tar) + 1 + strlen(chemin) + 1;
 		char res[lenres];
 		strcpy(res, tar);
 		res[strlen(tar)] = '/';
 		res[strlen(tar)+1] = '\0';
-		strcat(res, realchemin);
-		setPath(res, twd);
+		strcat(res, chemin);
+		setPath(res, oldtwd);
 	}
-	free(realchemin);
 	return (found)? 0 : -1;
 }
 
@@ -277,7 +267,7 @@ int isSameDir(char *dir1, char *dir2) {
 		&& (dir2[strlen(dir2)-1] == '/'));
 }
 
-int findTarIn(char *chemin, int res) {
+int findTarIn(char const *chemin, int res) {
 	if (chemin == NULL) return -1;
 	char copy[strlen(chemin)+1];
 	strcpy(copy, chemin);
@@ -287,12 +277,16 @@ int findTarIn(char *chemin, int res) {
 	return findTarIn(&chemin[lendoss], res+lendoss);
 }
 
-int appelSurTar(char *twd, char *newtwd, char *chemin) {
+int appelSurTar(char *twd, char *chemin) {
 	int indice = findTarIn(twd, 1);
-	char *tar = strtok(&newtwd[indice], "/");
+	char twdcopy[strlen(twd)+1];
+	strcpy(twdcopy, twd);
+
+	char *tar = strtok(&twdcopy[indice], "/");
 	int lentar = strlen(tar);
+
 	int len = strlen(&twd[indice+lentar]);
-	if(len != 0) len = strlen(&twd[indice+lentar+1]) + 1;
+	if(len != 0) len = strlen(&twd[indice+lentar+1]) + 1; //utile ? cas ou juste dans un tar
 	char newchemin[len + strlen(chemin) + 1];
 	if (len != 0) {
 		strcpy(newchemin, &twd[indice+lentar+1]);
@@ -306,7 +300,16 @@ int appelSurTar(char *twd, char *newtwd, char *chemin) {
 	char tarchemin[strlen(twd) - len + 1];
 	strncpy(tarchemin, twd, strlen(twd) - len);
 	tarchemin[strlen(twd) - len] = '\0';
-	return parcoursTar(newchemin, twd, tarchemin);
+
+	int retour;
+	char tarchemincopy[strlen(tarchemin)+1];
+	strcpy(tarchemincopy, tarchemin);
+	char *realchemin = getRealChemin(newchemin, tarchemincopy);
+	if (realchemin == NULL) return -1;
+	if (strlen(realchemin) <= strlen(tarchemin)) retour = parcoursChemin(realchemin, twd, "/");
+	else retour = parcoursTar(&realchemin[strlen(tarchemin)+1], twd, tarchemin);
+	free(realchemin);
+	return retour;
 }
 
 int getLenLast(char const *chemin) {
@@ -315,6 +318,7 @@ int getLenLast(char const *chemin) {
 		perror("Erreur impossible de trouver le pere!");
 		return -1;
 	}
+	if (strcmp(chemin, "/") == 0) return 1;
 	char copy[strlen(chemin) + 1];
 	strcpy(copy, chemin);
 
@@ -331,13 +335,8 @@ int getLenLast(char const *chemin) {
 	return len;
 }
 
-char *getRealCheminInTar(char *chemin, char *res) {
+char *getRealChemin(char *chemin, char *res) {
 	if (chemin == NULL) {
-		if (res == NULL) {
-			errno = ENOENT;
-			perror("impossible de trouver ce dossier dans l'archive!");
-			return NULL;
-		}
 		char *newres = malloc(strlen(res)+1);
 		assert(newres);
 		strcpy(newres, res);
@@ -347,42 +346,36 @@ char *getRealCheminInTar(char *chemin, char *res) {
 	strcpy(copy, chemin);
 
 	char *doss = strtok(copy, "/");
-	if (doss == NULL) return getRealCheminInTar(NULL, res);
+	if (doss == NULL) return getRealChemin(NULL, res);
 
 	if (strcmp(doss, ".") == 0) {
-		if (res != NULL && strcmp(res, "") == 0) res = NULL;
-		if (strlen(doss)+1 >= strlen(chemin)) return getRealCheminInTar(NULL, res);
-		return getRealCheminInTar(&chemin[strlen(doss)+1], res);
+		if (strlen(doss)+1 >= strlen(chemin)) return getRealChemin(NULL, res);
+		return getRealChemin(&chemin[strlen(doss)+1], res);
 	}
 	if (strcmp(doss, "..") == 0) {
 		int lenlast = getLenLast(res);
 		if (lenlast < 0) return NULL;
 		if (lenlast == strlen(res)) {
-			char *newres = "";
-			if (strlen(doss)+1 >= strlen(chemin)) return getRealCheminInTar(NULL, newres);
-			return getRealCheminInTar(&chemin[strlen(doss)+1], newres);
+			if (strlen(doss)+1 >= strlen(chemin)) return getRealChemin(NULL, res);
+			return getRealChemin(&chemin[strlen(doss)+1], res);
 		}
-		char newres[strlen(res) - lenlast - 1 + 1];
-		strncpy(newres, res, strlen(res) - lenlast - 1);
-		newres[strlen(res) - lenlast - 1] = '\0';
-		if (strlen(doss)+1 >= strlen(chemin)) return getRealCheminInTar(NULL, newres);
-		return getRealCheminInTar(&chemin[strlen(doss)+1], newres);
+		int lennewres = strlen(res) - lenlast - 1;
+		if (lennewres == 0) lennewres++;
+		char newres[lennewres + 1];
+		strncpy(newres, res, lennewres);
+		newres[lennewres] = '\0';
+		if (strlen(doss)+1 >= strlen(chemin)) return getRealChemin(NULL, newres);
+		return getRealChemin(&chemin[strlen(doss)+1], newres);
 	}
 
-
-	if (res == NULL) {
-		char newres[strlen(doss) + 1];
-		strcpy(newres, doss);
-		if (strlen(doss)+1 >= strlen(chemin)) return getRealCheminInTar(NULL, newres);
-		return getRealCheminInTar(&chemin[strlen(doss)+1], newres);
-	}else {
-		char newres[strlen(res) + 1 + strlen(doss) + 1];
-		strcpy(newres, res);
-		newres[strlen(res)] = '/';
-		newres[strlen(res)+1] = '\0';
-		strcat(newres, doss);
-		if (strlen(doss)+1 >= strlen(chemin)) return getRealCheminInTar(NULL, newres);
-		return getRealCheminInTar(&chemin[strlen(doss)+1], newres);
-	}
+	int lenres = strlen(res);
+	if (strcmp(res, "/") == 0) lenres--;
+	char newres[lenres + 1 + strlen(doss) + 1];
+	if (strcmp(res, "/") != 0) strcpy(newres, res);
+	newres[lenres] = '/';
+	newres[lenres+1] = '\0';
+	strcat(newres, doss);
+	if (strlen(doss)+1 >= strlen(chemin)) return getRealChemin(NULL, newres);
+	return getRealChemin(&chemin[strlen(doss)+1], newres);
 
 }

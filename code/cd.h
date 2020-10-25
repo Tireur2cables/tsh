@@ -11,9 +11,9 @@ int setPath(char *, char *);
 int errorDetect(int);
 int isTar(char *);
 int isSameDir(char *, char *);
-int findTarIn(char *, int);
-int appelSurTar(char *, char *, char *);
+int findTarIn(char const *, int);
+int appelSurTar(char *, char *);
 int getLenLast(char const *);
-char *getRealCheminInTar(char *, char *);
+char *getRealChemin(char *, char *);
 
 #endif
