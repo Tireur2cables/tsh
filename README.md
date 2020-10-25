@@ -51,5 +51,5 @@ On `test` directory you will find some tar and classic files and directories.
 ### Si vous n'utilisez pas docker
 
 Si vous n'utilisez pas docker, vous devrez installer la librairie readline que nous utilisons pour la lecture des commandes :  
-sudo apt-get install libreadline-dev permet d'installer la librairie readline
+sudo apt-get install libreadline-dev permet d'installer la librairie readline  
 -lreadline dans le makefile pour le linkeur
