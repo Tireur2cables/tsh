@@ -90,7 +90,7 @@ int print_inside_tar(char *file, char *options){
 				return -1;
 			}
 		}
-		char format = "\n";
+		char *format = "\n";
 		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
 			perror("Erreur d'écriture dans le shell!");
 			exit(EXIT_FAILURE);
@@ -145,7 +145,7 @@ int print_tar(char *file, char *options){
 				return -1;
 			}
 		}
-		char format = "\n";
+		char *format = "\n";
 		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
 			perror("Erreur d'écriture dans le shell!");
 			exit(EXIT_FAILURE);
@@ -282,7 +282,6 @@ int print_normal_dir(char* file){
 			taille_totale += strlen(entry->d_name) + 2;
 		}
 	}
-	//printf("%d", taille_totale);
 	closedir(dirp);
 	char format[taille_totale];
 	format[0] = '\0';
