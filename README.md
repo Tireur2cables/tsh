@@ -14,13 +14,19 @@ You can see all these commands by using `help` command in tsh.
 
 ### Build image
 
-You can build the docker image by using this command in the root folder of the repo :  
-`docker build -t tsh:testing .`  
+You can pull the image directly from the docker repo by using this command :  
+`docker pull tireur2cables/tsh_img`  
+Then you can either use the following command to create a new tag for this image :  
+`docker tag tireur2cables/tsh_img tsh_img`  
+Or on you can replace `tsh_img` by `tireur2cables/tsh_img` on the following parts.  
+
+You can also build the docker image yourself by using this command in the root folder of the repo :  
+`docker build -t tsh_img .`  
 
 ### Launch container
 
 You can launch tsh project on a container by using this command :  
-`docker run -tiw /home/tsh-testing tsh:testing`  
+`docker run -tiw /home/tsh-testing tsh_img`  
 
 ### Compile Project
 
