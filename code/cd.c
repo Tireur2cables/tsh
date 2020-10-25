@@ -128,7 +128,7 @@ int parcoursChemin(char *chemin, char *oldtwd, char *res) {
 	char *doss = strtok(chemin_cpy, "/");
 	int lendoss = strlen(doss);
 
-	if (isAccessibleFrom(doss, res)) {
+	if (isAccessibleFrom(doss, res) > 0) {
 		int lenres = strlen(res);
 		if (strcmp(res, "/") == 0) lenres--;
 		char newtwd[lenres + 1 + lendoss + 1];
@@ -155,7 +155,7 @@ int parcoursTar(char *chemin, char *oldtwd, char *tar) {
 		if (read(fd, &header, BLOCKSIZE) < BLOCKSIZE) break;
 		char nom[strlen(header.name)+1];
 		strcpy(nom, header.name);
-		if (isSameDir(chemin, nom)) found = 1;
+		if (nom[strlen(nom)-1] == '/'  && isSameDir(chemin, nom)) found = 1;
 		else {
 			if (strcmp(nom, "") == 0) break;
 			unsigned int taille;
@@ -206,8 +206,8 @@ int isAccessibleFrom(char *doss, char *dir) {
 				}
 				if (!S_ISDIR(st.st_mode)) { //not directory
 					char *tmp = " n'est pas un répertoire!\n";
-					char error[strlen(doss) + strlen(tmp) + 1];
-					strcpy(error, doss);
+					char error[strlen(absolutedoss) + strlen(tmp) + 1];
+					strcpy(error, absolutedoss);
 					strcat(error, tmp);
 					if (write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
 						perror("Erreur d'écriture dans le shell!");
