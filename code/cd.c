@@ -333,6 +333,11 @@ int getLenLast(char const *chemin) {
 
 char *getRealCheminInTar(char *chemin, char *res) {
 	if (chemin == NULL) {
+		if (res == NULL) {
+			errno = ENOENT;
+			perror("impossible de trouver ce dossier dans l'archive!");
+			return NULL;
+		}
 		char *newres = malloc(strlen(res)+1);
 		assert(newres);
 		strcpy(newres, res);
@@ -345,6 +350,7 @@ char *getRealCheminInTar(char *chemin, char *res) {
 	if (doss == NULL) return getRealCheminInTar(NULL, res);
 
 	if (strcmp(doss, ".") == 0) {
+		if (res != NULL && strcmp(res, "") == 0) res = NULL;
 		if (strlen(doss)+1 >= strlen(chemin)) return getRealCheminInTar(NULL, res);
 		return getRealCheminInTar(&chemin[strlen(doss)+1], res);
 	}
