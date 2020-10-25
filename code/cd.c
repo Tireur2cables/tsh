@@ -9,9 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <ctype.h>
 #include <dirent.h>
-#include <linux/limits.h>
 #include "tar.h"
 #include "cd.h"
 
@@ -336,6 +334,7 @@ int getLenLast(char const *chemin) {
 char *getRealCheminInTar(char *chemin, char *res) {
 	if (chemin == NULL) {
 		char *newres = malloc(strlen(res)+1);
+		assert(newres);
 		strcpy(newres, res);
 		return newres;
 	}

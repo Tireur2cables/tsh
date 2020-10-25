@@ -16,7 +16,4 @@ int appelSurTar(char *, char *, char *);
 int getLenLast(char const *);
 char *getRealCheminInTar(char *, char *);
 
-char *findpere(char *);
-int isOnlySpaceString(char *);
-
 #endif

@@ -10,15 +10,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <linux/limits.h>
 #include <readline/readline.h>
 #include "ls.h"
 #include "cd.h"
 #include "pwd.h"
 
 /* utiliser un tableau des commandes implémentées pour facotriser encore plus ? */
-
-//char pwd[PATH_MAX];
 
 int iscmd(char *, char *);
 int isOnlySpace(char *, int);
