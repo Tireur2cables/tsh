@@ -14,6 +14,7 @@
 #include "ls.h"
 #include "cd.h"
 #include "pwd.h"
+#include "help.h"
 
 /* utiliser un tableau des commandes implémentées pour facotriser encore plus ? */
 
@@ -75,13 +76,8 @@ void selectCommand(int readen, char *mycat_buf) { //lance la bonne commande ou l
 			exit(EXIT_FAILURE);
 		}
 		exit(EXIT_SUCCESS);
-	}else if (iscmd(mycat_buf, "help")) { //cmd = help //FIXME : A faire comme une fonction / commande a part
-		char *help = "Voici une liste non exhaustive des commandes implémentées:\nexit : quitte le tsh\nls : wip\ncd : wip\npwd : wip\nhelp : obtenir la liste des commandes\n\n";
-		int help_len = strlen(help);
-		if (write(STDOUT_FILENO, help, help_len) < help_len) {
-			perror("Erreur d'écriture dans les shell!");
-			exit(EXIT_FAILURE);
-		}
+	}else if (iscmd(mycat_buf, "help")) { //cmd = help
+		launchFunc(help, mycat_buf, readen);
 	}else if (iscmd(mycat_buf, "cd")) { //cmd = cd must be built-in func
 		launchBuiltInFunc(cd, mycat_buf, readen);
 	}else if (iscmd(mycat_buf, "ls")) { //cmd = ls
