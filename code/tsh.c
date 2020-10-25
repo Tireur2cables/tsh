@@ -1,3 +1,5 @@
+#define _DEFAULT_SOURCE // utile pour setenv
+
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -13,14 +15,16 @@
 #include "cd.h"
 #include "pwd.h"
 
-char *pwd; // utiliser une variable env
+/* utiliser un tableau des commandes implémentées pour facotriser encore plus ? */
 
 int iscmd(char *, char *);
 int isOnlySpace(char *, int);
 void selectCommand(int, char *);
 int getNbArgs(const char *, int);
 int launchFunc(int (*)(int, char *[]), char *, int);
+int launchBuiltInFunc(int (*)(int, char *[]), char *, int);
 int exec(int, char *[]);
+void setEnv();
 
 int main(int argc, char const *argv[]) { //main
 	if (argc > 1) {
@@ -28,15 +32,17 @@ int main(int argc, char const *argv[]) { //main
 		perror("Arguments non valides!");
 		exit(EXIT_FAILURE);
 	}
+	setEnv();
 
+	char const *twd;
 	char *prompt = "$ ";
 	int prompt_len = strlen(prompt);
 	while (1) {
-		pwd = getcwd(NULL, 0); // FIXME: à remplacer
-		char new_prompt[strlen(pwd) + 1 + prompt_len + 1];
-		strcpy(new_prompt, pwd);
-		new_prompt[strlen(pwd)] = ' ';
-		new_prompt[strlen(pwd)+1] = '\0';
+		twd = getenv("TWD");
+		char new_prompt[strlen(twd) + 1 + prompt_len + 1];
+		strcpy(new_prompt, twd);
+		new_prompt[strlen(twd)] = ' ';
+		new_prompt[strlen(twd)+1] = '\0';
 		strcat(new_prompt, prompt);
 
 		int readen;
@@ -55,7 +61,6 @@ int main(int argc, char const *argv[]) { //main
 			}
 		}
 		free(mycat_buf);
-		free(pwd);
 	}
 
 	return 0;
@@ -71,21 +76,32 @@ void selectCommand(int readen, char *mycat_buf) { //lance la bonne commande ou l
 		}
 		exit(EXIT_SUCCESS);
 	}else if (iscmd(mycat_buf, "help")) { //cmd = help //FIXME : A faire comme une fonction / commande a part
-		char *help = "Voici une liste non exhaustive des commandes implémentées:ǹ\nexit : quitte le tsh\nls : wip\nhelp : obtenir la liste des commandes\n\n";
+		char *help = "Voici une liste non exhaustive des commandes implémentées:\nexit : quitte le tsh\nls : wip\ncd : wip\npwd : wip\nhelp : obtenir la liste des commandes\n\n";
 		int help_len = strlen(help);
 		if (write(STDOUT_FILENO, help, help_len) < help_len) {
 			perror("Erreur d'écriture dans les shell!");
 			exit(EXIT_FAILURE);
 		}
+	}else if (iscmd(mycat_buf, "cd")) { //cmd = cd must be built-in func
+		launchBuiltInFunc(cd, mycat_buf, readen);
 	}else if (iscmd(mycat_buf, "ls")) { //cmd = ls
 		launchFunc(ls, mycat_buf, readen);
 	}else if (iscmd(mycat_buf, "pwd")) { //cmd = pwd
-		launchFunc(pwd_func, mycat_buf, readen);
-	}else if (iscmd(mycat_buf, "cd")) { //cmd = cd
-		launchFunc(cd, mycat_buf, readen);
+		launchFunc(pwd, mycat_buf, readen);
 	}else { //lancer la commande avec exec
 		launchFunc(exec, mycat_buf, readen);
 	}
+}
+
+int launchBuiltInFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lance la fonction demandée directement en processus principal
+	int argc = getNbArgs(mycat_buf, readen);
+	char *argv[argc+1];
+	argv[0] = strtok(mycat_buf, " ");
+	for (int i = 1; i <= argc; i++) {
+		argv[i] = strtok(NULL, " ");
+	}
+	func(argc, argv);
+	return 0;
 }
 
 int launchFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lance dans un nouveau processus la fonction demandée et attend qu'elle finisse
@@ -115,7 +131,7 @@ int launchFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lanc
 			if (!WIFEXITED(status)) {
 				char *erreur = "Erreur lors l'execution de la commande!\n";
 				int erreur_len = strlen(erreur);
-				if (write(STDOUT_FILENO, erreur, erreur_len) < erreur_len) {
+				if (write(STDERR_FILENO, erreur, erreur_len) < erreur_len) {
 					perror("Erreur d'écriture dans le shell!");
 					exit(EXIT_FAILURE);
 				}
@@ -159,4 +175,13 @@ int isOnlySpace(char *mycat_buf, int readen) { //verifie si la phrase donnée es
 int iscmd(char *mycat_buf, char *cmd) { //verifie qu'une phrase commence bien par la commande demandée suivie d'un espace (\n, ' ', etc...)
 	return (strncmp(mycat_buf, cmd, strlen(cmd)) == 0) &&
 	((isspace(mycat_buf[strlen(cmd)])) || (mycat_buf[strlen(cmd)] == '\0'));
+}
+
+void setEnv() {
+	char *oldpwd = getcwd(NULL, 0);
+	if (setenv("TWD", oldpwd, 1) < 0) {
+		perror("Erreur de création de TWD!");
+		exit(EXIT_FAILURE);
+	}
+	free(oldpwd);
 }
