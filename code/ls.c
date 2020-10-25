@@ -16,7 +16,9 @@
 //FONCTION LS
 /*TODO :
 		 nombre de references dans un tar
-		 traiter le cas d'un fichier dans un tar
+		 ls -l sur un fichier classique
+		 affichage d'un dossier dans un tar par parfait
+		 ls -l dans un dossier dans un tar
 */
 
 int ls(int argc, char *argv[]){
@@ -59,12 +61,62 @@ int print_dir(char *file, char *options){
 }
 
 int print_inside_tar(char *file, char *options){
-	printf("print inside tar");
-	//RECUPERER LE TAR
-	//RECUPERER LE FICHIER A AFFICHER
-	//ENUMERER LE HEADER DU TAR
-	//SI FICHIER EST UN FICHIER -> AFFICHER LE CHEMIN
-	//SI FICHIER EST UN REPERTOIRE -> AFFICHER LES FICHIERS DE CE REPERTOIRE
+	char tarfile[strlen(file)];
+	char namefile[strlen(file)];
+	int tarpos = strstr(file, ".tar") - file;
+	strncpy(tarfile, file, tarpos+4);
+	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
+	tarfile[tarpos+4] = '\0';
+	namefile[strlen(file)-tarpos-4] = '\0';
+	if(strcmp(options, "\0") == 0){ //pas d'option
+		struct posix_header * header = malloc(sizeof(struct posix_header));
+		assert(header);
+		int fd = open(tarfile, O_RDONLY);
+		if(fd == -1){
+		  perror("erreur d'ouverture de l'archive");
+		  return -1;
+		}
+		int n = 0;
+		int read_size = 0;
+		while((n=read(fd, header, BLOCKSIZE))>0){
+			//printf("-%s %s-\n", header->name, namefile);
+			if(strcmp(header->name, "\0") == 0){
+				break;
+			}if(strstr(header->name, namefile) != NULL && (strncmp(header->name, namefile, strlen(header->name)-1) != 0)) {
+				show_simple_header_infos(header, &read_size);
+			}else{
+				get_header_size(header, &read_size);
+			}
+
+			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+				perror("erreur de lecture de l'archive");
+				return -1;
+			}
+		}
+		printf("\n");
+		close(fd);
+	}else{ //WIP
+		struct posix_header * header = malloc(sizeof(struct posix_header));
+		assert(header);
+		int fd = open(file, O_RDONLY);
+		if(fd == -1){
+		  perror("erreur d'ouverture de l'archive");
+		  return -1;
+		}
+		int n = 0;
+		int read_size = 0;
+		while((n=read(fd, header, BLOCKSIZE))>0){
+			if(strcmp(header->name, "\0") == 0){
+				break;
+			}
+			show_complete_header_infos(header, &read_size);
+			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+				perror("erreur de lecture de l'archive");
+				exit(EXIT_FAILURE);
+			}
+		}
+		close(fd);
+	}
 	return 0;
 }
 
@@ -239,6 +291,12 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 		perror("Erreur d'écriture dans le shell!");
 		exit(EXIT_FAILURE);
 	}
+}
+
+void get_header_size(struct posix_header *header, int *read_size){
+	int taille = 0;
+	sscanf(header->size, "%o", &taille);
+	*read_size = ((taille + 512-1)/512);
 }
 void show_simple_header_infos(struct posix_header *header, int *read_size){
 	int taille = 0;

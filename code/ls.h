@@ -6,6 +6,7 @@
 extern int ls(int, char *[]);
 
 void show_simple_header_infos(struct posix_header *, int *);
+void get_header_size(struct posix_header *, int *);
 void show_complete_header_infos(struct posix_header *, int *);
 int print_normal_dir(char *);
 int print_complete_normal_dir(char *);
