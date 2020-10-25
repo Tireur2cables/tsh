@@ -30,11 +30,13 @@ You can launch tsh project on a container by using this command :
 
 ### Compile Project
 
-You can compile tsh projet by using this command in the container :  
+Note that you should ignore this step if you pull directly tsh_img from docker repo as the image comes with a compile project.  
+You can compile tsh projet by using this command in the container (in `code` directory) :  
 `make`
 
 ### Run Project
 
-You can run tsh project in the container by using this command :  
-`./tsh`  
+You can run tsh project in the container by using this command on the root folder of the repo :  
+`./tsh.sh`  
 Then feel free to test all the commands you want.  
+On `test` directory you will find some tar and classic files and directories.  
