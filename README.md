@@ -6,10 +6,14 @@ Nous avons implémenté le shell, `./tsh`, capable d'executer les commandes suiv
 `help` -> donne des informations sur les commandes disponibles  
 `ls [-l] [repertoire]` -> affiche le contenu du repertoire, l'options -l donne des informations supplémentaires  
 `cd [repertoire]` -> permet de se déplacer dans un repertoire particulier  
+`pwd` -> affiche notre position actuelle dans l'arborescence de fichier
 `exit` -> quitte le tsh  
 
-Il existe encore certains problèmes connu, notamment avec la commande ls (ls . par exemple, affiche actuellement tout le temps le contenu du repertoire a partir duquel
-on a lancé le tsh, ou ls .. dans un tar ne fonctionne pas)  
+Il existe encore certains problèmes connus, notamment avec la commande ls (ls . par exemple, affiche actuellement tout le temps le contenu du repertoire a partir duquel
+on a lancé le tsh, ou ls .. dans un tar ne fonctionne pas).  
+Les commandes pwd, cd et exit fonctionnent sans problème. Nous avons aussi débuté la rédaction de tests, afin de vérifier le bon fonctionnement de toutes les commandes.
+Le fichier test.c utilise pour le moment la fonction system() pour appeler un script construisant une architecture de fichier, mais sera rapidement remplacé par 
+un autre système de test.  
   
 
 ## Test with Docker container
