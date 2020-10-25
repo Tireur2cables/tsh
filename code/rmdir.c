@@ -13,7 +13,7 @@
 
 int error_or_not = 1;
 
-int main(int argc,char **argv) {
+int rmdir_func(int argc,char **argv) {
 	
 	char *oldpwd = getcwd(NULL, 0);
 	if (setenv("TWD", oldpwd, 1) < 0) {
