@@ -384,7 +384,7 @@ int is_tar(char *file){
 }
 
 int is_options(char *options){
-	return (options[0] == '-');
+	return (options[0] == '-' && strlen(options) > 1);
 }
 
 int check_options(char *options){
