@@ -62,14 +62,13 @@ int print_dir(char *file, char *options){ //Fonction générale qui gère dans q
 int print_inside_tar(char *file, char *options){
 	char tarfile[strlen(file)]; //Contient le chemin jusqu'au tar pour l'ouvrir
 	char namefile[strlen(file)]; //Contient la suite du chemin pour l'affichage
-	int tarpos = strstr(file, ".tar") - file; //Existe car on qu'il y a un tar dans le chemin
+	int tarpos = strstr(file, ".tar") - file; //Existe car on sait qu'il y a un tar dans le chemin
 	strncpy(tarfile, file, tarpos+4);
 	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
 	tarfile[tarpos+4] = '\0';
 	namefile[strlen(file)-tarpos-4] = '\0';
 	if(strcmp(options, "\0") == 0){ //pas d'option
-		struct posix_header * header = malloc(sizeof(struct posix_header));
-		assert(header);
+		struct posix_header header;
 		int fd = open(tarfile, O_RDONLY);
 		if(fd == -1){
 		  perror("erreur d'ouverture de l'archive");
@@ -77,13 +76,13 @@ int print_inside_tar(char *file, char *options){
 		}
 		int n = 0;
 		int read_size = 0;
-		while((n=read(fd, header, BLOCKSIZE))>0){ //FIXME : Si on ne trouve pas de fichier : erreur
-			if(strcmp(header->name, "\0") == 0){
+		while((n=read(fd, &header, BLOCKSIZE))>0){ //FIXME : Si on ne trouve pas de fichier : erreur
+			if(strcmp(header.name, "\0") == 0){
 				break;
-			}if(strstr(header->name, namefile) != NULL && (strncmp(header->name, namefile, strlen(header->name)-1) != 0)) {
-				show_simple_header_infos(header, &read_size);
+			}if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) != 0)) {
+				show_simple_header_infos(&header, &read_size);
 			}else{
-				get_header_size(header, &read_size);
+				get_header_size(&header, &read_size);
 			}
 
 			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
@@ -94,8 +93,7 @@ int print_inside_tar(char *file, char *options){
 		printf("\n");
 		close(fd);
 	}else{
-		struct posix_header * header = malloc(sizeof(struct posix_header));
-		assert(header);
+		struct posix_header header;
 		int fd = open(tarfile, O_RDONLY);
 		if(fd == -1){
 		  perror("erreur d'ouverture de l'archive");
@@ -103,14 +101,14 @@ int print_inside_tar(char *file, char *options){
 		}
 		int n = 0;
 		int read_size = 0;
-		while((n=read(fd, header, BLOCKSIZE))>0){ //FIXME : Si on ne trouve pas de fichier : erreur
-			if(strcmp(header->name, "\0") == 0){
+		while((n=read(fd, &header, BLOCKSIZE))>0){ //FIXME : Si on ne trouve pas de fichier : erreur
+			if(strcmp(header.name, "\0") == 0){
 				break;
 			}
-			if(strstr(header->name, namefile) != NULL && (strncmp(header->name, namefile, strlen(header->name)-1) != 0)) {
-				show_complete_header_infos(header, &read_size);
+			if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) != 0)) {
+				show_complete_header_infos(&header, &read_size);
 			}else{
-				get_header_size(header, &read_size);
+				get_header_size(&header, &read_size);
 			}
 			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
 				perror("erreur de lecture de l'archive");
@@ -124,8 +122,7 @@ int print_inside_tar(char *file, char *options){
 
 int print_tar(char *file, char *options){
 	if(strcmp(options, "\0") == 0){ //pas d'option
-		struct posix_header * header = malloc(sizeof(struct posix_header));
-		assert(header);
+		struct posix_header header;
 		int fd = open(file, O_RDONLY);
 		if(fd == -1){
 		  perror("erreur d'ouverture de l'archive");
@@ -134,11 +131,11 @@ int print_tar(char *file, char *options){
 
 		int n = 0;
 		int read_size = 0;
-		while((n=read(fd, header, BLOCKSIZE))>0){
-			if(strcmp(header->name, "\0") == 0){
+		while((n=read(fd, &header, BLOCKSIZE))>0){
+			if(strcmp(header.name, "\0") == 0){
 				break;
 			}
-			show_simple_header_infos(header, &read_size);
+			show_simple_header_infos(&header, &read_size);
 			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
 				perror("erreur de lecture de l'archive");
 				return -1;
@@ -147,8 +144,7 @@ int print_tar(char *file, char *options){
 		printf("\n");
 		close(fd);
 	}else{ //ls -l
-		struct posix_header * header = malloc(sizeof(struct posix_header));
-		assert(header);
+		struct posix_header header;
 		int fd = open(file, O_RDONLY);
 		if(fd == -1){
 		  perror("erreur d'ouverture de l'archive");
@@ -156,11 +152,11 @@ int print_tar(char *file, char *options){
 		}
 		int n = 0;
 		int read_size = 0;
-		while((n=read(fd, header, BLOCKSIZE))>0){
-			if(strcmp(header->name, "\0") == 0){
+		while((n=read(fd, &header, BLOCKSIZE))>0){
+			if(strcmp(header.name, "\0") == 0){
 				break;
 			}
-			show_complete_header_infos(header, &read_size);
+			show_complete_header_infos(&header, &read_size);
 			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
 				perror("erreur de lecture de l'archive");
 				exit(EXIT_FAILURE);
