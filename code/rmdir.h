@@ -7,7 +7,7 @@ int openDetectError(DIR *);
 int fileFound(int);
 void NotDirectory(char *);
 void actuDir(char *);
-int DeletingDirectory(char *);
+int DeletingDirectory(char *, char *);
 
 #endif
 
