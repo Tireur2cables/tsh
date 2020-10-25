@@ -6,7 +6,7 @@ Nous avons implémenté le shell, `./tsh`, capable d'executer les commandes suiv
 `help` -> donne des informations sur les commandes disponibles  
 `ls [-l] [repertoire]` -> affiche le contenu du repertoire, l'options -l donne des informations supplémentaires  
 `cd [repertoire]` -> permet de se déplacer dans un repertoire particulier  
-`pwd` -> affiche notre position actuelle dans l'arborescence de fichier
+`pwd` -> affiche notre position actuelle dans l'arborescence de fichier  
 `exit` -> quitte le tsh  
 
 Il existe encore certains problèmes connus, notamment avec la commande `ls` (`ls .` par exemple, affiche actuellement tout le temps le contenu du repertoire a partir duquel
