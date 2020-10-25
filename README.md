@@ -1,14 +1,16 @@
 # Projet_Systeme
 
-`sudo apt-get install libreadline-dev` permet d'installer la librairie readline  
-`-lreadline` dans le makefile pour le linkeur  
+## Commands usable with tarballs as directory  
+  
+Nous avons implémenté le shell, `./tsh`, capable d'executer les commandes suivantes :  
+`help` -> donne des informations sur les commandes disponibles  
+`ls [-l] [repertoire]` -> affiche le contenu du repertoire, l'options -l donne des informations supplémentaires  
+`cd [repertoire]` -> permet de se déplacer dans un repertoire particulier  
+`exit` -> quitte le tsh  
 
-
-
-## Commands usable with tarballs as directory
-
-You can see all these commands by using `help` command in tsh.  
-
+Il existe encore certains problèmes connu, notamment avec la commande ls (ls . par exemple, affiche actuellement tout le temps le contenu du repertoire a partir duquel
+on a lancé le tsh, ou ls .. dans un tar ne fonctionne pas)  
+  
 
 ## Test with Docker container
 
