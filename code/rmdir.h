@@ -3,9 +3,10 @@
 
 extern int rmdir_func(int, char *[]); 
 
-int errorDetect(int);
-int errorOPEN(DIR *,char *);
-
+int openDetectError(DIR *);
+int fileFound(int);
+void NotDirectory(char *);
+int actuDir(char *);
 
 #endif
 
