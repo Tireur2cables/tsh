@@ -100,7 +100,6 @@ int print_tar(char *file, char *options){
 		  perror("erreur d'ouverture de l'archive");
 		  return -1;
 		}
-
 		int n = 0;
 		int read_size = 0;
 		while((n=read(fd, header, BLOCKSIZE))>0){
@@ -120,7 +119,7 @@ int print_tar(char *file, char *options){
 
 int print_rep(char *file, char *options){
 	DIR *dirp;
-	if((dirp = opendir(file)) == NULL){
+	if((dirp = opendir(file)) == NULL){ //Cas d'un fichier simple
 		char format[strlen(file) + 2];
 		strcpy(format, file);
 		strcat(format, "\n");
@@ -174,7 +173,6 @@ void convert_mode(mode_t mode, char* res){
 		*res++ = 'x';
 	else
 		*res++ = '-';
-
 	//OTHER
 	if (mode & S_IROTH)
 		*res++ = 'r';
