@@ -47,3 +47,9 @@ You can run tsh project in the container by using this command on the root folde
 `./tsh.sh`  
 Then feel free to test all the commands you want.  
 On `test` directory you will find some tar and classic files and directories.  
+
+### Si vous n'utilisez pas docker
+
+Si vous n'utilisez pas docker, vous devrez installer la librairie readline que nous utilisons pour la lecture des commandes :  
+sudo apt-get install libreadline-dev permet d'installer la librairie readline
+-lreadline dans le makefile pour le linkeur
