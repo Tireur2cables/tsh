@@ -46,7 +46,7 @@ int ls(int argc, char *argv[]){
 	return 0;
 }
 
-int print_dir(char *file, char *options){
+int print_dir(char *file, char *options){ //Fonction générale qui gère dans quel cas on se trouve
 	char *cp = malloc(sizeof(file)+1);
 	assert(cp);
 	strcpy(cp, file);
@@ -61,9 +61,9 @@ int print_dir(char *file, char *options){
 }
 
 int print_inside_tar(char *file, char *options){
-	char tarfile[strlen(file)];
-	char namefile[strlen(file)];
-	int tarpos = strstr(file, ".tar") - file;
+	char tarfile[strlen(file)]; //Contient le chemin jusqu'au tar pour l'ouvrir
+	char namefile[strlen(file)]; //Contient la suite du chemin pour l'affichage
+	int tarpos = strstr(file, ".tar") - file; //Existe car on qu'il y a un tar dans le chemin
 	strncpy(tarfile, file, tarpos+4);
 	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
 	tarfile[tarpos+4] = '\0';
@@ -78,8 +78,7 @@ int print_inside_tar(char *file, char *options){
 		}
 		int n = 0;
 		int read_size = 0;
-		while((n=read(fd, header, BLOCKSIZE))>0){
-			//printf("-%s %s-\n", header->name, namefile);
+		while((n=read(fd, header, BLOCKSIZE))>0){ //FIXME : Si on ne trouve pas de fichier : erreur
 			if(strcmp(header->name, "\0") == 0){
 				break;
 			}if(strstr(header->name, namefile) != NULL && (strncmp(header->name, namefile, strlen(header->name)-1) != 0)) {
@@ -105,7 +104,7 @@ int print_inside_tar(char *file, char *options){
 		}
 		int n = 0;
 		int read_size = 0;
-		while((n=read(fd, header, BLOCKSIZE))>0){
+		while((n=read(fd, header, BLOCKSIZE))>0){ //FIXME : Si on ne trouve pas de fichier : erreur
 			if(strcmp(header->name, "\0") == 0){
 				break;
 			}
@@ -148,7 +147,7 @@ int print_tar(char *file, char *options){
 		}
 		printf("\n");
 		close(fd);
-	}else{
+	}else{ //ls -l
 		struct posix_header * header = malloc(sizeof(struct posix_header));
 		assert(header);
 		int fd = open(file, O_RDONLY);
@@ -175,10 +174,10 @@ int print_tar(char *file, char *options){
 
 int print_rep(char *file, char *options){
 	struct stat statbuf;
-	if(stat(file, &statbuf) == -1){ //Cas d'un fichier simple
+	if(stat(file, &statbuf) == -1){ //Cas d'un nom de fichier absent
 		perror("Impossible d'ouvrir le fichier");
 		return -1;
-	}else if(S_ISREG(statbuf.st_mode)){
+	}else if(S_ISREG(statbuf.st_mode)){ //Cas d'un fichier simple
 		char format[strlen(file) + 2];
 		strcpy(format, file);
 		strcat(format, "\n");
@@ -190,62 +189,10 @@ int print_rep(char *file, char *options){
 	}
 	if(strcmp(options, "\0") == 0){ //pas d'options
 		print_normal_dir(file);
-	}else{
+	}else{ //ls -l
 		print_complete_normal_dir(file);
 	}
 	return 0;
-}
-
-int nbdigit(int n){
-	int count = 1;
-	while(n > 9){
-		count++;
-		n/=10;
-	}
-	return count;
-}
-
-void convert_mode(mode_t mode, char* res){
-	//UTILISATEUR
-	if (mode & S_IRUSR)
-		*res++ = 'r';
-	else
-		*res++ = '-';
-	if (mode & S_IWUSR)
-		*res++ = 'w';
-	else
-		*res++ = '-';
-	if (mode & S_IXUSR)
-		*res++ = 'x';
-	else
-		*res++ = '-';
-	//GROUPE
-	if (mode & S_IRGRP)
-		*res++ = 'r';
-	else
-		*res++ = '-';
-	if (mode & S_IWGRP)
-		*res++ = 'w';
-	else
-		*res++ = '-';
-	if (mode & S_IXGRP)
-		*res++ = 'x';
-	else
-		*res++ = '-';
-	//OTHER
-	if (mode & S_IROTH)
-		*res++ = 'r';
-	else
-		*res++ = '-';
-	if (mode & S_IWOTH)
-		*res++ = 'w';
-	else
-		*res++ = '-';
-	if (mode & S_IXOTH)
-		*res++ = 'x';
-	else
-		*res++ = '-';
-	*res = '\0';
 }
 
 void show_complete_header_infos(struct posix_header *header, int *read_size){
@@ -276,7 +223,7 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	date[strlen(date) - 1] = '\0'; // ctime renvoit une string se terminant par \n ...
 
 	*read_size = ((taille + 512-1)/512);
-	char format[2*sizeof(int) + 1 + strlen(name) + strlen(date) + strlen(pw_name) + strlen(gr_name)+ 1];
+	char format[2*sizeof(int) + 1 + strlen(name) + strlen(date) + strlen(pw_name) + strlen(gr_name)+ 1]; //calcul de taille faux
 	strcpy(format, typeformat);
 	strcat(format, mode_str);
 	strcat(format, " ");
@@ -297,11 +244,6 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	}
 }
 
-void get_header_size(struct posix_header *header, int *read_size){
-	int taille = 0;
-	sscanf(header->size, "%o", &taille);
-	*read_size = ((taille + 512-1)/512);
-}
 void show_simple_header_infos(struct posix_header *header, int *read_size){
 	int taille = 0;
 	int mode = 0;
@@ -316,6 +258,12 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 		perror("Erreur d'écriture dans le shell!");
 		exit(EXIT_FAILURE);
 	}
+}
+
+void get_header_size(struct posix_header *header, int *read_size){
+	int taille = 0;
+	sscanf(header->size, "%o", &taille);
+	*read_size = ((taille + 512-1)/512);
 }
 
 int print_normal_dir(char* file){
@@ -394,7 +342,7 @@ int print_complete_normal_dir(char* file){
 			taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1)-1:5] = '\0';
 			typeformat[0] = ((S_ISDIR(mode))?'d':'-');
 			typeformat[1] = '\0';
-			char format[2*sizeof(int) + 1 + strlen(name) + strlen(date) + strlen(nlink_str) + strlen(pw_name) + strlen(gr_name)+ 1];
+			char format[2*sizeof(int) + 1 + strlen(name) + strlen(date) + strlen(nlink_str) + strlen(pw_name) + strlen(gr_name)+ 1]; //calcul de taille faux
 			strcpy(format, typeformat);
 			strcat(format, mode_str);
 			strcat(format, " ");
@@ -443,4 +391,56 @@ int check_options(char *options){
 		printf("ls : option invalide -- '%s'\n", options);
 		exit(EXIT_FAILURE);
 	}
+}
+
+int nbdigit(int n){
+	int count = 1;
+	while(n > 9){
+		count++;
+		n/=10;
+	}
+	return count;
+}
+
+void convert_mode(mode_t mode, char* res){
+	//UTILISATEUR
+	if (mode & S_IRUSR)
+		*res++ = 'r';
+	else
+		*res++ = '-';
+	if (mode & S_IWUSR)
+		*res++ = 'w';
+	else
+		*res++ = '-';
+	if (mode & S_IXUSR)
+		*res++ = 'x';
+	else
+		*res++ = '-';
+	//GROUPE
+	if (mode & S_IRGRP)
+		*res++ = 'r';
+	else
+		*res++ = '-';
+	if (mode & S_IWGRP)
+		*res++ = 'w';
+	else
+		*res++ = '-';
+	if (mode & S_IXGRP)
+		*res++ = 'x';
+	else
+		*res++ = '-';
+	//OTHER
+	if (mode & S_IROTH)
+		*res++ = 'r';
+	else
+		*res++ = '-';
+	if (mode & S_IWOTH)
+		*res++ = 'w';
+	else
+		*res++ = '-';
+	if (mode & S_IXOTH)
+		*res++ = 'x';
+	else
+		*res++ = '-';
+	*res = '\0';
 }
