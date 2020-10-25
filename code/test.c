@@ -51,6 +51,7 @@ int main(int argc, char const *argv[]) {
 
 
 int generate_files(){
+	//TEMPORAIRE POUR CREER L'ARBORESCENCE DE FICHIER POUR EFFECTUER LES TESTS
 	system("../test/test.sh");
 	return 0;
 }
