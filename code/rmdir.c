@@ -15,7 +15,7 @@ char * InitialRep = NULL;
 
 //TODO : inclure tar dans chemin (isTAR..)
 
-int main(int argc,char **argv) {
+int rmdir_func(int argc,char **argv) {
 	
 	InitialRep = getcwd(NULL,0);
 	
