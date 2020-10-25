@@ -47,8 +47,7 @@ int ls(int argc, char *argv[]){
 }
 
 int print_dir(char *file, char *options){ //Fonction générale qui gère dans quel cas on se trouve
-	char *cp = malloc(sizeof(file)+1);
-	assert(cp);
+	char cp[strlen(file)+1];
 	strcpy(cp, file);
 	if(is_tar(cp)){
 		print_tar(file, options);
