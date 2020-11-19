@@ -119,11 +119,11 @@ int print_tar(char *file, char *options){
 			break;
 		}
 		if(strcmp(options, "\0") == 0){ //Pas d'option, affichage simple
-			/*if ((count_slash(header.name) < 2)) {*/
-			show_simple_header_infos(&header, &read_size);
-			/*}else{
+			if ((get_profondeur(header.name) == 0)) {
+				show_simple_header_infos(&header, &read_size);
+			}else{
 				get_header_size(&header, &read_size);
-			}*/
+			}
 		}else { //ls -l
 			show_complete_header_infos(&header, &read_size);
 		}
@@ -235,7 +235,7 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 int get_filename(char *name, char* namecp){
 	if(name[strlen(name)-1] == '/'){
 		strcpy(namecp, name);
-		return 1;
+		return 0;
 	}
 	int index = 0;
     for (int i = 0; i < strlen(name); i++) {
@@ -255,10 +255,23 @@ int get_filename(char *name, char* namecp){
 		}
 		namecp[strlen(name)-index-1] = '\0';
 	}
-
-	//namecp[strlen(name)-index] = '.';
-
 	return 0;
+}
+
+int get_profondeur(char *name){
+	int profondeur = 0;
+	if(name[strlen(name)-1] == '/'){
+		//strcpy(namecp, name);
+		return profondeur;
+	}
+	int index = 0;
+    for (int i = 0; i < strlen(name); i++) {
+        if (name[i] == '/') {
+            index = i;
+			profondeur++;
+		}
+	}
+	return profondeur;
 }
 
 void get_header_size(struct posix_header *header, int *read_size){
@@ -373,20 +386,6 @@ int print_complete_normal_dir(char* file){
 
 int contains_tar(char *file){
 	return (strstr(file,".tar") != NULL);
-}
-
-int count_slash(char *name){
-	char namecp[strlen(name)+1];
-	strcpy(namecp, name);
-	strtok(namecp, "/");
-	int count = 1;
-	char *token;
-	while((token = strtok(NULL, "/")) != NULL){
-		if(strlen(token) > 0){
-			count++;
-		}
-	}
-	return count;
 }
 
 int is_ext(char *file, char *ext){
