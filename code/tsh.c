@@ -71,18 +71,61 @@ int main(int argc, char const *argv[]) { //main
 void selectCommand(int readen, char *mycat_buf) { //lance la bonne commande ou lance avec exec
 	if (iscmd(mycat_buf, "exit")) { //cmd = exit must be built-in func
 		launchBuiltInFunc(exit_tsh, mycat_buf, readen);
-	}else if (iscmd(mycat_buf, "cd")) { //cmd = cd must be built-in func
+	}
+	else if (iscmd(mycat_buf, "cd")) { //cmd = cd must be built-in func
 		launchBuiltInFunc(cd, mycat_buf, readen);
-	}else if (iscmd(mycat_buf, "help")) { //cmd = help
+	}
+	else if (iscmd(mycat_buf, "help")) { //cmd = help
 		launchFunc(help, mycat_buf, readen);
-	}else if (iscmd(mycat_buf, "ls")) { //cmd = ls
+	}
+	else if (iscmd(mycat_buf, "ls")) { //cmd = ls
 		launchFunc(ls, mycat_buf, readen);
-	}else if (iscmd(mycat_buf, "pwd")) { //cmd = pwd
+	}
+	else if (iscmd(mycat_buf, "pwd")) { //cmd = pwd
 		launchFunc(pwd, mycat_buf, readen);
-	}else { //lancer la commande avec exec
+	}
+	else if (iscmd(mycat_buf, "cat")) { //cmd = cat
+		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
+			perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
+	}
+	else if (iscmd(mycat_buf, "cp")) { //cmd = cp
+		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
+			perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
+	}
+	else if (iscmd(mycat_buf, "rm")) { //cmd = rm
+		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
+			perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
+	}
+	else if (iscmd(mycat_buf, "mv")) { //cmd = mv
+		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
+			perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
+	}
+	else if (iscmd(mycat_buf, "mkdir")) { //cmd = mkdir
+		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
+			perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
+	}
+	else if (iscmd(mycat_buf, "rmdir")) { //cmd = rmdir
+		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
+			perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
+	}
+	else { //lancer la commande avec exec
 		launchFunc(exec, mycat_buf, readen);
 	}
 }
+
+
 
 int launchBuiltInFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lance la fonction demandée directement en processus principal
 	int argc = getNbArgs(mycat_buf, readen);
