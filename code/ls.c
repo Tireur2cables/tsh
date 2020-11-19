@@ -67,111 +67,79 @@ int print_inside_tar(char *file, char *options){
 	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
 	tarfile[tarpos+4] = '\0';
 	namefile[strlen(file)-tarpos-4] = '\0';
-	if(strcmp(options, "\0") == 0){ //pas d'option
-		struct posix_header header;
-		int fd = open(tarfile, O_RDONLY);
-		if(fd == -1){
-		  perror("erreur d'ouverture de l'archive");
-		  return -1;
-		}
-		int n = 0;
-		int read_size = 0;
-		while((n=read(fd, &header, BLOCKSIZE))>0){ //FIXME : Si on ne trouve pas de fichier : erreur
-			if(strcmp(header.name, "\0") == 0){
-				break;
-			}if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) != 0)) {
+	struct posix_header header;
+	int fd = open(tarfile, O_RDONLY);
+	if(fd == -1){
+	  perror("erreur d'ouverture de l'archive");
+	  return -1;
+	}
+	int n = 0;
+	int read_size = 0;
+	while((n=read(fd, &header, BLOCKSIZE))>0){ //FIXME : Si on ne trouve pas de fichier : erreur
+		if(strcmp(header.name, "\0") == 0){
+			break;
+		}if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) != 0)) {
+			if(strcmp(options, "\0") == 0){ //pas d'option
 				show_simple_header_infos(&header, &read_size);
-			}else{
-				get_header_size(&header, &read_size);
+			}else{ //Option
+				show_complete_header_infos(&header, &read_size);
 			}
-
-			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
-				perror("erreur de lecture de l'archive");
-				return -1;
-			}
+		}else{
+			get_header_size(&header, &read_size);
 		}
+
+		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+			perror("erreur de lecture de l'archive");
+			return -1;
+		}
+	}
+	if(strcmp(options, "\0") == 0){
 		char *format = "\n";
 		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
 			perror("Erreur d'écriture dans le shell!");
 			exit(EXIT_FAILURE);
 		}
-		close(fd);
-	}else{
-		struct posix_header header;
-		int fd = open(tarfile, O_RDONLY);
-		if(fd == -1){
-		  perror("erreur d'ouverture de l'archive");
-		  return -1;
-		}
-		int n = 0;
-		int read_size = 0;
-		while((n=read(fd, &header, BLOCKSIZE))>0){ //FIXME : Si on ne trouve pas de fichier : erreur
-			if(strcmp(header.name, "\0") == 0){
-				break;
-			}
-			if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) != 0)) {
-				show_complete_header_infos(&header, &read_size);
-			}else{
-				get_header_size(&header, &read_size);
-			}
-			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
-				perror("erreur de lecture de l'archive");
-				exit(EXIT_FAILURE);
-			}
-		}
-		close(fd);
 	}
+	close(fd);
 	return 0;
 }
 
 int print_tar(char *file, char *options){
-	if(strcmp(options, "\0") == 0){ //pas d'option
-		struct posix_header header;
-		int fd = open(file, O_RDONLY);
-		if(fd == -1){
-		  perror("erreur d'ouverture de l'archive");
-		  return -1;
-		}
+	struct posix_header header;
+	int fd = open(file, O_RDONLY);
+	if(fd == -1){
+	  perror("erreur d'ouverture de l'archive");
+	  return -1;
+	}
 
-		int n = 0;
-		int read_size = 0;
-		while((n=read(fd, &header, BLOCKSIZE))>0){
-			if(strcmp(header.name, "\0") == 0){
-				break;
-			}
-			show_simple_header_infos(&header, &read_size);
-			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
-				perror("erreur de lecture de l'archive");
-				return -1;
-			}
+	int n = 0;
+	int read_size = 0;
+	while((n=read(fd, &header, BLOCKSIZE))>0){
+		if(strcmp(header.name, "\0") == 0){
+			break;
 		}
+		if(strcmp(options, "\0") == 0){ //Pas d'option, affichage simple
+			/*if ((count_slash(header.name) < 2)) {*/
+			show_simple_header_infos(&header, &read_size);
+			/*}else{
+				get_header_size(&header, &read_size);
+			}*/
+		}else { //ls -l
+			show_complete_header_infos(&header, &read_size);
+		}
+		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+			perror("erreur de lecture de l'archive");
+			return -1;
+		}
+	}
+	if(strcmp(options, "\0") == 0){ //Si on a effectué un affichage simple, on doit rajouter un retour a la ligne, qui n'a pas lieu d'etre dans ls -l etant donné qu'on affiche ligne par ligne
 		char *format = "\n";
 		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
 			perror("Erreur d'écriture dans le shell!");
 			exit(EXIT_FAILURE);
 		}
-		close(fd);
-	}else{ //ls -l
-		struct posix_header header;
-		int fd = open(file, O_RDONLY);
-		if(fd == -1){
-		  perror("erreur d'ouverture de l'archive");
-		  return -1;
-		}
-		int n = 0;
-		int read_size = 0;
-		while((n=read(fd, &header, BLOCKSIZE))>0){
-			if(strcmp(header.name, "\0") == 0){
-				break;
-			}
-			show_complete_header_infos(&header, &read_size);
-			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
-				perror("erreur de lecture de l'archive");
-				exit(EXIT_FAILURE);
-			}
-		}
-		close(fd);
 	}
+	close(fd);
 	return 0;
 }
 
@@ -200,11 +168,11 @@ int print_rep(char *file, char *options){
 
 void show_complete_header_infos(struct posix_header *header, int *read_size){
 	int taille, mode, uid, gid;
-	char name[strlen(header->name)];
+	char name[strlen(header->name)+1];
+	get_filename(header->name, name);
 	char mode_str[10];
 	char typeformat[2];
 	long int mtime;
-	sscanf(header->name, "%s", name);
 	sscanf(header->size, "%o", &taille);
 	char taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1):6]; //Les tailles ne sont plus alignés au dessus de 6 chiffres
 	sprintf(taille_str, "%d", taille);
@@ -253,14 +221,44 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 	sscanf(header->size, "%o", &taille);
 	sscanf(header->mode, "%o", &mode);
 	*read_size = ((taille + 512-1)/512);
-	int filename_len = strlen(header->name) + 3;
-	char filename[filename_len];
-	strcpy(filename, header->name);
-	strcat(filename, "  ");
-	if (write(STDOUT_FILENO, filename, filename_len) < filename_len) {
+	char filename[strlen(header->name)+1];
+	get_filename(header->name, filename);
+	char filename_format[strlen(filename) + 2 + 1];
+	strcpy(filename_format, filename);
+	strcat(filename_format, "  ");
+	if (write(STDOUT_FILENO, filename_format, strlen(filename_format)) < strlen(filename_format)) {
 		perror("Erreur d'écriture dans le shell!");
 		exit(EXIT_FAILURE);
 	}
+}
+
+int get_filename(char *name, char* namecp){
+	if(name[strlen(name)-1] == '/'){
+		strcpy(namecp, name);
+		return 1;
+	}
+	int index = 0;
+    for (int i = 0; i < strlen(name); i++) {
+        if (name[i] == '/') {
+            index = i;
+		}
+	}
+	//char *namecp[strlen(name)-index];
+	if(index == 0){
+		for (int i = 0; i < strlen(name)-index; i++) {
+	        namecp[i] = name[index + i];
+		}
+		namecp[strlen(name)-index] = '\0';
+	}else{
+		for (int i = 0; i < strlen(name)-index - 1; i++) {
+			namecp[i] = name[index + i +1];
+		}
+		namecp[strlen(name)-index-1] = '\0';
+	}
+
+	//namecp[strlen(name)-index] = '.';
+
+	return 0;
 }
 
 void get_header_size(struct posix_header *header, int *read_size){
@@ -268,6 +266,8 @@ void get_header_size(struct posix_header *header, int *read_size){
 	sscanf(header->size, "%o", &taille);
 	*read_size = ((taille + 512-1)/512);
 }
+
+
 
 int print_normal_dir(char* file){
 	DIR * dirp;
@@ -373,6 +373,20 @@ int print_complete_normal_dir(char* file){
 
 int contains_tar(char *file){
 	return (strstr(file,".tar") != NULL);
+}
+
+int count_slash(char *name){
+	char namecp[strlen(name)+1];
+	strcpy(namecp, name);
+	strtok(namecp, "/");
+	int count = 1;
+	char *token;
+	while((token = strtok(NULL, "/")) != NULL){
+		if(strlen(token) > 0){
+			count++;
+		}
+	}
+	return count;
 }
 
 int is_ext(char *file, char *ext){

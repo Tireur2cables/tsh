@@ -22,5 +22,7 @@ int is_curr_or_parent_rep(char *);
 int is_ext(char *, char *);
 int nbdigit(int);
 void convert_mode(mode_t, char*);
+int count_slash(char *);
+int get_filename(char *, char*);
 
 #endif
