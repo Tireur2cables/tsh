@@ -14,6 +14,7 @@
 #include "ls.h"
 #include "cd.h"
 #include "pwd.h"
+#include "cat.h"
 
 /* utiliser un tableau des commandes implémentées pour facotriser encore plus ? */
 
@@ -87,6 +88,8 @@ void selectCommand(int readen, char *mycat_buf) { //lance la bonne commande ou l
 	}else if (iscmd(mycat_buf, "ls")) { //cmd = ls
 		launchFunc(ls, mycat_buf, readen);
 	}else if (iscmd(mycat_buf, "pwd")) { //cmd = pwd
+		launchFunc(pwd, mycat_buf, readen);
+	}else if (iscmd(mycat_buf, "cat")) { //cmd = cat
 		launchFunc(pwd, mycat_buf, readen);
 	}else { //lancer la commande avec exec
 		launchFunc(exec, mycat_buf, readen);
