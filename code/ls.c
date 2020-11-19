@@ -75,14 +75,23 @@ int print_inside_tar(char *file, char *options){
 	}
 	int n = 0;
 	int read_size = 0;
+	int profondeur = get_profondeur(namefile);
 	while((n=read(fd, &header, BLOCKSIZE))>0){ //FIXME : Si on ne trouve pas de fichier : erreur
 		if(strcmp(header.name, "\0") == 0){
 			break;
 		}if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) != 0)) {
 			if(strcmp(options, "\0") == 0){ //pas d'option
-				show_simple_header_infos(&header, &read_size);
+				if(get_profondeur(header.name) == profondeur+1){
+					show_simple_header_infos(&header, &read_size);
+				}else{
+					get_header_size(&header, &read_size);
+				}
 			}else{ //Option
-				show_complete_header_infos(&header, &read_size);
+				if(get_profondeur(header.name) == profondeur+1){
+					show_complete_header_infos(&header, &read_size);
+				}else{
+					get_header_size(&header, &read_size);
+				}
 			}
 		}else{
 			get_header_size(&header, &read_size);
@@ -111,7 +120,6 @@ int print_tar(char *file, char *options){
 	  perror("erreur d'ouverture de l'archive");
 	  return -1;
 	}
-
 	int n = 0;
 	int read_size = 0;
 	while((n=read(fd, &header, BLOCKSIZE))>0){
@@ -125,7 +133,11 @@ int print_tar(char *file, char *options){
 				get_header_size(&header, &read_size);
 			}
 		}else { //ls -l
-			show_complete_header_infos(&header, &read_size);
+			if ((get_profondeur(header.name) == 0)) {
+				show_complete_header_infos(&header, &read_size);
+			}else{
+				get_header_size(&header, &read_size);
+			}
 		}
 		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
 			perror("erreur de lecture de l'archive");
@@ -233,17 +245,31 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 }
 
 int get_filename(char *name, char* namecp){
+	int index = 0;
 	if(name[strlen(name)-1] == '/'){
-		strcpy(namecp, name);
+		for (int i = 0; i < strlen(name)-1; i++) {
+	        if (name[i] == '/') {
+	            index = i;
+			}
+		}
+		if(index == 0){
+			for (int i = 0; i < strlen(name)-index; i++) {
+		        namecp[i] = name[index + i];
+			}
+			namecp[strlen(name)-index] = '\0';
+		}else{
+			for (int i = 0; i < strlen(name)-index - 1; i++) {
+				namecp[i] = name[index + i +1];
+			}
+			namecp[strlen(name)-index-1] = '\0';
+		}
 		return 0;
 	}
-	int index = 0;
     for (int i = 0; i < strlen(name); i++) {
         if (name[i] == '/') {
             index = i;
 		}
 	}
-	//char *namecp[strlen(name)-index];
 	if(index == 0){
 		for (int i = 0; i < strlen(name)-index; i++) {
 	        namecp[i] = name[index + i];
@@ -261,16 +287,20 @@ int get_filename(char *name, char* namecp){
 int get_profondeur(char *name){
 	int profondeur = 0;
 	if(name[strlen(name)-1] == '/'){
-		//strcpy(namecp, name);
+		for (int i = 0; i < strlen(name)-1; i++) {
+	        if (name[i] == '/') {
+				profondeur++;
+			}
+		}
+		//printf("%s - %d\n", name, profondeur);
 		return profondeur;
 	}
-	int index = 0;
     for (int i = 0; i < strlen(name); i++) {
         if (name[i] == '/') {
-            index = i;
 			profondeur++;
 		}
 	}
+	//printf("%s - %d\n", name, profondeur);
 	return profondeur;
 }
 
