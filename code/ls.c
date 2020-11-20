@@ -16,7 +16,6 @@
 //FONCTION LS
 /*TODO :
 		 nombre de references dans un tar
-		 ls arch.tar/rep/ -> Affiche un cran trop profond
 		 ls arch.tar/rep/file -> Affiche que le ficher n'existe pas
 */
 
@@ -126,6 +125,9 @@ int print_inside_tar(char *file, char *options){
 
 int print_tar(char *file, char *options){
 	struct posix_header header;
+	if(file[strlen(file)-1] == '/'){ //remove trailing_slash
+		file[strlen(file)-1] = '\0';
+	}
 	int fd = open(file, O_RDONLY);
 	if(fd == -1){
 	  perror("erreur d'ouverture de l'archive");
@@ -255,7 +257,7 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 int get_filename(char *name, char* namecp){
 	int index = 0;
 	int trailing_slash = ((name[strlen(name)-1] == '/')?1:0);
-    for (int i = 0; i < strlen(name)-trailing_slash; i++) {
+    for (int i = 0; i < strlen(name)-trailing_slash; i++) { //Cherche l'index du dernier /, ce qui se trouve après est le nom du fichier
         if (name[i] == '/') {
             index = i;
 		}
@@ -282,6 +284,7 @@ int get_profondeur(char *name){
 			profondeur++;
 		}
 	}
+	//printf("-%s %d-\n", name, profondeur);
 	return profondeur;
 }
 
@@ -404,7 +407,7 @@ int is_ext(char *file, char *ext){
 }
 
 int is_tar(char *file){
-	return is_ext(file, ".tar");
+	return is_ext(file, ".tar") || is_ext(file, ".tar/");
 }
 
 int is_options(char *options){
