@@ -16,8 +16,6 @@
 //FONCTION LS
 /*TODO :
 		 nombre de references dans un tar
-		 ls -l sur un fichier classique
-		 fichier dans un tar qui n'existe pas : Pour le moment on affiche rien -> Ecrire une erreur : ce fichier n'existe pas
 		 ls arch.tar/rep/ -> Affiche un cran trop profond
 		 ls arch.tar/rep/file -> Affiche que le ficher n'existe pas
 */
@@ -78,7 +76,7 @@ int print_inside_tar(char *file, char *options){
 	int found = 0;
 	int read_size = 0;
 	int profondeur = get_profondeur(namefile);
-	while((n=read(fd, &header, BLOCKSIZE))>0){ //FIXME : Si on ne trouve pas de fichier : erreur
+	while((n=read(fd, &header, BLOCKSIZE))>0){
 		if(strcmp(header.name, "\0") == 0){
 			break;
 		}
@@ -296,21 +294,12 @@ int get_filename(char *name, char* namecp){
 
 int get_profondeur(char *name){
 	int profondeur = 0;
-	if(name[strlen(name)-1] == '/'){
-		for (int i = 0; i < strlen(name)-1; i++) {
-	        if (name[i] == '/') {
-				profondeur++;
-			}
-		}
-		//printf("%s - %d\n", name, profondeur);
-		return profondeur;
-	}
-    for (int i = 0; i < strlen(name); i++) {
+	int decalage_trailing_slash = ((name[strlen(name)-1] == '/')?1:0);
+    for (int i = 0; i < strlen(name)-decalage_trailing_slash; i++) {
         if (name[i] == '/') {
 			profondeur++;
 		}
 	}
-	//printf("%s - %d\n", name, profondeur);
 	return profondeur;
 }
 
