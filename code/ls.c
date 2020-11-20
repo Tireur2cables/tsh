@@ -254,26 +254,8 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 
 int get_filename(char *name, char* namecp){
 	int index = 0;
-	if(name[strlen(name)-1] == '/'){
-		for (int i = 0; i < strlen(name)-1; i++) {
-	        if (name[i] == '/') {
-	            index = i;
-			}
-		}
-		if(index == 0){
-			for (int i = 0; i < strlen(name)-index; i++) {
-		        namecp[i] = name[index + i];
-			}
-			namecp[strlen(name)-index] = '\0';
-		}else{
-			for (int i = 0; i < strlen(name)-index - 1; i++) {
-				namecp[i] = name[index + i +1];
-			}
-			namecp[strlen(name)-index-1] = '\0';
-		}
-		return 0;
-	}
-    for (int i = 0; i < strlen(name); i++) {
+	int trailing_slash = ((name[strlen(name)-1] == '/')?1:0);
+    for (int i = 0; i < strlen(name)-trailing_slash; i++) {
         if (name[i] == '/') {
             index = i;
 		}
@@ -285,7 +267,7 @@ int get_filename(char *name, char* namecp){
 		namecp[strlen(name)-index] = '\0';
 	}else{
 		for (int i = 0; i < strlen(name)-index - 1; i++) {
-			namecp[i] = name[index + i +1];
+			namecp[i] = name[index + i + 1];
 		}
 		namecp[strlen(name)-index-1] = '\0';
 	}
@@ -294,8 +276,8 @@ int get_filename(char *name, char* namecp){
 
 int get_profondeur(char *name){
 	int profondeur = 0;
-	int decalage_trailing_slash = ((name[strlen(name)-1] == '/')?1:0);
-    for (int i = 0; i < strlen(name)-decalage_trailing_slash; i++) {
+	int trailing_slash = ((name[strlen(name)-1] == '/')?1:0);
+    for (int i = 0; i < strlen(name)-trailing_slash; i++) {
         if (name[i] == '/') {
 			profondeur++;
 		}
