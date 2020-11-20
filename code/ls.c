@@ -18,6 +18,8 @@
 		 nombre de references dans un tar
 		 ls -l sur un fichier classique
 		 fichier dans un tar qui n'existe pas : Pour le moment on affiche rien -> Ecrire une erreur : ce fichier n'existe pas
+		 ls arch.tar/rep/ -> Affiche un cran trop profond
+		 ls arch.tar/rep/file -> Affiche que le ficher n'existe pas
 */
 
 int ls(int argc, char *argv[]){
@@ -73,6 +75,7 @@ int print_inside_tar(char *file, char *options){
 	  return -1;
 	}
 	int n = 0;
+	int found = 0;
 	int read_size = 0;
 	int profondeur = get_profondeur(namefile);
 	while((n=read(fd, &header, BLOCKSIZE))>0){ //FIXME : Si on ne trouve pas de fichier : erreur
@@ -87,6 +90,7 @@ int print_inside_tar(char *file, char *options){
 				else{ //ls -l
 					show_complete_header_infos(&header, &read_size);
 				}
+				found = 1;
 			}
 			else{
 				get_header_size(&header, &read_size);
@@ -101,8 +105,18 @@ int print_inside_tar(char *file, char *options){
 			return -1;
 		}
 	}
-	if(strcmp(options, "\0") == 0){
+	if(found && strcmp(options, "\0") == 0){
 		char *format = "\n";
+		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
+			perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
+	}
+	if(!found){
+		char format[100];
+		strcpy(format, "ls : impossible d'acceder a '");
+		strcat(format, namefile);
+		strcat(format, "': Aucun fichier ou dossier de ce type\n");
 		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
 			perror("Erreur d'écriture dans le shell!");
 			exit(EXIT_FAILURE);
