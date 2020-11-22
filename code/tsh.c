@@ -23,6 +23,12 @@ char const *builtin[2] = {"cd", "exit"};
 int len_custom = 9;
 char const *custom[9] = {"help", "ls", "pwd", "cat", "cp", "rm", "mv", "rmdir", "mkdir"};
 
+//todo list
+// cd sans tar
+// redirection < > >> 2>>
+// tube |
+// arriere plan &
+
 int iscmd(char *, char *);
 int isOnlySpace(char *, int);
 void selectCommand(int, char *);
@@ -152,8 +158,7 @@ int launchBuiltInFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) {
 	for (int i = 1; i <= argc; i++) {
 		argv[i] = strtok(NULL, " ");
 	}
-	func(argc, argv);
-	return 0;
+	return func(argc, argv);
 }
 
 int launchFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lance dans un nouveau processus la fonction demandée et attend qu'elle finisse
