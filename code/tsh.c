@@ -27,7 +27,6 @@ char const *custom[9] = {"help", "ls", "pwd", "cat", "cp", "rm", "mv", "rmdir", 
 // cd sans tar
 // redirection < > >> 2>>
 // tube |
-// arriere plan &
 
 int iscmd(char *, char *);
 int isOnlySpace(char *, int);
