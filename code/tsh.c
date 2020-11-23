@@ -17,14 +17,14 @@
 #include "help.h"
 #include "exit.h"
 
-//utiliser une struct pour faire une map avec clé string et valeur pointeur function et factoriser ?
+//utiliser une struct pour faire un couple avec clé string et valeur pointeur function et factoriser ? a faire dans un .h séparé avec les fonctions associées
 int len_builtin = 2;
 char const *builtin[2] = {"cd", "exit"};
 int len_custom = 9;
 char const *custom[9] = {"help", "ls", "pwd", "cat", "cp", "rm", "mv", "rmdir", "mkdir"};
 
 //todo list
-// cd sans tar
+// cd sans tar à faire dans un autre dossier
 // redirection < > >> 2>>
 // tube |
 
