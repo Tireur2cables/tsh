@@ -16,6 +16,7 @@
 #include "pwd.h"
 #include "help.h"
 #include "exit.h"
+#include "cdIn.h"
 
 //utiliser une struct pour faire un couple avec clé string et valeur pointeur function et factoriser ? a faire dans un .h séparé avec les fonctions associées
 int len_builtin = 2;
@@ -24,7 +25,6 @@ int len_custom = 9;
 char const *custom[9] = {"help", "ls", "pwd", "cat", "cp", "rm", "mv", "rmdir", "mkdir"};
 
 //todo list
-// cd sans tar à faire dans un autre dossier
 // redirection < > >> 2>>
 // tube |
 
@@ -46,19 +46,21 @@ int main(int argc, char const *argv[]) { //main
 		perror("Arguments non valides!");
 		exit(EXIT_FAILURE);
 	}
-	char const *pwd;
-	char const *twd;
+
+	char *pwd;
+	char *twd;
 	char *prompt = " $ ";
 	int prompt_len = strlen(prompt);
 	while (1) {
 		pwd = getcwd(NULL, 0);
 		twd = getenv("TWD");
 		int len_twd = 0;
-		if (twd != NULL && strlen(twd) != 0)
+		if (twd != NULL && strlen(twd) != 0) //s'ajoute seulement si besoin
 			len_twd = 1 + strlen(twd);
 		char new_prompt[strlen(pwd) + len_twd + prompt_len + 1];
 		strcpy(new_prompt, pwd);
-		strcat(new_prompt, "/");
+		if (strcmp(pwd, "/") != 0) //seulement si on est pas à la racine
+			strcat(new_prompt, "/");
 		if (twd != NULL && strlen(twd) != 0) strcat(new_prompt, twd);
 		strcat(new_prompt, prompt);
 
@@ -83,20 +85,20 @@ int main(int argc, char const *argv[]) { //main
 }
 
 void selectCommand(int readen, char *mycat_buf) { //lance la bonne commande ou lance avec exec
-//les commandes spéciales à ce shell
-	if (iscmd(mycat_buf, "exit")) //cmd = exit must be built-in func
-		launchBuiltInFunc(exit_tsh, mycat_buf, readen);
+//les commandes spéciales pour les tar
+	if (hasTarIn(mycat_buf, readen)) //custom commands if implies to use tarball
+		selectCustomCommand(readen, mycat_buf);
 
+//les commandes spéciales à ce shell
 	else if (iscmd(mycat_buf, "help")) //cmd = help
 		launchFunc(help, mycat_buf, readen);
 
-//les commandes spéciales pour les tar
-	else if (hasTarIn(mycat_buf, readen)) //custom commands if implies to use tarball
-		selectCustomCommand(readen, mycat_buf);
-
-//les commandes builtin qui ne doivent pas faire de EXIT
+//les commandes built-in
 	if (iscmd(mycat_buf, "cd")) //cmd = cd must be built-in func
 		launchBuiltInFunc(cdIn, mycat_buf, readen);
+
+	else if (iscmd(mycat_buf, "exit")) //cmd = exit must be built-in func
+		launchBuiltInFunc(exit_tsh, mycat_buf, readen);
 
 //execution normale de la commande
 	else //lancer la commande avec exec
@@ -197,17 +199,9 @@ int launchFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lanc
 	return 0;
 }
 
-int cdIn(int argc, char *argv[]) {
-	return chdir(argv[1]);
-}
-
 int exec(int argc, char *argv[]) { //lance une commande
-	char *argvbis[2+argc+1];
-	argvbis[0] = "bash";
-	argvbis[1] = "-c";
-	for (int i = 0; i <= argc; i++)
-		argvbis[i+2] = argv[i];
-	if (execvp(argvbis[0], argvbis) < 0) {
+// utiliser bash -c comme commande pour lancer les commandes ?
+	if (execvp(argv[0], argv) < 0) {
 		perror("Erreur d'execution de la commande!");
 		exit(EXIT_FAILURE);
 	}
@@ -257,10 +251,14 @@ int hasTarIn(char const *mycat_buf, int readen) { //vérifie si la commande util
 	char mycat_buf_copy[readen+1];
 	strcpy(mycat_buf_copy, mycat_buf);
 	char *argv[argc];
-	argv[0] = strtok(mycat_buf_copy, " ");
+	argv[0] = strtok(mycat_buf_copy, " "); //nom de la commande inutile de verifier
 	for (int i = 1; i < argc; i++) {
 		argv[i] = strtok(NULL, " ");
 		if (strstr(argv[i], ".tar") != NULL) return 1; //test si un tar est explicite dans les arguments
+		if (strlen(argv[i]) != 0) { //vérifie les chemins spéciaux ~ et -
+			if (argv[i][0] == '~' && strstr(getenv("HOME"), ".tar") != NULL) return 1;
+			if (strcmp(argv[i], "-") == 0 && strstr(getenv("OLDPWD"), ".tar") != NULL) return 1;
+		}
 	}
 	return 0;
 }
