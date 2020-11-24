@@ -11,7 +11,7 @@ cdIn.o : cdIn.c cdIn.h
 test.o : test.c ls.h cd.h pwd.h
 exit.o : exit.c exit.h
 ls.o : ls.c tar.h ls.h
-tsh.o : tsh.c ls.h cd.h pwd.h help.h exit.h cdIn.h
+tsh.o : tsh.c couple.h ls.h cd.h pwd.h help.h exit.h cdIn.h
 pwd.o : pwd.c pwd.h
 clean :
 	rm -rf *~

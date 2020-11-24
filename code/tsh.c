@@ -11,18 +11,13 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <readline/readline.h>
+#include "couple.h"
 #include "ls.h"
 #include "cd.h"
 #include "pwd.h"
 #include "help.h"
 #include "exit.h"
 #include "cdIn.h"
-
-//utiliser une struct pour faire un couple avec clé string et valeur pointeur function et factoriser ? a faire dans un .h séparé avec les fonctions associées
-int len_builtin = 2;
-char const *builtin[2] = {"cd", "exit"};
-int len_custom = 9;
-char const *custom[9] = {"help", "ls", "pwd", "cat", "cp", "rm", "mv", "rmdir", "mkdir"};
 
 //todo list
 // redirection < > >> 2>>
@@ -38,7 +33,12 @@ int launchBuiltInFunc(int (*)(int, char *[]), char *, int);
 int exec(int, char *[]);
 int cdIn(int, char *[]);
 int hasTarIn(char const *, int);
-int isIn(char *, char const *[], int);;
+
+//tableau (et sa taille) des commandes implémentées (non built-in) pour les tar
+int len_custom = 3; //8
+couple custom[3] = {{"ls", ls}, {"pwd", pwd}};
+//, {"cat", cat}, {"cp", cp}, {"rm", rm}, {"mv", mv}, {"rmdir", rmdir}, {"mkdir", mkdir};
+
 
 int main(int argc, char const *argv[]) { //main
 	if (argc > 1) {
@@ -50,27 +50,27 @@ int main(int argc, char const *argv[]) { //main
 	char *pwd;
 	char *twd;
 	char *prompt = " $ ";
-	int prompt_len = strlen(prompt);
 	while (1) {
 		pwd = getcwd(NULL, 0);
 		twd = getenv("TWD");
 		int len_twd = 0;
 		if (twd != NULL && strlen(twd) != 0) //s'ajoute seulement si besoin
 			len_twd = 1 + strlen(twd);
-		char new_prompt[strlen(pwd) + len_twd + prompt_len + 1];
+
+		char new_prompt[strlen(pwd) + len_twd + strlen(prompt) + 1];
 		strcpy(new_prompt, pwd);
 		if (strcmp(pwd, "/") != 0) //seulement si on est pas à la racine
 			strcat(new_prompt, "/");
-		if (twd != NULL && strlen(twd) != 0) strcat(new_prompt, twd);
+		if (twd != NULL && strlen(twd) != 0) //seulement si besoin
+			strcat(new_prompt, twd);
 		strcat(new_prompt, prompt);
 
-		int readen;
 		char *mycat_buf;
 		if ((mycat_buf = readline(new_prompt)) != NULL) {
-			readen = strlen(mycat_buf);
-			if (readen > 0 && !isOnlySpace(mycat_buf, readen))
+			int readen = strlen(mycat_buf);
+			if (readen > 0 && !isOnlySpace(mycat_buf, readen)) //if not empty line
 				selectCommand(readen, mycat_buf);
-		}else { // EOF detected
+		}else { //EOF detected
 			char *newline = "\n";
 			int newline_len = strlen(newline);
 			if (write(STDOUT_FILENO, newline, newline_len) < newline_len) {
@@ -94,61 +94,28 @@ void selectCommand(int readen, char *mycat_buf) { //lance la bonne commande ou l
 		launchFunc(help, mycat_buf, readen);
 
 //les commandes built-in
-	if (iscmd(mycat_buf, "cd")) //cmd = cd must be built-in func
+	else if (iscmd(mycat_buf, "cd")) //cmd = cd must be built-in func
 		launchBuiltInFunc(cdIn, mycat_buf, readen);
 
 	else if (iscmd(mycat_buf, "exit")) //cmd = exit must be built-in func
 		launchBuiltInFunc(exit_tsh, mycat_buf, readen);
 
-//execution normale de la commande
+//execution normale de la command
 	else //lancer la commande avec exec
 		launchFunc(exec, mycat_buf, readen);
 }
 
 void selectCustomCommand(int readen, char *mycat_buf) { //lance la bonne custom commande ou lance avec exec
-	if (iscmd(mycat_buf, "ls")) //cmd = ls
-		launchFunc(ls, mycat_buf, readen);
+//les commandes built-in
+	if (iscmd(mycat_buf, "cd")) //cmd = cd must be built-in func
+		launchBuiltInFunc(cd, mycat_buf, readen);
 
-	else if (iscmd(mycat_buf, "pwd")) //cmd = pwd
-		launchFunc(pwd, mycat_buf, readen);
+//lance la commande si elle a été implémentée
+	else if (isIn(mycat_buf, custom, len_custom))
+		launchFunc(getFun(mycat_buf, custom, len_custom), mycat_buf, readen);
 
-	else if (iscmd(mycat_buf, "cat")) { //cmd = cat
-		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else if (iscmd(mycat_buf, "cp")) { //cmd = cp
-		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else if (iscmd(mycat_buf, "rm")) { //cmd = rm
-		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else if (iscmd(mycat_buf, "mv")) { //cmd = mv
-		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else if (iscmd(mycat_buf, "mkdir")) { //cmd = mkdir
-		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else if (iscmd(mycat_buf, "rmdir")) { //cmd = rmdir
-		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else //lancer la commande avec exec
+//essaie de lancer la commande avec exec sinon
+	else
 		launchFunc(exec, mycat_buf, readen);
 }
 
@@ -234,13 +201,6 @@ int isOnlySpace(char *mycat_buf, int readen) { //verifie si la phrase donnée es
 int iscmd(char *mycat_buf, char *cmd) { //verifie qu'une phrase commence bien par la commande demandée suivie d'un espace (\n, ' ', etc...)
 	return (strncmp(mycat_buf, cmd, strlen(cmd)) == 0) &&
 	((isspace(mycat_buf[strlen(cmd)])) || (mycat_buf[strlen(cmd)] == '\0'));
-}
-
-int isIn(char *cmd, char const *tab[], int len) {
-	for (int i = 0; i < len; i++) {
-		if (strcmp(cmd, tab[i]) == 0) return 1;
-	}
-	return 0;
 }
 
 int hasTarIn(char const *mycat_buf, int readen) { //vérifie si la commande utilise un tar dans ces arguments
