@@ -33,6 +33,7 @@ int launchBuiltInFunc(int (*)(int, char *[]), char *, int);
 int exec(int, char *[]);
 int cdIn(int, char *[]);
 int hasTarIn(char const *, int);
+char *traiterArguements(char *, int *);
 
 //tableau (et sa taille) des commandes implémentées (non built-in) pour les tar
 int len_custom = 3; //8
@@ -106,6 +107,7 @@ void selectCommand(int readen, char *mycat_buf) { //lance la bonne commande ou l
 }
 
 void selectCustomCommand(int readen, char *mycat_buf) { //lance la bonne custom commande ou lance avec exec
+	mycat_buf = traiterArguements(mycat_buf, &readen);
 //les commandes built-in
 	if (iscmd(mycat_buf, "cd")) //cmd = cd must be built-in func
 		launchBuiltInFunc(cd, mycat_buf, readen);
@@ -221,4 +223,51 @@ int hasTarIn(char const *mycat_buf, int readen) { //vérifie si la commande util
 		}
 	}
 	return 0;
+}
+
+char *traiterArguements(char *line, int *len) {
+	int argc = getNbArgs(line, &len);
+	char *argv[argc];
+	char *argv[0] = strtok(line, " ");
+	int newlen = strlen(cmd);
+	for (int i = 1; i < argc; i++) {
+		argv[i] = strtok(NULL, " ");
+		if (strlen(argv[i]) != 0 && argv[i][0] == '~') { //transforme ~ en HOME
+			char *home = getenv("HOME");
+			char tmp[strlen(home) + strlen(argv[i])];
+			strcpy(tmp, home);
+			strcat(tmp, &argv[i][1]);
+			argv[i] = tmp;
+		}else if (strstr(argv[i], ".") != NULL) { //verifie si . ou ..
+			int pwdlen = 0;
+			char *pwd;
+			if (argv[i][0] != '/') {
+				pwd = getcwd(NULL, 0);
+				pwdlen = strlen(pwd);
+			}
+			char argvcopy[pwdlen+strlen(argv[i])+1];
+			if (argv[i][0] != '/') {
+				strcpy(argvcopy, pwd);
+				strcat(argvcopy, argv[i]);
+			}else strcpy(argvcopy, argv[i]);
+			char argvcopycount[strlen(argvcopy)+1];
+			strcpy(argvcopycount, argvcopy);
+			char *saveptr;
+			char *token;
+			int argc = 0;
+			while ((token = strtok_r(argvcopycount, "/", &saveptr)) != NULL) {
+			 	argc += strlen(token);
+			}
+			char *saveptr1;
+			char *tab[argc];
+			for (int i = 0; i < argc; i++) {
+				tab[i] = strtok_r(argvcopy, "/", &saveptr1);
+			}
+
+			char tmp[tmplen];
+
+		}else // pas de tar detecté
+			newlen += strlen(argv[i]);
+	}
+
 }
