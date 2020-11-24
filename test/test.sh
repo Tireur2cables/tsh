@@ -17,7 +17,8 @@ echo "Fichier avec extension 3" > tests/rep1/tar.g
 echo "Fichier 5" > tests/rep1/fic5
 echo "Fichier 6" > tests/rep1/rep2/fic6
 echo "Fichier 7" > tests/rep1/rep2/rep3/rep4/fic5
-tar cf tests/arch.tar tests/rep1 tests/rep1/rep2 tests/rep1/rep2/rep3 tests/rep1/rep2/fic6 tests/rep1/rep2/rep3/rep4/fic5 tests/fic1 tests/fic2 tests/rep1/fic3 tests/rep1/fic4 tests/rep1/ext.txt tests/rep1/tar.txt tests/rep1/tar.g
+#tar cf arch.tar tests/ tests/rep1 tests/rep1/rep2 tests/rep1/rep2/rep3 tests/rep1/rep2/fic6 tests/rep1/rep2/rep3/rep4/fic5 tests/fic1 tests/fic2 tests/rep1/fic3 tests/rep1/fic4 tests/rep1/ext.txt tests/rep1/tar.txt tests/rep1/tar.g
+tar cf arch.tar tests/
 ln -s tests/test_fic tests/test_lien
 mkfifo tests/test_fifo
 touch tests/test_exe1
