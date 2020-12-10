@@ -20,7 +20,7 @@
 #include "cdIn.h"
 
 //todo list
-// traitement args . .. ~
+// traitement args . .. ~ doit vérifier l'existence du chemin de parcours
 // exec ls ~ marche po
 // redirection < > >> 2>>
 // tube |
