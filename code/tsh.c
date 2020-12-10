@@ -20,7 +20,6 @@
 #include "cdIn.h"
 
 //todo list
-// traitement args . .. ~ doit vérifier l'existence du chemin de parcours
 // exec ls ~ marche po
 // redirection < > >> 2>>
 // tube |
@@ -237,7 +236,7 @@ char *traiterArguements(char *line, int *len) {
 	for (int i = 1; i < argc; i++) {
 		argv[i] = strtok(NULL, " ");
 
-		if (strlen(argv[i]) != 0 && argv[i][0] == '~') { //transforme ~ en HOME
+		if (strlen(argv[i]) != 0 && argv[i][0] == '~') { //transforme ~ en HOME s'il faut
 			char *home = getenv("HOME");
 			char tmp[strlen(home) + strlen(argv[i])];
 			strcpy(tmp, home);
