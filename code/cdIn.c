@@ -26,20 +26,6 @@ int cdIn(int argc, char *argv[]) {
 			perror("Erreur de cd!");
 			return 0;
 		}
-	}else if (argv[1][0] == '~') { //path starting with ~ as $HOME
-		char *home = getenv("HOME");
-		if (home == NULL || strlen(home) == 0) {
-			errno = EINVAL;
-			perror("Home indisponible!");
-			return 0;
-		}
-		char chemin[strlen(home) + strlen(argv[1])];
-		strcpy(chemin, home);
-		strcat(chemin, &argv[1][1]);
-		if (chdir(chemin) == -1) {
-			perror("Erreur de cd!");
-			return 0;
-		}
 	}else if (strcmp(argv[1], "-") == 0) { //path is - as OLDPWD
 		char *oldpwd = getenv("OLDPWD");
 		if (oldpwd == NULL || strlen(oldpwd) == 0) {
