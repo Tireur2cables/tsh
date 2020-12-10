@@ -20,13 +20,15 @@
 #include "cdIn.h"
 
 //todo list
+// traitement args . .. ~
+// exec ls ~ marche po
 // redirection < > >> 2>>
 // tube |
 
 int iscmd(char *, char *);
 int isOnlySpace(char *, int);
-void selectCommand(int, char *);
-void selectCustomCommand(int, char *);
+void selectCommand(char *, int);
+void selectCustomCommand(char *, int);
 int getNbArgs(char const *, int);
 int launchFunc(int (*)(int, char *[]), char *, int);
 int launchBuiltInFunc(int (*)(int, char *[]), char *, int);
@@ -66,11 +68,11 @@ int main(int argc, char const *argv[]) { //main
 			strcat(new_prompt, twd);
 		strcat(new_prompt, prompt);
 
-		char *mycat_buf;
-		if ((mycat_buf = readline(new_prompt)) != NULL) {
-			int readen = strlen(mycat_buf);
-			if (readen > 0 && !isOnlySpace(mycat_buf, readen)) //if not empty line
-				selectCommand(readen, mycat_buf);
+		char *line;
+		if ((line = readline(new_prompt)) != NULL) {
+			int readen = strlen(line);
+			if (readen > 0 && !isOnlySpace(line, readen)) //if not empty line
+				selectCommand(line, readen);
 		}else { //EOF detected
 			char *newline = "\n";
 			int newline_len = strlen(newline);
@@ -79,62 +81,64 @@ int main(int argc, char const *argv[]) { //main
 				exit(EXIT_FAILURE);
 			}
 		}
-		free(mycat_buf);
+		free(line);
 	}
 
 	return 0;
 }
 
-void selectCommand(int readen, char *mycat_buf) { //lance la bonne commande ou lance avec exec
+void selectCommand(char *line, int readen) { //lance la bonne commande ou lance avec exec
 //les commandes spéciales pour les tar
-	if (hasTarIn(mycat_buf, readen)) //custom commands if implies to use tarball
-		selectCustomCommand(readen, mycat_buf);
+	if (hasTarIn(line, readen)) //custom commands if implies to use tarball
+		selectCustomCommand(line, readen);
 
 //les commandes spéciales à ce shell
-	else if (iscmd(mycat_buf, "help")) //cmd = help
-		launchFunc(help, mycat_buf, readen);
+	else if (iscmd(line, "help")) //cmd = help
+		launchFunc(help, line, readen);
 
 //les commandes built-in
-	else if (iscmd(mycat_buf, "cd")) //cmd = cd must be built-in func
-		launchBuiltInFunc(cdIn, mycat_buf, readen);
+	else if (iscmd(line, "cd")) //cmd = cd must be built-in func
+		launchBuiltInFunc(cdIn, line, readen);
 
-	else if (iscmd(mycat_buf, "exit")) //cmd = exit must be built-in func
-		launchBuiltInFunc(exit_tsh, mycat_buf, readen);
+	else if (iscmd(line, "exit")) //cmd = exit must be built-in func
+		launchBuiltInFunc(exit_tsh, line, readen);
 
 //execution normale de la command
 	else //lancer la commande avec exec
-		launchFunc(exec, mycat_buf, readen);
+		launchFunc(exec, line, readen);
 }
 
-void selectCustomCommand(int readen, char *mycat_buf) { //lance la bonne custom commande ou lance avec exec
-	mycat_buf = traiterArguements(mycat_buf, &readen);
+void selectCustomCommand(char *line, int readen) { //lance la bonne custom commande ou lance avec exec
+//traite les arguments si presence de . .. ou ~
+	line = traiterArguements(line, &readen);
+	//printf("%s\n", mycat_buf);
 //les commandes built-in
-	if (iscmd(mycat_buf, "cd")) //cmd = cd must be built-in func
-		launchBuiltInFunc(cd, mycat_buf, readen);
+	if (iscmd(line, "cd")) //cmd = cd must be built-in func
+		launchBuiltInFunc(cd, line, readen);
 
 //lance la commande si elle a été implémentée
-	else if (isIn(mycat_buf, custom, len_custom))
-		launchFunc(getFun(mycat_buf, custom, len_custom), mycat_buf, readen);
+	else if (isIn(line, custom, len_custom))
+		launchFunc(getFun(line, custom, len_custom), line, readen);
 
 //essaie de lancer la commande avec exec sinon
 	else
-		launchFunc(exec, mycat_buf, readen);
+		launchFunc(exec, line, readen);
 }
 
-int launchBuiltInFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lance la fonction demandée directement en processus principal
-	int argc = getNbArgs(mycat_buf, readen);
+int launchBuiltInFunc(int (*func)(int, char *[]), char *line, int readen) { //lance la fonction demandée directement en processus principal
+	int argc = getNbArgs(line, readen);
 	char *argv[argc+1];
-	argv[0] = strtok(mycat_buf, " ");
+	argv[0] = strtok(line, " ");
 	for (int i = 1; i <= argc; i++) {
 		argv[i] = strtok(NULL, " ");
 	}
 	return func(argc, argv);
 }
 
-int launchFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lance dans un nouveau processus la fonction demandée et attend qu'elle finisse
-	int argc = getNbArgs(mycat_buf, readen);
+int launchFunc(int (*func)(int, char *[]), char *line, int readen) { //lance dans un nouveau processus la fonction demandée et attend qu'elle finisse
+	int argc = getNbArgs(line, readen);
 	char *argv[argc+1];
-	argv[0] = strtok(mycat_buf, " ");
+	argv[0] = strtok(line, " ");
 	for (int i = 1; i <= argc; i++) {
 		argv[i] = strtok(NULL, " ");
 	}
@@ -169,22 +173,21 @@ int launchFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lanc
 }
 
 int exec(int argc, char *argv[]) { //lance une commande
-// utiliser bash -c comme commande pour lancer les commandes ?
-	if (execvp(argv[0], argv) < 0) {
+	if (execvp(argv[0], &argv[0]) < 0) {
 		perror("Erreur d'execution de la commande!");
 		exit(EXIT_FAILURE);
 	}
 	return 0;
 }
 
-int getNbArgs(char const *mycat_buf, int len) { //compte le nombre de mots dans une phrase
-	char mycat_buf_copy[len+1];
-	strncpy(mycat_buf_copy, mycat_buf, len);
-	mycat_buf_copy[len] = '\0';
+int getNbArgs(char const *line, int len) { //compte le nombre de mots dans une ligne
+	char line_copy[len+1];
+	strncpy(line_copy, line, len);
+	line_copy[len] = '\0';
 
 	int res = 0;
 	char *args;
-	if ((args = strtok(mycat_buf_copy, " ")) != NULL) {
+	if ((args = strtok(line_copy, " ")) != NULL) {
 		res++;
 		while ((args = strtok(NULL, " ")) != NULL) {
 			res++;
@@ -193,27 +196,27 @@ int getNbArgs(char const *mycat_buf, int len) { //compte le nombre de mots dans 
 	return res;
 }
 
-int isOnlySpace(char *mycat_buf, int readen) { //verifie si la phrase donnée est uniquement composée d'espaces (\n, ' ', etc...)
+int isOnlySpace(char *line, int readen) { //verifie si la ligne donnée est uniquement composée d'espaces (\n, ' ', etc...)
 	for(int i = 0; i < readen; i++) {
-		if (!isspace(mycat_buf[i])) return 0;
+		if (!isspace(line[i])) return 0;
 	}
 	return 1;
 }
 
-int iscmd(char *mycat_buf, char *cmd) { //verifie qu'une phrase commence bien par la commande demandée suivie d'un espace (\n, ' ', etc...)
-	return (strncmp(mycat_buf, cmd, strlen(cmd)) == 0) &&
-	((isspace(mycat_buf[strlen(cmd)])) || (mycat_buf[strlen(cmd)] == '\0'));
+int iscmd(char *line, char *cmd) { //verifie qu'une ligne commence bien par la commande demandée suivie d'un espace (\n, ' ', etc...)
+	return (strncmp(line, cmd, strlen(cmd)) == 0) &&
+	((isspace(line[strlen(cmd)])) || (line[strlen(cmd)] == '\0'));
 }
 
-int hasTarIn(char const *mycat_buf, int readen) { //vérifie si la commande utilise un tar dans ces arguments
+int hasTarIn(char const *line, int readen) { //vérifie si la commande utilise un tar dans ces arguments
 	char const *env = getenv("TWD");
 	if (env != NULL && strlen(env) != 0) return 1; //test si on est déjà dans un tar
 
-	int argc = getNbArgs(mycat_buf, readen);
-	char mycat_buf_copy[readen+1];
-	strcpy(mycat_buf_copy, mycat_buf);
+	int argc = getNbArgs(line, readen);
+	char line_copy[readen+1];
+	strcpy(line_copy, line);
 	char *argv[argc];
-	argv[0] = strtok(mycat_buf_copy, " "); //nom de la commande inutile de verifier
+	argv[0] = strtok(line_copy, " "); //nom de la commande inutile de verifier
 	for (int i = 1; i < argc; i++) {
 		argv[i] = strtok(NULL, " ");
 		if (strstr(argv[i], ".tar") != NULL) return 1; //test si un tar est explicite dans les arguments
@@ -226,48 +229,85 @@ int hasTarIn(char const *mycat_buf, int readen) { //vérifie si la commande util
 }
 
 char *traiterArguements(char *line, int *len) {
-	int argc = getNbArgs(line, &len);
+	int argc = getNbArgs(line, *len);
 	char *argv[argc];
-	char *argv[0] = strtok(line, " ");
-	int newlen = strlen(cmd);
+	argv[0] = strtok(line, " ");
+	int newlen = strlen(argv[0]);
+
 	for (int i = 1; i < argc; i++) {
 		argv[i] = strtok(NULL, " ");
+
 		if (strlen(argv[i]) != 0 && argv[i][0] == '~') { //transforme ~ en HOME
 			char *home = getenv("HOME");
 			char tmp[strlen(home) + strlen(argv[i])];
 			strcpy(tmp, home);
 			strcat(tmp, &argv[i][1]);
 			argv[i] = tmp;
-		}else if (strstr(argv[i], ".") != NULL) { //verifie si . ou ..
+		}
+
+		if (strstr(argv[i], ".") != NULL) { //verifie si . ou ..
 			int pwdlen = 0;
 			char *pwd;
 			if (argv[i][0] != '/') {
 				pwd = getcwd(NULL, 0);
 				pwdlen = strlen(pwd);
 			}
-			char argvcopy[pwdlen+strlen(argv[i])+1];
+			char argvcopy[pwdlen+1+strlen(argv[i])+1];
 			if (argv[i][0] != '/') {
 				strcpy(argvcopy, pwd);
+				strcat(argvcopy, "/");
 				strcat(argvcopy, argv[i]);
 			}else strcpy(argvcopy, argv[i]);
+
 			char argvcopycount[strlen(argvcopy)+1];
 			strcpy(argvcopycount, argvcopy);
+
 			char *saveptr;
 			char *token;
 			int argc = 0;
-			while ((token = strtok_r(argvcopycount, "/", &saveptr)) != NULL) {
-			 	argc += strlen(token);
+			char *tmp = argvcopycount;
+			while ((token = strtok_r(tmp, "/", &saveptr)) != NULL) {
+			 	argc += 1;
+				tmp = saveptr;
 			}
-			char *saveptr1;
+
 			char *tab[argc];
-			for (int i = 0; i < argc; i++) {
-				tab[i] = strtok_r(argvcopy, "/", &saveptr1);
+			int indice = 0;
+			int tab_len = 0;
+			tmp = argvcopy;
+			for (int i = 0; i < argc; i++, tmp = saveptr) {
+				token = strtok_r(tmp, "/", &saveptr);
+				if (strcmp(token, "..") == 0) {
+					if (indice != 0) {
+						indice--;
+						tab_len -= strlen(tab[indice]);
+					}
+				}else if (strcmp(token, ".") == 0) continue;
+				else {
+					tab_len += strlen(token);
+					tab[indice++] = token;
+				}
 			}
 
-			char tmp[tmplen];
+			char res[1 + tab_len + indice];
+			strcpy(res, "");
+			for (int j = 0; j < indice; j++) {
+				strcat(res, "/");
+				strcat(res, tab[j]);
+			}
 
-		}else // pas de tar detecté
-			newlen += strlen(argv[i]);
+			argv[i] = res;
+		}
+
+		newlen += strlen(argv[i]);
 	}
 
+	*len = newlen;
+	char *newline = malloc(newlen + argc);
+	strcpy(newline, argv[0]);
+	for (int i = 1; i < argc; i++) {
+		strcat(newline, " ");
+		strcat(newline, argv[i]);
+	}
+	return newline;
 }
