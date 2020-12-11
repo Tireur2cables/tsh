@@ -20,7 +20,6 @@
 #include "cdIn.h"
 
 //todo list
-// exec ls ~ marche po
 // redirection < > >> 2>>
 // tube |
 
@@ -35,6 +34,7 @@ int exec(int, char *[]);
 int cdIn(int, char *[]);
 int hasTarIn(char const *, int);
 char *traiterArguements(char *, int *);
+char *traiterHome(char *, int *);
 
 //tableau (et sa taille) des commandes implémentées (non built-in) pour les tar
 int len_custom = 3; //8
@@ -87,6 +87,9 @@ int main(int argc, char const *argv[]) { //main
 }
 
 void selectCommand(char *line, int readen) { //lance la bonne commande ou lance avec exec
+	line = traiterHome(line, &readen);
+	write(STDOUT_FILENO, line, readen);
+	write(STDOUT_FILENO, "\n", 1);
 //les commandes spéciales pour les tar
 	if (hasTarIn(line, readen)) //custom commands if implies to use tarball
 		selectCustomCommand(line, readen);
@@ -110,7 +113,6 @@ void selectCommand(char *line, int readen) { //lance la bonne commande ou lance 
 void selectCustomCommand(char *line, int readen) { //lance la bonne custom commande ou lance avec exec
 //traite les arguments si presence de . .. ou ~
 	line = traiterArguements(line, &readen);
-	//printf("%s\n", mycat_buf);
 //les commandes built-in
 	if (iscmd(line, "cd")) //cmd = cd must be built-in func
 		launchBuiltInFunc(cd, line, readen);
@@ -227,54 +229,77 @@ int hasTarIn(char const *line, int readen) { //vérifie si la commande utilise u
 	return 0;
 }
 
-char *traiterArguements(char *line, int *len) {
+char *traiterHome(char *line, int *len) { //transforme ~ en HOME dans les arguments passés
 	int argc = getNbArgs(line, *len);
 	char *argv[argc];
 	argv[0] = strtok(line, " ");
 	int newlen = strlen(argv[0]);
 
 	for (int i = 1; i < argc; i++) {
-		argv[i] = strtok(NULL, " ");
-
-		if (strlen(argv[i]) != 0 && argv[i][0] == '~') { //transforme ~ en HOME s'il faut
+		char *token = strtok(NULL, " ");
+		if (strlen(token) != 0 && token[0] == '~') { //detection of ~
 			char *home = getenv("HOME");
-			char tmp[strlen(home) + strlen(argv[i])];
+			char tmp[strlen(home) + strlen(token)];
 			strcpy(tmp, home);
-			strcat(tmp, &argv[i][1]);
+			strcat(tmp, &token[1]);
 			argv[i] = tmp;
-		}
+		}else argv[i] = token;
+		write(STDOUT_FILENO, argv[i], strlen(argv[i]));
+		write(STDOUT_FILENO, "\n", 1);
 
-		if (strstr(argv[i], ".") != NULL) { //verifie si . ou ..
+		newlen += strlen(argv[i]);
+	}
+
+	*len = newlen + argc - 1;
+	char *newline = malloc(newlen + argc);
+	strcpy(newline, argv[0]);
+	for (int i = 1; i < argc; i++) {
+		strcat(newline, " ");
+		strcat(newline, argv[i]);
+	}
+	return newline;
+}
+
+char *traiterArguements(char *line, int *len) { //modifie les chemins contenant . et .. pour les simplifés
+	int argc = getNbArgs(line, *len);
+	char *argv[argc];
+	argv[0] = strtok(line, " ");
+	int newlen = strlen(argv[0]);
+
+	for (int i = 1; i < argc; i++) {
+		char *tok = strtok(NULL, " ");
+
+		if (strstr(tok, ".") != NULL) { //verifie si . ou .. sont contenus
 			int pwdlen = 0;
 			char *pwd;
-			if (argv[i][0] != '/') {
+			if (tok[0] != '/') {
 				pwd = getcwd(NULL, 0);
 				pwdlen = strlen(pwd);
 			}
-			char argvcopy[pwdlen+1+strlen(argv[i])+1];
-			if (argv[i][0] != '/') {
+			char argvcopy[pwdlen+1+strlen(tok)+1];
+			if (tok[0] != '/') {
 				strcpy(argvcopy, pwd);
 				strcat(argvcopy, "/");
-				strcat(argvcopy, argv[i]);
-			}else strcpy(argvcopy, argv[i]);
+				strcat(argvcopy, tok);
+			}else strcpy(argvcopy, tok);
 
 			char argvcopycount[strlen(argvcopy)+1];
 			strcpy(argvcopycount, argvcopy);
 
 			char *saveptr;
 			char *token;
-			int argc = 0;
+			int argcount = 0;
 			char *tmp = argvcopycount;
 			while ((token = strtok_r(tmp, "/", &saveptr)) != NULL) {
-			 	argc += 1;
+			 	argcount += 1;
 				tmp = saveptr;
 			}
 
-			char *tab[argc];
+			char *tab[argcount];
 			int indice = 0;
 			int tab_len = 0;
 			tmp = argvcopy;
-			for (int i = 0; i < argc; i++, tmp = saveptr) {
+			for (int i = 0; i < argcount; i++, tmp = saveptr) {
 				token = strtok_r(tmp, "/", &saveptr);
 				if (strcmp(token, "..") == 0) {
 					if (indice != 0) {
@@ -296,12 +321,12 @@ char *traiterArguements(char *line, int *len) {
 			}
 
 			argv[i] = res;
-		}
+		}else argv[i] = tok;
 
 		newlen += strlen(argv[i]);
 	}
 
-	*len = newlen;
+	*len = newlen + argc - 1;
 	char *newline = malloc(newlen + argc);
 	strcpy(newline, argv[0]);
 	for (int i = 1; i < argc; i++) {
