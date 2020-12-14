@@ -88,8 +88,6 @@ int main(int argc, char const *argv[]) { //main
 
 void selectCommand(char *line, int readen) { //lance la bonne commande ou lance avec exec
 	line = traiterHome(line, &readen);
-	write(STDOUT_FILENO, line, readen);
-	write(STDOUT_FILENO, "\n", 1);
 //les commandes spéciales pour les tar
 	if (hasTarIn(line, readen)) //custom commands if implies to use tarball
 		selectCustomCommand(line, readen);
@@ -237,15 +235,17 @@ char *traiterHome(char *line, int *len) { //transforme ~ en HOME dans les argume
 
 	for (int i = 1; i < argc; i++) {
 		char *token = strtok(NULL, " ");
+
 		if (strlen(token) != 0 && token[0] == '~') { //detection of ~
 			char *home = getenv("HOME");
 			char tmp[strlen(home) + strlen(token)];
 			strcpy(tmp, home);
 			strcat(tmp, &token[1]);
-			argv[i] = tmp;
+
+			argv[i] = malloc(strlen(tmp)+1);
+			strcpy(argv[i], tmp);
+
 		}else argv[i] = token;
-		write(STDOUT_FILENO, argv[i], strlen(argv[i]));
-		write(STDOUT_FILENO, "\n", 1);
 
 		newlen += strlen(argv[i]);
 	}
