@@ -17,6 +17,16 @@ int cat(int argc, char *argv[]) {
 	cat_file(file, "\0");
 	return 0;
 }
+
+int write_tar(struct posix_header *header){
+	write(STDOUT_FILENO, "yes", 3);
+	int taille;
+	sscanf(header->size, "%o", &taille);
+	char format[taille+1];
+	memcpy(format, header, taille);
+	write(STDOUT_FILENO, format, strlen(format));
+	return 0;
+}
 int get_header_size_cat(struct posix_header *header, int *read_size){
 	int taille = 0;
 	sscanf(header->size, "%o", &taille);
@@ -72,10 +82,7 @@ int cat_tar(char *file, char *options){ //Fonction générale qui gère dans que
 				break;
 			}
 			if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) == 0)) {
-				if (write(STDOUT_FILENO, &header, BLOCKSIZE) < BLOCKSIZE) {
-					perror("Erreur d'écriture dans le shell!");
-					exit(EXIT_FAILURE);
-				}
+				write_tar(&header);
 			}else{
 				get_header_size_cat(&header, &read_size);
 			}
