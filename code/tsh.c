@@ -11,22 +11,36 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <readline/readline.h>
+#include "couple.h"
 #include "ls.h"
 #include "cd.h"
 #include "pwd.h"
 #include "help.h"
 #include "exit.h"
+#include "cdIn.h"
 
-/* utiliser un tableau des commandes implémentées pour facotriser encore plus ? */
+//todo list
+// redirection < > >> 2>>
+// tube |
 
 int iscmd(char *, char *);
 int isOnlySpace(char *, int);
-void selectCommand(int, char *);
-int getNbArgs(const char *, int);
+void selectCommand(char *, int);
+void selectCustomCommand(char *, int);
+int getNbArgs(char const *, int);
 int launchFunc(int (*)(int, char *[]), char *, int);
 int launchBuiltInFunc(int (*)(int, char *[]), char *, int);
 int exec(int, char *[]);
-void setEnv();
+int cdIn(int, char *[]);
+int hasTarIn(char const *, int);
+char *traiterArguements(char *, int *);
+char *traiterHome(char *, int *);
+
+//tableau (et sa taille) des commandes implémentées (non built-in) pour les tar
+int len_custom = 3; //8
+couple custom[3] = {{"ls", ls}, {"pwd", pwd}};
+//, {"cat", cat}, {"cp", cp}, {"rm", rm}, {"mv", mv}, {"rmdir", rmdir}, {"mkdir", mkdir};
+
 
 int main(int argc, char const *argv[]) { //main
 	if (argc > 1) {
@@ -34,27 +48,31 @@ int main(int argc, char const *argv[]) { //main
 		perror("Arguments non valides!");
 		exit(EXIT_FAILURE);
 	}
-	setEnv();
 
-	char const *twd;
-	char *prompt = "$ ";
-	int prompt_len = strlen(prompt);
+	char *pwd;
+	char *twd;
+	char *prompt = " $ ";
 	while (1) {
+		pwd = getcwd(NULL, 0);
 		twd = getenv("TWD");
-		char new_prompt[strlen(twd) + 1 + prompt_len + 1];
-		strcpy(new_prompt, twd);
-		new_prompt[strlen(twd)] = ' ';
-		new_prompt[strlen(twd)+1] = '\0';
+		int len_twd = 0;
+		if (twd != NULL && strlen(twd) != 0) //s'ajoute seulement si besoin
+			len_twd = 1 + strlen(twd);
+
+		char new_prompt[strlen(pwd) + len_twd + strlen(prompt) + 1];
+		strcpy(new_prompt, pwd);
+		if (strcmp(pwd, "/") != 0) //seulement si on est pas à la racine
+			strcat(new_prompt, "/");
+		if (twd != NULL && strlen(twd) != 0) //seulement si besoin
+			strcat(new_prompt, twd);
 		strcat(new_prompt, prompt);
 
-		int readen;
-		char *mycat_buf;
-		if ((mycat_buf = readline (new_prompt)) != NULL) {
-			readen = strlen(mycat_buf);
-			if (readen > 0 && !isOnlySpace(mycat_buf, readen)) {
-				selectCommand(readen, mycat_buf);
-			}
-		}else {
+		char *line;
+		if ((line = readline(new_prompt)) != NULL) {
+			int readen = strlen(line);
+			if (readen > 0 && !isOnlySpace(line, readen)) //if not empty line
+				selectCommand(line, readen);
+		}else { //EOF detected
 			char *newline = "\n";
 			int newline_len = strlen(newline);
 			if (write(STDOUT_FILENO, newline, newline_len) < newline_len) {
@@ -62,86 +80,64 @@ int main(int argc, char const *argv[]) { //main
 				exit(EXIT_FAILURE);
 			}
 		}
-		free(mycat_buf);
+		free(line);
 	}
 
 	return 0;
 }
 
-void selectCommand(int readen, char *mycat_buf) { //lance la bonne commande ou lance avec exec
-	if (iscmd(mycat_buf, "exit")) { //cmd = exit must be built-in func
-		launchBuiltInFunc(exit_tsh, mycat_buf, readen);
-	}
-	else if (iscmd(mycat_buf, "cd")) { //cmd = cd must be built-in func
-		launchBuiltInFunc(cd, mycat_buf, readen);
-	}
-	else if (iscmd(mycat_buf, "help")) { //cmd = help
-		launchFunc(help, mycat_buf, readen);
-	}
-	else if (iscmd(mycat_buf, "ls")) { //cmd = ls
-		launchFunc(ls, mycat_buf, readen);
-	}
-	else if (iscmd(mycat_buf, "pwd")) { //cmd = pwd
-		launchFunc(pwd, mycat_buf, readen);
-	}
-	else if (iscmd(mycat_buf, "cat")) { //cmd = cat
-		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else if (iscmd(mycat_buf, "cp")) { //cmd = cp
-		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else if (iscmd(mycat_buf, "rm")) { //cmd = rm
-		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else if (iscmd(mycat_buf, "mv")) { //cmd = mv
-		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else if (iscmd(mycat_buf, "mkdir")) { //cmd = mkdir
-		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else if (iscmd(mycat_buf, "rmdir")) { //cmd = rmdir
-		if (write(STDOUT_FILENO, "WIP\n", 4) < 4) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else { //lancer la commande avec exec
-		launchFunc(exec, mycat_buf, readen);
-	}
+void selectCommand(char *line, int readen) { //lance la bonne commande ou lance avec exec
+	line = traiterHome(line, &readen);
+//les commandes spéciales pour les tar
+	if (hasTarIn(line, readen)) //custom commands if implies to use tarball
+		selectCustomCommand(line, readen);
+
+//les commandes spéciales à ce shell
+	else if (iscmd(line, "help")) //cmd = help
+		launchFunc(help, line, readen);
+
+//les commandes built-in
+	else if (iscmd(line, "cd")) //cmd = cd must be built-in func
+		launchBuiltInFunc(cdIn, line, readen);
+
+	else if (iscmd(line, "exit")) //cmd = exit must be built-in func
+		launchBuiltInFunc(exit_tsh, line, readen);
+
+//execution normale de la command
+	else //lancer la commande avec exec
+		launchFunc(exec, line, readen);
 }
 
+void selectCustomCommand(char *line, int readen) { //lance la bonne custom commande ou lance avec exec
+//traite les arguments si presence de . .. ou ~
+	line = traiterArguements(line, &readen);
+//les commandes built-in
+	if (iscmd(line, "cd")) //cmd = cd must be built-in func
+		launchBuiltInFunc(cd, line, readen);
 
+//lance la commande si elle a été implémentée
+	else if (isIn(line, custom, len_custom))
+		launchFunc(getFun(line, custom, len_custom), line, readen);
 
-int launchBuiltInFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lance la fonction demandée directement en processus principal
-	int argc = getNbArgs(mycat_buf, readen);
+//essaie de lancer la commande avec exec sinon
+	else
+		launchFunc(exec, line, readen);
+}
+
+int launchBuiltInFunc(int (*func)(int, char *[]), char *line, int readen) { //lance la fonction demandée directement en processus principal
+	int argc = getNbArgs(line, readen);
 	char *argv[argc+1];
-	argv[0] = strtok(mycat_buf, " ");
+	argv[0] = strtok(line, " ");
 	for (int i = 1; i <= argc; i++) {
 		argv[i] = strtok(NULL, " ");
 	}
-	func(argc, argv);
-	return 0;
+	return func(argc, argv);
 }
 
-int launchFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lance dans un nouveau processus la fonction demandée et attend qu'elle finisse
-	int argc = getNbArgs(mycat_buf, readen);
+int launchFunc(int (*func)(int, char *[]), char *line, int readen) { //lance dans un nouveau processus la fonction demandée et attend qu'elle finisse
+	int argc = getNbArgs(line, readen);
 	char *argv[argc+1];
-	argv[0] = strtok(mycat_buf, " ");
+	argv[0] = strtok(line, " ");
 	for (int i = 1; i <= argc; i++) {
 		argv[i] = strtok(NULL, " ");
 	}
@@ -176,21 +172,21 @@ int launchFunc(int (*func)(int, char *[]), char *mycat_buf, int readen) { //lanc
 }
 
 int exec(int argc, char *argv[]) { //lance une commande
-	if (execvp(argv[0], argv) < 0) {
+	if (execvp(argv[0], &argv[0]) < 0) {
 		perror("Erreur d'execution de la commande!");
 		exit(EXIT_FAILURE);
 	}
 	return 0;
 }
 
-int getNbArgs(const char *mycat_buf, int len) { //compte le nombre de mots dans une phrase
-	char mycat_buf_copy[len+1];
-	strncpy(mycat_buf_copy, mycat_buf, len);
-	mycat_buf_copy[len] = '\0';
+int getNbArgs(char const *line, int len) { //compte le nombre de mots dans une ligne
+	char line_copy[len+1];
+	strncpy(line_copy, line, len);
+	line_copy[len] = '\0';
 
 	int res = 0;
 	char *args;
-	if ((args = strtok(mycat_buf_copy, " ")) != NULL) {
+	if ((args = strtok(line_copy, " ")) != NULL) {
 		res++;
 		while ((args = strtok(NULL, " ")) != NULL) {
 			res++;
@@ -199,23 +195,143 @@ int getNbArgs(const char *mycat_buf, int len) { //compte le nombre de mots dans 
 	return res;
 }
 
-int isOnlySpace(char *mycat_buf, int readen) { //verifie si la phrase donnée est uniquement composée d'espaces (\n, ' ', etc...)
+int isOnlySpace(char *line, int readen) { //verifie si la ligne donnée est uniquement composée d'espaces (\n, ' ', etc...)
 	for(int i = 0; i < readen; i++) {
-		if (!isspace(mycat_buf[i])) return 0;
+		if (!isspace(line[i])) return 0;
 	}
 	return 1;
 }
 
-int iscmd(char *mycat_buf, char *cmd) { //verifie qu'une phrase commence bien par la commande demandée suivie d'un espace (\n, ' ', etc...)
-	return (strncmp(mycat_buf, cmd, strlen(cmd)) == 0) &&
-	((isspace(mycat_buf[strlen(cmd)])) || (mycat_buf[strlen(cmd)] == '\0'));
+int iscmd(char *line, char *cmd) { //verifie qu'une ligne commence bien par la commande demandée suivie d'un espace (\n, ' ', etc...)
+	return (strncmp(line, cmd, strlen(cmd)) == 0) &&
+	((isspace(line[strlen(cmd)])) || (line[strlen(cmd)] == '\0'));
 }
 
-void setEnv() {
-	char *oldpwd = getcwd(NULL, 0);
-	if (setenv("TWD", oldpwd, 1) < 0) {
-		perror("Erreur de création de TWD!");
-		exit(EXIT_FAILURE);
+int hasTarIn(char const *line, int readen) { //vérifie si la commande utilise un tar dans ces arguments
+	char const *env = getenv("TWD");
+	if (env != NULL && strlen(env) != 0) return 1; //test si on est déjà dans un tar
+
+	int argc = getNbArgs(line, readen);
+	char line_copy[readen+1];
+	strcpy(line_copy, line);
+	char *argv[argc];
+	argv[0] = strtok(line_copy, " "); //nom de la commande inutile de verifier
+	for (int i = 1; i < argc; i++) {
+		argv[i] = strtok(NULL, " ");
+		if (strstr(argv[i], ".tar") != NULL) return 1; //test si un tar est explicite dans les arguments
+		if (strlen(argv[i]) != 0) { //vérifie les chemins spéciaux ~ et -
+			if (argv[i][0] == '~' && strstr(getenv("HOME"), ".tar") != NULL) return 1;
+			if (strcmp(argv[i], "-") == 0 && strstr(getenv("OLDPWD"), ".tar") != NULL) return 1;
+		}
 	}
-	free(oldpwd);
+	return 0;
+}
+
+char *traiterHome(char *line, int *len) { //transforme ~ en HOME dans les arguments passés
+	int argc = getNbArgs(line, *len);
+	char *argv[argc];
+	argv[0] = strtok(line, " ");
+	int newlen = strlen(argv[0]);
+
+	for (int i = 1; i < argc; i++) {
+		char *token = strtok(NULL, " ");
+
+		if (strlen(token) != 0 && token[0] == '~') { //detection of ~
+			char *home = getenv("HOME");
+			char tmp[strlen(home) + strlen(token)];
+			strcpy(tmp, home);
+			strcat(tmp, &token[1]);
+
+			argv[i] = malloc(strlen(tmp)+1);
+			strcpy(argv[i], tmp);
+
+		}else argv[i] = token;
+
+		newlen += strlen(argv[i]);
+	}
+
+	*len = newlen + argc - 1;
+	char *newline = malloc(newlen + argc);
+	strcpy(newline, argv[0]);
+	for (int i = 1; i < argc; i++) {
+		strcat(newline, " ");
+		strcat(newline, argv[i]);
+	}
+	return newline;
+}
+
+char *traiterArguements(char *line, int *len) { //modifie les chemins contenant . et .. pour les simplifés
+	int argc = getNbArgs(line, *len);
+	char *argv[argc];
+	argv[0] = strtok(line, " ");
+	int newlen = strlen(argv[0]);
+
+	for (int i = 1; i < argc; i++) {
+		char *tok = strtok(NULL, " ");
+
+		if (strstr(tok, ".") != NULL) { //verifie si . ou .. sont contenus
+			int pwdlen = 0;
+			char *pwd;
+			if (tok[0] != '/') {
+				pwd = getcwd(NULL, 0);
+				pwdlen = strlen(pwd);
+			}
+			char argvcopy[pwdlen+1+strlen(tok)+1];
+			if (tok[0] != '/') {
+				strcpy(argvcopy, pwd);
+				strcat(argvcopy, "/");
+				strcat(argvcopy, tok);
+			}else strcpy(argvcopy, tok);
+
+			char argvcopycount[strlen(argvcopy)+1];
+			strcpy(argvcopycount, argvcopy);
+
+			char *saveptr;
+			char *token;
+			int argcount = 0;
+			char *tmp = argvcopycount;
+			while ((token = strtok_r(tmp, "/", &saveptr)) != NULL) {
+			 	argcount += 1;
+				tmp = saveptr;
+			}
+
+			char *tab[argcount];
+			int indice = 0;
+			int tab_len = 0;
+			tmp = argvcopy;
+			for (int i = 0; i < argcount; i++, tmp = saveptr) {
+				token = strtok_r(tmp, "/", &saveptr);
+				if (strcmp(token, "..") == 0) {
+					if (indice != 0) {
+						indice--;
+						tab_len -= strlen(tab[indice]);
+					}
+				}else if (strcmp(token, ".") == 0) continue;
+				else {
+					tab_len += strlen(token);
+					tab[indice++] = token;
+				}
+			}
+
+			char res[1 + tab_len + indice];
+			strcpy(res, "");
+			for (int j = 0; j < indice; j++) {
+				strcat(res, "/");
+				strcat(res, tab[j]);
+			}
+
+			argv[i] = res;
+		}else argv[i] = tok;
+
+		newlen += strlen(argv[i]);
+	}
+
+	*len = newlen + argc - 1;
+	char *newline = malloc(newlen + argc);
+	strcpy(newline, argv[0]);
+	for (int i = 1; i < argc; i++) {
+		strcat(newline, " ");
+		strcat(newline, argv[i]);
+	}
+	return newline;
 }
