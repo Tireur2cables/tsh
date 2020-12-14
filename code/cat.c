@@ -51,8 +51,15 @@ int cat_file(char *file, char *options){ //Fonction générale qui gère dans qu
 }
 
 int cat_tar(char *file, char *options){ //Fonction générale qui gère dans quel cas on se trouve
+		char tarfile[strlen(file)]; //Contient le chemin jusqu'au tar pour l'ouvrir
+		char namefile[strlen(file)]; //Contient la suite du chemin pour l'affichage
+		int tarpos = strstr(file, ".tar") - file; //Existe car on sait qu'il y a un tar dans le chemin
+		strncpy(tarfile, file, tarpos+4);
+		strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
+		tarfile[tarpos+4] = '\0';
+		namefile[strlen(file)-tarpos-4] = '\0';
 		struct posix_header header;
-		int fd = open(file, O_RDONLY);
+		int fd = open(tarfile, O_RDONLY);
 		if(fd == -1){
 		  perror("erreur d'ouverture de l'archive");
 		  return -1;
@@ -61,10 +68,21 @@ int cat_tar(char *file, char *options){ //Fonction générale qui gère dans que
 		int n = 0;
 		int read_size = 0;
 		while((n=read(fd, &header, BLOCKSIZE))>0){
-			get_header_size_cat(&header, &read_size);
-			if (write(STDOUT_FILENO, &header, BLOCKSIZE) < BLOCKSIZE) {
-				perror("Erreur d'écriture dans le shell!");
-				exit(EXIT_FAILURE);
+			if(strcmp(header.name, "\0") == 0){
+				break;
+			}
+			if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) == 0)) {
+				if (write(STDOUT_FILENO, &header, BLOCKSIZE) < BLOCKSIZE) {
+					perror("Erreur d'écriture dans le shell!");
+					exit(EXIT_FAILURE);
+				}
+			}else{
+				get_header_size_cat(&header, &read_size);
+			}
+
+			if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+				perror("erreur de lecture de l'archive");
+				return -1;
 			}
 		}
 		close(fd);

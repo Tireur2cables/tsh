@@ -12,6 +12,6 @@ int is_ext_cat(char *, char *);
 int cat_tar(char *, char *);
 int cat_file(char *, char *);
 ssize_t read_line(int, char *, size_t);
-int get_header_size_cat(struct posix_header *, int *);
+int get_header_size_cat_t(struct posix_header *, int *);
 
 #endif
