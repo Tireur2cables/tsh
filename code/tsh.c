@@ -110,7 +110,9 @@ void selectCommand(char *line, int readen) { //lance la bonne commande ou lance 
 
 void selectCustomCommand(char *line, int readen) { //lance la bonne custom commande ou lance avec exec
 //traite les arguments si presence de . .. ou ~
+	write(STDOUT_FILENO, line, strlen(line));
 	line = traiterArguements(line, &readen);
+	write(STDOUT_FILENO, line, strlen(line));
 //les commandes built-in
 	if (iscmd(line, "cd")) //cmd = cd must be built-in func
 		launchBuiltInFunc(cd, line, readen);
@@ -320,7 +322,8 @@ char *traiterArguements(char *line, int *len) { //modifie les chemins contenant 
 				strcat(res, tab[j]);
 			}
 
-			argv[i] = res;
+			argv[i] = malloc(strlen(res) + 1);
+			strcpy(argv[i], res);
 		}else argv[i] = tok;
 
 		newlen += strlen(argv[i]);
