@@ -245,7 +245,10 @@ char *traiterHome(char *line, int *len) { //transforme ~ en HOME dans les argume
 			argv[i] = malloc(strlen(tmp)+1);
 			strcpy(argv[i], tmp);
 
-		}else argv[i] = token;
+		}else {
+			argv[i] = malloc(strlen(token) + 1);
+			strcpy(argv[i], token);
+		}
 
 		newlen += strlen(argv[i]);
 	}
@@ -256,6 +259,7 @@ char *traiterHome(char *line, int *len) { //transforme ~ en HOME dans les argume
 	for (int i = 1; i < argc; i++) {
 		strcat(newline, " ");
 		strcat(newline, argv[i]);
+		free(argv[i]);
 	}
 	return newline;
 }
@@ -322,7 +326,10 @@ char *traiterArguements(char *line, int *len) { //modifie les chemins contenant 
 
 			argv[i] = malloc(strlen(res) + 1);
 			strcpy(argv[i], res);
-		}else argv[i] = tok;
+		}else {
+			argv[i] = malloc(strlen(tok) + 1);
+			strcpy(argv[i], tok);
+		}
 
 		newlen += strlen(argv[i]);
 	}
@@ -333,6 +340,7 @@ char *traiterArguements(char *line, int *len) { //modifie les chemins contenant 
 	for (int i = 1; i < argc; i++) {
 		strcat(newline, " ");
 		strcat(newline, argv[i]);
+		free(argv[i]);
 	}
 	return newline;
 }
