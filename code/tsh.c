@@ -110,9 +110,7 @@ void selectCommand(char *line, int readen) { //lance la bonne commande ou lance 
 
 void selectCustomCommand(char *line, int readen) { //lance la bonne custom commande ou lance avec exec
 //traite les arguments si presence de . .. ou ~
-	write(STDOUT_FILENO, line, strlen(line));
 	line = traiterArguements(line, &readen);
-	write(STDOUT_FILENO, line, strlen(line));
 //les commandes built-in
 	if (iscmd(line, "cd")) //cmd = cd must be built-in func
 		launchBuiltInFunc(cd, line, readen);
