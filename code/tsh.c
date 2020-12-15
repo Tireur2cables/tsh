@@ -15,6 +15,7 @@
 #include "ls.h"
 #include "cd.h"
 #include "pwd.h"
+#include "cat.h"
 #include "help.h"
 #include "exit.h"
 #include "cdIn.h"
