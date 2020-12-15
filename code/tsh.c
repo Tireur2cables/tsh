@@ -39,8 +39,8 @@ char *traiterHome(char *, int *);
 
 //tableau (et sa taille) des commandes implémentées (non built-in) pour les tar
 int len_custom = 3; //8
-couple custom[3] = {{"ls", ls}, {"pwd", pwd}};
-//, {"cat", cat}, {"cp", cp}, {"rm", rm}, {"mv", mv}, {"rmdir", rmdir}, {"mkdir", mkdir};
+couple custom[3] = {{"ls", ls}, {"pwd", pwd}, {"cat", cat}};
+//, {"cp", cp}, {"rm", rm}, {"mv", mv}, {"rmdir", rmdir}, {"mkdir", mkdir};
 
 
 int main(int argc, char const *argv[]) { //main
