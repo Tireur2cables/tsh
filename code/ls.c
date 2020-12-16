@@ -65,6 +65,19 @@ int print_inside_tar(char *file, char *options){
 	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
 	tarfile[tarpos+4] = '\0';
 	namefile[strlen(file)-tarpos-4] = '\0';
+	write(STDOUT_FILENO, namefile, strlen(namefile));
+	write(STDOUT_FILENO, "\n", 1);
+	write(STDOUT_FILENO, tarfile, strlen(tarfile));
+	write(STDOUT_FILENO, "\n", 1);
+	write(STDOUT_FILENO, file, strlen(file));
+	write(STDOUT_FILENO, "\n", 1);
+	if (file[tarpos+4] != '/'){ //Si après le .tar il n'y a pas de / => Il y a une erreur dans le nom du fichier
+		write(STDOUT_FILENO, "yes", 3);
+		char format[73];
+		sprintf(format, "ls : impossible d'accéder à '%s' : Aucun fichier ou dossier de ce type\n", file);
+		write(STDOUT_FILENO, format, strlen(format));
+		return -1;
+	}
 	struct posix_header header;
 	int fd = open(tarfile, O_RDONLY);
 	if(fd == -1){
@@ -128,6 +141,7 @@ int print_tar(char *file, char *options){
 	if(file[strlen(file)-1] == '/'){ //remove trailing_slash
 		file[strlen(file)-1] = '\0';
 	}
+	//write(STDOUT_FILENO, file, strlen(file));
 	int fd = open(file, O_RDONLY);
 	if(fd == -1){
 	  perror("erreur d'ouverture de l'archive");
