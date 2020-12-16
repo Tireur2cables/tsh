@@ -73,7 +73,7 @@ int print_inside_tar(char *file, char *options){
 	write(STDOUT_FILENO, "\n", 1);
 	if (file[tarpos+4] != '/'){ //Si après le .tar il n'y a pas de / => Il y a une erreur dans le nom du fichier
 		write(STDOUT_FILENO, "yes", 3);
-		char format[73];
+		char format[72 + strlen(file)];
 		sprintf(format, "ls : impossible d'accéder à '%s' : Aucun fichier ou dossier de ce type\n", file);
 		write(STDOUT_FILENO, format, strlen(format));
 		return -1;
