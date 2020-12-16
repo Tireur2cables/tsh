@@ -222,7 +222,10 @@ int hasTarIn(char const *line, int readen) { //vérifie si la commande utilise u
 		if (strstr(argv[i], ".tar") != NULL) return 1; //test si un tar est explicite dans les arguments
 		if (strlen(argv[i]) != 0) { //vérifie les chemins spéciaux ~ et -
 			if (argv[i][0] == '~' && strstr(getenv("HOME"), ".tar") != NULL) return 1;
-			if (strcmp(argv[i], "-") == 0 && strstr(getenv("OLDPWD"), ".tar") != NULL) return 1;
+			if (strcmp(argv[i], "-") == 0) {
+				char *oldtwd = getenv("OLDTWD");
+				if (oldtwd != NULL && strlen(oldtwd) != 0) return 1;
+			}
 		}
 	}
 	return 0;
@@ -276,15 +279,24 @@ char *traiterArguements(char *line, int *len) { //modifie les chemins contenant 
 
 		if (strstr(tok, ".") != NULL) { //verifie si . ou .. sont contenus
 			int pwdlen = 0;
+			int twdlen = 0;
 			char *pwd;
+			char *twd;
 			if (tok[0] != '/') {
 				pwd = getcwd(NULL, 0);
 				pwdlen = strlen(pwd);
+				twd = getenv("TWD");
+				if (twd != NULL && strlen(twd) != 0)
+					twdlen = strlen(twd) + 1;
 			}
-			char argvcopy[pwdlen+1+strlen(tok)+1];
+			char argvcopy[pwdlen+1+twdlen+strlen(tok)+1];
 			if (tok[0] != '/') {
 				strcpy(argvcopy, pwd);
 				strcat(argvcopy, "/");
+				if (twdlen != 0) {
+					strcat(argvcopy, twd);
+					strcat(argvcopy, "/");
+				}
 				strcat(argvcopy, tok);
 			}else strcpy(argvcopy, tok);
 
