@@ -19,13 +19,14 @@ int rmdir_func(int argc,char **argv) {
 	
 	InitialRep = getcwd(NULL,0);
 	
+	/* a enlever pour compiler */
 	char *oldpwd = getcwd(NULL, 0);
 	if (setenv("TWD", oldpwd, 1) < 0) {
 		perror("Erreur de création de TWD!");
 		exit(EXIT_FAILURE);
 	}
 	free(oldpwd);
-
+	/**/
 	
 	if(argc <= 1 ) {
 		errno = EINVAL;
@@ -34,7 +35,6 @@ int rmdir_func(int argc,char **argv) {
 	}
 	
 	
-	char * chemin;
 	struct stat s;
 	struct dirent * d;
 	DIR * dir_courant;
@@ -42,9 +42,13 @@ int rmdir_func(int argc,char **argv) {
 	for(int i=1;i<argc;i++) {
 		
 		int error_or_not = 1;
-		chemin=argv[i];
+		
+		char chemin[strlen(argv[i])+1];
+		strcpy(chemin,argv[i]);
+		
 		char CheminTMP[strlen(chemin)+1];
 		strcpy(CheminTMP,chemin);
+		
 		const char * separator = "/";
 		char * part=strtok(CheminTMP,separator);
 		char * lastRep = NULL;
@@ -60,8 +64,8 @@ int rmdir_func(int argc,char **argv) {
 		if(passage<1) break;
 		
 		found=0;
-
 		dir_courant=opendir(getenv("TWD"));
+		
 		if(openDetectError(dir_courant)!=0) return -1;
 		
 			while((d=readdir(dir_courant))!=NULL) {
@@ -75,7 +79,6 @@ int rmdir_func(int argc,char **argv) {
 						exit(EXIT_FAILURE);
 					} else {
 						if(S_ISDIR(s.st_mode)==0) {
-						
 							NotDirectory(chemin);
 							error_or_not=0;
 							break;
@@ -90,7 +93,9 @@ int rmdir_func(int argc,char **argv) {
 			} // fin while2
 		
 		if(fileFound(found)!=0)  { passage=0; error_or_not = 0; };
-		if(part!=NULL)  { lastRep=part; actuDir(part); }
+		if(part!=NULL)  { 
+		lastRep=part; actuDir(part); 
+		}
 		part=strtok(NULL,separator);
 		
 		
