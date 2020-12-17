@@ -58,14 +58,16 @@ int main(int argc, char const *argv[]) { //main
 		twd = getenv("TWD");
 		int len_twd = 0;
 		if (twd != NULL && strlen(twd) != 0) //s'ajoute seulement si besoin
-			len_twd = 1 + strlen(twd);
+			len_twd = strlen(twd) + 1;
 
-		char new_prompt[strlen(pwd) + len_twd + strlen(prompt) + 1];
+		char new_prompt[strlen(pwd) + 1 + len_twd + strlen(prompt) + 1];
 		strcpy(new_prompt, pwd);
 		if (strcmp(pwd, "/") != 0) //seulement si on est pas à la racine
 			strcat(new_prompt, "/");
-		if (twd != NULL && strlen(twd) != 0) //seulement si besoin
+		if (twd != NULL && strlen(twd) != 0) { //seulement si on est dans un .tar
 			strcat(new_prompt, twd);
+			strcat(new_prompt, "/");
+		}
 		strcat(new_prompt, prompt);
 
 		char *line;
@@ -88,21 +90,23 @@ int main(int argc, char const *argv[]) { //main
 }
 
 void selectCommand(char *line, int readen) { //lance la bonne commande ou lance avec exec
+//traite le ~ au début des arguments
 	line = traiterHome(line, &readen);
-//les commandes spéciales pour les tar
-	if (hasTarIn(line, readen)) //custom commands if implies to use tarball
-		selectCustomCommand(line, readen);
 
 //les commandes spéciales à ce shell
-	else if (iscmd(line, "help")) //cmd = help
+	if (iscmd(line, "help")) //cmd = help
 		launchFunc(help, line, readen);
-
-//les commandes built-in
-	else if (iscmd(line, "cd")) //cmd = cd must be built-in func
-		launchBuiltInFunc(cdIn, line, readen);
 
 	else if (iscmd(line, "exit")) //cmd = exit must be built-in func
 		launchBuiltInFunc(exit_tsh, line, readen);
+
+//les commandes spéciales pour les tar
+	else if (hasTarIn(line, readen)) //custom commands if implies to use tarball
+		selectCustomCommand(line, readen);
+
+//les commandes built-in n'agissant pas dans les tar
+	else if (iscmd(line, "cd")) //cmd = cd must be built-in func
+		launchBuiltInFunc(cdIn, line, readen);
 
 //execution normale de la command
 	else //lancer la commande avec exec
@@ -209,20 +213,26 @@ int iscmd(char *line, char *cmd) { //verifie qu'une ligne commence bien par la c
 }
 
 int hasTarIn(char const *line, int readen) { //vérifie si la commande utilise un tar dans ces arguments
-	char const *env = getenv("TWD");
+	char *env = getenv("TWD");
 	if (env != NULL && strlen(env) != 0) return 1; //test si on est déjà dans un tar
 
 	int argc = getNbArgs(line, readen);
 	char line_copy[readen+1];
 	strcpy(line_copy, line);
 	char *argv[argc];
-	argv[0] = strtok(line_copy, " "); //nom de la commande inutile de verifier
+	argv[0] = strtok(line_copy, " "); //nom de la commande
+	if (argc == 1) { //no arguments
+		if (strcmp(argv[0], "cd") == 0 && strstr(getenv("HOME"), ".tar") != NULL) return 1;
+	}
 	for (int i = 1; i < argc; i++) {
 		argv[i] = strtok(NULL, " ");
 		if (strstr(argv[i], ".tar") != NULL) return 1; //test si un tar est explicite dans les arguments
 		if (strlen(argv[i]) != 0) { //vérifie les chemins spéciaux ~ et -
 			if (argv[i][0] == '~' && strstr(getenv("HOME"), ".tar") != NULL) return 1;
-			if (strcmp(argv[i], "-") == 0 && strstr(getenv("OLDPWD"), ".tar") != NULL) return 1;
+			if (strcmp(argv[i], "-") == 0) {
+				char *oldtwd = getenv("OLDTWD");
+				if (oldtwd != NULL && strlen(oldtwd) != 0) return 1;
+			}
 		}
 	}
 	return 0;
@@ -276,15 +286,24 @@ char *traiterArguements(char *line, int *len) { //modifie les chemins contenant 
 
 		if (strstr(tok, ".") != NULL) { //verifie si . ou .. sont contenus
 			int pwdlen = 0;
+			int twdlen = 0;
 			char *pwd;
+			char *twd;
 			if (tok[0] != '/') {
 				pwd = getcwd(NULL, 0);
 				pwdlen = strlen(pwd);
+				twd = getenv("TWD");
+				if (twd != NULL && strlen(twd) != 0)
+					twdlen = strlen(twd) + 1;
 			}
-			char argvcopy[pwdlen+1+strlen(tok)+1];
+			char argvcopy[pwdlen+1+twdlen+strlen(tok)+1];
 			if (tok[0] != '/') {
 				strcpy(argvcopy, pwd);
 				strcat(argvcopy, "/");
+				if (twdlen != 0) {
+					strcat(argvcopy, twd);
+					strcat(argvcopy, "/");
+				}
 				strcat(argvcopy, tok);
 			}else strcpy(argvcopy, tok);
 
