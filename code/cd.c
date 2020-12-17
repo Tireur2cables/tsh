@@ -235,7 +235,7 @@ int isAccessibleFrom(char *doss, char *dir) {
 	return found;
 }
 
-int parcoursCheminTar(char *pwd, char *twd, char *chemin) {
+int parcoursCheminTar(char *pwd, char *twd, char *rest) {
 	char twd_copy[strlen(twd)+1];
 	strcpy(twd_copy, twd);
 	char *tar = strtok(twd_copy, "/");
@@ -243,6 +243,12 @@ int parcoursCheminTar(char *pwd, char *twd, char *chemin) {
 	strcpy(absolutetar, pwd);
 	strcat(absolutetar, "/");
 	strcat(absolutetar, tar);
+
+	char chemin[strlen(twd) - strlen(tar) + strlen(rest) + 1];
+	if (strlen(twd) - strlen(tar) > 0) strcpy(chemin, &twd[strlen(tar)+1]);
+	else strcpy(chemin, &twd[strlen(tar)]);
+	if (strlen(chemin) != 0) strcat(chemin, "/");
+	strcat(chemin, rest);
 
 	int fd = open(absolutetar, O_RDONLY);
 	if (fd == -1) {
@@ -268,6 +274,7 @@ int parcoursCheminTar(char *pwd, char *twd, char *chemin) {
 			strcpy(nom, header.name);
 			if (nom[strlen(nom)-1] == '/' && isSameDir(chemin, nom)) found = 1;
 			else {
+				if (strcmp(nom, chemin) == 0) found = -1;
 				if (strcmp(nom, "") == 0) break;
 				unsigned int taille;
 				sscanf(header.size, "%o", &taille);
@@ -291,16 +298,29 @@ int parcoursCheminTar(char *pwd, char *twd, char *chemin) {
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
 			perror("Erreur d'écriture dans le shell!");
-	}else {
+	}else if (found == 1) {
 		char res[strlen(absolutetar) + 1 + strlen(chemin) + 1];
 		strcpy(res, absolutetar);
 		if (chemin != NULL && strlen(chemin) != 0) {
 			strcat(res, "/");
 			strcat(res, chemin);
 		}
+		if (res[strlen(res)-1] == '/') res[strlen(res)-1] = '\0';
 		setWd(res);
+	}else {
+		char *deb  = "cd : ";
+		char *end = " n'est pas un répertoire!\n";
+		char error[strlen(deb) + strlen(absolutetar) + 1 + strlen(chemin) + strlen(end) + 1];
+		strcpy(error, deb);
+		strcat(error, absolutetar);
+		strcat(error, "/");
+		strcat(error, chemin);
+		strcat(error, end);
+		int errorlen = strlen(error);
+		if (write(STDERR_FILENO, error, errorlen) < errorlen)
+			perror("Erreur d'écriture dans le shell!");
 	}
-	return (found)? 0 : -1;
+	return (found == 1)? 0 : -1;
 }
 
 int isSameDir(char *dir1, char *dir2) {
