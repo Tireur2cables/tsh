@@ -8,6 +8,14 @@
 #include "tar.h"
 #include <stdlib.h>
 
+int is_tar_cat(char *);
+int contains_tar_cat(char *);
+int is_ext_cat(char *, char *);
+int cat_tar(char *, char *);
+int cat_file(char *, char *);
+ssize_t read_line(int, char *, size_t);
+int get_header_size_cat_t(struct posix_header *, int *);
+
 int cat(int argc, char *argv[]) {
 	char *file = argv[1];
 	cat_file(file, "\0");
