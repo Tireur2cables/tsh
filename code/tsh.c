@@ -213,14 +213,17 @@ int iscmd(char *line, char *cmd) { //verifie qu'une ligne commence bien par la c
 }
 
 int hasTarIn(char const *line, int readen) { //vérifie si la commande utilise un tar dans ces arguments
-	char const *env = getenv("TWD");
+	char *env = getenv("TWD");
 	if (env != NULL && strlen(env) != 0) return 1; //test si on est déjà dans un tar
 
 	int argc = getNbArgs(line, readen);
 	char line_copy[readen+1];
 	strcpy(line_copy, line);
 	char *argv[argc];
-	argv[0] = strtok(line_copy, " "); //nom de la commande inutile de verifier
+	argv[0] = strtok(line_copy, " "); //nom de la commande
+	if (argc == 1) { //no arguments
+		if (strcmp(argv[0], "cd") == 0 && strstr(getenv("HOME"), ".tar") != NULL) return 1;
+	}
 	for (int i = 1; i < argc; i++) {
 		argv[i] = strtok(NULL, " ");
 		if (strstr(argv[i], ".tar") != NULL) return 1; //test si un tar est explicite dans les arguments

@@ -50,7 +50,7 @@ int cd(int argc, char *argv[]) {
 
 		char *oldtwd = getenv("OLDTWD");
 		int oldtwd_len = 0;
-		if (oldtwd != NULL && strlen(oldtwd) == 0)
+		if (oldtwd != NULL && strlen(oldtwd) != 0)
 			oldtwd_len = 1 + strlen(oldtwd);
 
 		char copy[strlen(oldpwd) + oldtwd_len + 1];
