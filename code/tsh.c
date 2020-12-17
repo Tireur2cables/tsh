@@ -58,14 +58,16 @@ int main(int argc, char const *argv[]) { //main
 		twd = getenv("TWD");
 		int len_twd = 0;
 		if (twd != NULL && strlen(twd) != 0) //s'ajoute seulement si besoin
-			len_twd = 1 + strlen(twd);
+			len_twd = strlen(twd) + 1;
 
-		char new_prompt[strlen(pwd) + len_twd + strlen(prompt) + 1];
+		char new_prompt[strlen(pwd) + 1 + len_twd + strlen(prompt) + 1];
 		strcpy(new_prompt, pwd);
 		if (strcmp(pwd, "/") != 0) //seulement si on est pas à la racine
 			strcat(new_prompt, "/");
-		if (twd != NULL && strlen(twd) != 0) //seulement si besoin
+		if (twd != NULL && strlen(twd) != 0) { //seulement si on est dans un .tar
 			strcat(new_prompt, twd);
+			strcat(new_prompt, "/");
+		}
 		strcat(new_prompt, prompt);
 
 		char *line;
@@ -88,21 +90,23 @@ int main(int argc, char const *argv[]) { //main
 }
 
 void selectCommand(char *line, int readen) { //lance la bonne commande ou lance avec exec
+//traite le ~ au début des arguments
 	line = traiterHome(line, &readen);
-//les commandes spéciales pour les tar
-	if (hasTarIn(line, readen)) //custom commands if implies to use tarball
-		selectCustomCommand(line, readen);
 
 //les commandes spéciales à ce shell
-	else if (iscmd(line, "help")) //cmd = help
+	if (iscmd(line, "help")) //cmd = help
 		launchFunc(help, line, readen);
-
-//les commandes built-in
-	else if (iscmd(line, "cd")) //cmd = cd must be built-in func
-		launchBuiltInFunc(cdIn, line, readen);
 
 	else if (iscmd(line, "exit")) //cmd = exit must be built-in func
 		launchBuiltInFunc(exit_tsh, line, readen);
+
+//les commandes spéciales pour les tar
+	else if (hasTarIn(line, readen)) //custom commands if implies to use tarball
+		selectCustomCommand(line, readen);
+
+//les commandes built-in n'agissant pas dans les tar
+	else if (iscmd(line, "cd")) //cmd = cd must be built-in func
+		launchBuiltInFunc(cdIn, line, readen);
 
 //execution normale de la command
 	else //lancer la commande avec exec
