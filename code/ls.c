@@ -49,7 +49,19 @@ int ls(int argc, char *argv[]){
 				check_options(argv[1]);
 				print_dir(getenv("TWD"), argv[1]);
 			}else{
-				print_dir(argv[1], "\0");
+				if(getenv("TWD") != NULL){
+					if(is_tar(getenv("TWD"))){
+						print_dir(argv[1], "\0");
+					}else{
+						char file[strlen(getenv("TWD")) + strlen(argv[1])];
+						sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
+						print_dir(file, "\0");
+					}
+				}
+				else{
+					print_dir(argv[1], "\0");
+				}
+
 			}
 		}else if(argc == 3){
 			check_options(argv[1]);
@@ -67,12 +79,9 @@ int print_dir(char *file, char *options){ //Fonction générale qui gère dans q
 		print_tar(file, options);
 	}else if(contains_tar(cp)){
 		print_inside_tar(file, options);
-	}else{
-		char *format = "Erreur du programme, la commande ls externe aurait du etre utilisée";
-		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
-			perror("Erreur d'écriture dans le shell");
-			exit(EXIT_FAILURE);
-		}
+	}else{//On se trouve dans un tar, mais on fait ls sur un chemin qui ne contient pas de tar
+
+		execlp("ls", "ls", file, (options[0] == '\0')?NULL:options, NULL);
 	}
 	return 0;
 }
