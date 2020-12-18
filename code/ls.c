@@ -157,7 +157,7 @@ int print_inside_tar(char *file, char *options){
 		strcpy(format, "ls : impossible d'acceder a '");
 		strcat(format, namefile);
 		strcat(format, "': Aucun fichier ou dossier de ce type\n");
-		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
+		if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)) {
 			perror("Erreur d'écriture dans le shell!");
 			exit(EXIT_FAILURE);
 		}
