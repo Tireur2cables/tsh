@@ -16,12 +16,9 @@
 void show_simple_header_infos(struct posix_header *, int *);
 void get_header_size(struct posix_header *, int *);
 void show_complete_header_infos(struct posix_header *, int *);
-/*int print_normal_dir(char *);
-int print_complete_normal_dir(char *);*/
 int print_dir(char *, char *);
 int print_tar(char *, char *);
 int print_inside_tar(char *, char *);
-//int print_rep(char *, char *);
 int is_tar(char *);
 int contains_tar(char *);
 int check_options(char *);
@@ -36,7 +33,6 @@ int get_filename(char *, char*);
 //FONCTION LS
 /*TODO :
 		 nombre de references dans un tar
-		 ls arch.tar/rep/file -> Affiche que le ficher n'existe pas
 */
 
 int ls(int argc, char *argv[]){
@@ -112,8 +108,13 @@ int print_inside_tar(char *file, char *options){
 		if(strcmp(header.name, "\0") == 0){
 			break;
 		}
-		if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) != 0)) {
-			if(get_profondeur(header.name) == profondeur+1){
+		if (strcmp(header.name, namefile) == 0){
+			show_simple_header_infos(&header, &read_size);
+			found = 1;
+		}
+		else if (strstr(header.name, namefile) != NULL){
+			int namepos = strstr(header.name, namefile) - header.name;
+			if((header.name[namepos + strlen(namefile)] == '/') && get_profondeur(header.name) == profondeur + 1){
 				if(strcmp(options, "\0") == 0){ //pas d'option
 					show_simple_header_infos(&header, &read_size);
 				}
@@ -143,7 +144,7 @@ int print_inside_tar(char *file, char *options){
 		}
 	}
 	if(!found){
-		char format[100];
+		char format[strlen(namefile) + 71];
 		strcpy(format, "ls : impossible d'acceder a '");
 		strcat(format, namefile);
 		strcat(format, "': Aucun fichier ou dossier de ce type\n");
@@ -294,7 +295,6 @@ int get_profondeur(char *name){
 			profondeur++;
 		}
 	}
-	//printf("-%s %d-\n", name, profondeur);
 	return profondeur;
 }
 
@@ -345,7 +345,9 @@ int nbdigit(int n){
 	}
 	return count;
 }
-
+/*
+*Convertis le mode (en octal) en une string rwxrwxrwx
+*/
 void convert_mode(mode_t mode, char* res){
 	//UTILISATEUR
 	if (mode & S_IRUSR)
