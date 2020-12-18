@@ -14,7 +14,16 @@ int is_ext_cat(char *, char *);
 int cat_tar(char *, char *);
 int cat_file(char *, char *);
 ssize_t read_line(int, char *, size_t);
-int get_header_size_cat_t(struct posix_header *, int *);
+int get_header_size_cat(struct posix_header *, int *);
+void write_content(int, int);
+
+void write_content(int fd, int read_size){
+	for(int i = 0; i < read_size; i++){
+		char format[BLOCKSIZE];
+		read(fd, format, BLOCKSIZE);
+		write(STDOUT_FILENO, format, (strlen(format)));
+	}
+}
 
 int cat(int argc, char *argv[]) {
 	char *file = argv[1];
@@ -80,11 +89,7 @@ int cat_tar(char *file, char *options){ //Fonction générale qui gère dans que
 			if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) == 0)) {
 				get_header_size_cat(&header, &read_size);
 				found = 1;
-				for(int i = 0; i < read_size; i++){
-					char format[BLOCKSIZE];
-					read(fd, format, BLOCKSIZE);
-					write(STDOUT_FILENO, format, (strlen(format)));
-				}
+				write_content(fd, read_size);
 			}else{
 				get_header_size_cat(&header, &read_size);
 			}
