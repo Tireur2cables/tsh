@@ -77,6 +77,9 @@ int print_dir(char *file, char *options){ //Fonction générale qui gère dans q
 	return 0;
 }
 
+/*
+* ls dans le cas ls arch.tar/file
+*/
 int print_inside_tar(char *file, char *options){
 	char tarfile[strlen(file)]; //Contient le chemin jusqu'au tar pour l'ouvrir
 	char namefile[strlen(file)]; //Contient la suite du chemin pour l'affichage
@@ -108,13 +111,10 @@ int print_inside_tar(char *file, char *options){
 		if(strcmp(header.name, "\0") == 0){
 			break;
 		}
-		if (strcmp(header.name, namefile) == 0){
-			show_simple_header_infos(&header, &read_size);
-			found = 1;
-		}
-		else if (strstr(header.name, namefile) != NULL){
+		if (strstr(header.name, namefile) != NULL){ //Inutile de faire plus de tests si le fichier ne contient pas le nom recherché
 			int namepos = strstr(header.name, namefile) - header.name;
-			if((header.name[namepos + strlen(namefile)] == '/') && get_profondeur(header.name) == profondeur + 1){
+			//Si le nom du fichier est exactement celui qu'on recherche (c'est un fichier) ou si on trouve un dossier qui porte se nom, on affiche le contenu a profondeur + 1
+			if(strcmp(header.name, namefile) == 0 || (header.name[namepos + strlen(namefile)] == '/' && get_profondeur(header.name) == profondeur + 1)){
 				if(strcmp(options, "\0") == 0){ //pas d'option
 					show_simple_header_infos(&header, &read_size);
 				}
@@ -131,19 +131,19 @@ int print_inside_tar(char *file, char *options){
 			get_header_size(&header, &read_size);
 		}
 
-		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){ //On avance du nombre de blocks du fichier etudié pour passer au prochain
 			perror("erreur de lecture de l'archive");
 			return -1;
 		}
 	}
-	if(found && strcmp(options, "\0") == 0){
+	if(found && strcmp(options, "\0") == 0){ //On affiche un retour a la ligne, seulement si on avait pas d'option, car ls -l met un retour a la ligne à la fin de chaque ligne
 		char *format = "\n";
 		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
 			perror("Erreur d'écriture dans le shell!");
 			exit(EXIT_FAILURE);
 		}
 	}
-	if(!found){
+	if(!found){ //On a pas trouvé le fichier dans l'archive, message d'erreur
 		char format[strlen(namefile) + 71];
 		strcpy(format, "ls : impossible d'acceder a '");
 		strcat(format, namefile);
@@ -157,9 +157,12 @@ int print_inside_tar(char *file, char *options){
 	return 0;
 }
 
+/*
+* ls dans le cas ls arch.tar
+*/
 int print_tar(char *file, char *options){
 	struct posix_header header;
-	if(file[strlen(file)-1] == '/'){ //remove trailing_slash
+	if(file[strlen(file)-1] == '/'){ //suppression des slashs en fin de noms
 		file[strlen(file)-1] = '\0';
 	}
 	int fd = open(file, O_RDONLY);
