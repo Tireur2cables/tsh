@@ -8,33 +8,44 @@
 #include "tar.h"
 #include <stdlib.h>
 
-char read_line_buf[BUFFSIZE];
-int read_line_pos;
-int read_line_siz = 0;
+int is_tar_cat(char *);
+int contains_tar_cat(char *);
+int is_ext_cat(char *, char *);
+int cat_tar(char *, char *);
+int cat_file(char *, char *);
+ssize_t read_line(int, char *, size_t);
+int get_header_size_cat(struct posix_header *, int *);
+void write_content(int, int);
 
+
+/*
+* Affiche sur stdout read_size BLOCK (512 octets) du fichier fd
+*/
+void write_content(int fd, int read_size){
+	for(int i = 0; i < read_size; i++){
+		char format[BLOCKSIZE];
+		read(fd, format, BLOCKSIZE);
+		write(STDOUT_FILENO, format, (strlen(format)));
+	}
+}
+
+/*
+* Appel de la fonction, gestion des options et du nom du fichier a cat
+*/
 int cat(int argc, char *argv[]) {
 	char *file = argv[1];
 	cat_file(file, "\0");
 	return 0;
 }
 
-int write_tar(struct posix_header *header){
-	write(STDOUT_FILENO, "yes", 3);
-	int taille;
-	sscanf(header->size, "%o", &taille);
-	char format[taille+1];
-	memcpy(format, header, taille);
-	write(STDOUT_FILENO, format, strlen(format));
-	return 0;
-}
-int get_header_size_cat(struct posix_header *header, int *read_size){
-	int taille = 0;
-	sscanf(header->size, "%o", &taille);
-	*read_size = ((taille + 512-1)/512);
-	return 0;
-}
+/*
+*
+Fonction générale qui gére les différents cas dans lesquels on peut se trouver : - Afficher un tar -> erreur
+																				 - Pas de Tar dans le nom -> Ne dois pas arriver -> Erreur
+																				 - Un fichier dans un tar -> Appel de cat_tar
 
-int cat_file(char *file, char *options){ //Fonction générale qui gère dans quel cas on se trouve
+*/
+int cat_file(char *file, char *options){
 	char cp[strlen(file)+1];
 	strcpy(cp, file);
 	if(contains_tar_cat(cp)){
@@ -50,7 +61,7 @@ int cat_file(char *file, char *options){ //Fonction générale qui gère dans qu
 		}
 
 	}else{
-		char *format = "WIP";
+		char *format = "Erreur du programme, la fonction cat eterne aurait du etre appelée";
 		if(write(STDOUT_FILENO, format, strlen(format)) < strlen(format))  {
 			perror("Erreur d'écriture dans le shell!");
 			exit(EXIT_FAILURE);
@@ -59,11 +70,14 @@ int cat_file(char *file, char *options){ //Fonction générale qui gère dans qu
 	}
 	return 0;
 }
-
-int cat_tar(char *file, char *options){ //Fonction générale qui gère dans quel cas on se trouve
+/*
+* Parcours le tar et appelle write_content sur les parties du fichier qui correspondent au nom de fichier demandé
+*
+*/
+int cat_tar(char *file, char *options){
 		char tarfile[strlen(file)]; //Contient le chemin jusqu'au tar pour l'ouvrir
 		char namefile[strlen(file)]; //Contient la suite du chemin pour l'affichage
-		int tarpos = strstr(file, ".tar") - file; //Existe car on sait qu'il y a un tar dans le chemin
+		int tarpos = strstr(file, ".tar") - file; //Existe car on sait qu'il y a un tar dans le chemin, arithmétique des pointers pour retrouver la position du .tar dans le nom de fichier
 		strncpy(tarfile, file, tarpos+4);
 		strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
 		tarfile[tarpos+4] = '\0';
@@ -77,12 +91,15 @@ int cat_tar(char *file, char *options){ //Fonction générale qui gère dans que
 
 		int n = 0;
 		int read_size = 0;
+		int found = 0;
 		while((n=read(fd, &header, BLOCKSIZE))>0){
 			if(strcmp(header.name, "\0") == 0){
 				break;
 			}
 			if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) == 0)) {
-				write_tar(&header);
+				get_header_size_cat(&header, &read_size);
+				found = 1;
+				write_content(fd, read_size);
 			}else{
 				get_header_size_cat(&header, &read_size);
 			}
@@ -92,31 +109,23 @@ int cat_tar(char *file, char *options){ //Fonction générale qui gère dans que
 				return -1;
 			}
 		}
+		if(!found){
+			char format[60 + strlen(file)];
+			sprintf(format, "cat : %s: Aucun fichier ou dossier de ce type\n", file);
+			write(STDOUT_FILENO, format, strlen(format));
+		}
 		close(fd);
 	return 0;
 }
 
-ssize_t read_line(int fd, char *buf, size_t count){
-	if(read_line_siz == 0){
-		if((read_line_siz = read(fd, read_line_buf, BUFFSIZE)) < 0){
-			return -1;
-		}
-	}
-	int i;
-	for(i = 0;read_line_pos < read_line_siz && i < count; i++, read_line_pos++){
-		buf[i] = read_line_buf[read_line_pos];
-		if(buf[i] == '\n'){
-			i++;
-			break;
-		}
-	}
-	read_line_pos++;
-	if(read_line_siz == read_line_pos){
-		read_line_pos = 0;
-		read_line_siz = 0;
-	}
-	if(i == (count-1) && buf[i-1] != '\n') return -1;
-	return i;
+/*
+* Renvoit le nombre de block, decrivant le contenu du fichier, suivant le header
+*/
+int get_header_size_cat(struct posix_header *header, int *read_size){
+	int taille = 0;
+	sscanf(header->size, "%o", &taille);
+	*read_size = ((taille + 512-1)/512);
+	return 0;
 }
 
 int contains_tar_cat(char *file){

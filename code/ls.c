@@ -13,10 +13,26 @@
 #include "tar.h"
 #include "ls.h"
 
+void show_simple_header_infos(struct posix_header *, int *);
+void get_header_size(struct posix_header *, int *);
+void show_complete_header_infos(struct posix_header *, int *);
+int print_dir(char *, char *);
+int print_tar(char *, char *);
+int print_inside_tar(char *, char *);
+int is_tar(char *);
+int contains_tar(char *);
+int check_options(char *);
+int is_options(char *);
+int is_curr_or_parent_rep(char *);
+int is_ext(char *, char *);
+int nbdigit(int);
+void convert_mode(mode_t, char*);
+int get_profondeur(char *);
+int get_filename(char *, char*);
+
 //FONCTION LS
 /*TODO :
 		 nombre de references dans un tar
-		 ls arch.tar/rep/file -> Affiche que le ficher n'existe pas
 */
 
 int ls(int argc, char *argv[]){
@@ -52,11 +68,18 @@ int print_dir(char *file, char *options){ //Fonction générale qui gère dans q
 	}else if(contains_tar(cp)){
 		print_inside_tar(file, options);
 	}else{
-		print_rep(file, options);
+		char *format = "Erreur du programme, la commande ls externe aurait du etre utilisée";
+		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+			perror("Erreur d'écriture dans le shell");
+			exit(EXIT_FAILURE);
+		}
 	}
 	return 0;
 }
 
+/*
+* ls dans le cas ls arch.tar/file
+*/
 int print_inside_tar(char *file, char *options){
 	char tarfile[strlen(file)]; //Contient le chemin jusqu'au tar pour l'ouvrir
 	char namefile[strlen(file)]; //Contient la suite du chemin pour l'affichage
@@ -65,6 +88,15 @@ int print_inside_tar(char *file, char *options){
 	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
 	tarfile[tarpos+4] = '\0';
 	namefile[strlen(file)-tarpos-4] = '\0';
+	if (file[tarpos+4] != '/'){ //Si après le .tar il n'y a pas de / => Il y a une erreur dans le nom du fichier
+		char format[72 + strlen(file)];
+		sprintf(format, "ls : impossible d'accéder à '%s' : Aucun fichier ou dossier de ce type\n", file);
+		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+			perror("Erreur d'écriture dans le shell");
+			exit(EXIT_FAILURE);
+		}
+		return -1;
+	}
 	struct posix_header header;
 	int fd = open(tarfile, O_RDONLY);
 	if(fd == -1){
@@ -79,8 +111,10 @@ int print_inside_tar(char *file, char *options){
 		if(strcmp(header.name, "\0") == 0){
 			break;
 		}
-		if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) != 0)) {
-			if(get_profondeur(header.name) == profondeur+1){
+		if (strstr(header.name, namefile) != NULL){ //Inutile de faire plus de tests si le fichier ne contient pas le nom recherché
+			int namepos = strstr(header.name, namefile) - header.name;
+			//Si le nom du fichier est exactement celui qu'on recherche (c'est un fichier) ou si on trouve un dossier qui porte se nom, on affiche le contenu a profondeur + 1
+			if(strcmp(header.name, namefile) == 0 || (header.name[namepos + strlen(namefile)] == '/' && get_profondeur(header.name) == profondeur + 1)){
 				if(strcmp(options, "\0") == 0){ //pas d'option
 					show_simple_header_infos(&header, &read_size);
 				}
@@ -97,20 +131,20 @@ int print_inside_tar(char *file, char *options){
 			get_header_size(&header, &read_size);
 		}
 
-		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){ //On avance du nombre de blocks du fichier etudié pour passer au prochain
 			perror("erreur de lecture de l'archive");
 			return -1;
 		}
 	}
-	if(found && strcmp(options, "\0") == 0){
+	if(found && strcmp(options, "\0") == 0){ //On affiche un retour a la ligne, seulement si on avait pas d'option, car ls -l met un retour a la ligne à la fin de chaque ligne
 		char *format = "\n";
 		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
 			perror("Erreur d'écriture dans le shell!");
 			exit(EXIT_FAILURE);
 		}
 	}
-	if(!found){
-		char format[100];
+	if(!found){ //On a pas trouvé le fichier dans l'archive, message d'erreur
+		char format[strlen(namefile) + 71];
 		strcpy(format, "ls : impossible d'acceder a '");
 		strcat(format, namefile);
 		strcat(format, "': Aucun fichier ou dossier de ce type\n");
@@ -123,9 +157,12 @@ int print_inside_tar(char *file, char *options){
 	return 0;
 }
 
+/*
+* ls dans le cas ls arch.tar
+*/
 int print_tar(char *file, char *options){
 	struct posix_header header;
-	if(file[strlen(file)-1] == '/'){ //remove trailing_slash
+	if(file[strlen(file)-1] == '/'){ //suppression des slashs en fin de noms
 		file[strlen(file)-1] = '\0';
 	}
 	int fd = open(file, O_RDONLY);
@@ -162,29 +199,6 @@ int print_tar(char *file, char *options){
 		}
 	}
 	close(fd);
-	return 0;
-}
-
-int print_rep(char *file, char *options){
-	struct stat statbuf;
-	if(stat(file, &statbuf) == -1){ //Cas d'un nom de fichier absent
-		perror("Impossible d'ouvrir le fichier");
-		return -1;
-	}else if(S_ISREG(statbuf.st_mode)){ //Cas d'un fichier simple
-		char format[strlen(file) + 2];
-		strcpy(format, file);
-		strcat(format, "\n");
-		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
-			perror("Erreur d'écriture dans le shell!");
-			exit(EXIT_FAILURE);
-		}
-		return 0;
-	}
-	if(strcmp(options, "\0") == 0){ //pas d'options
-		print_normal_dir(file);
-	}else{ //ls -l
-		print_complete_normal_dir(file);
-	}
 	return 0;
 }
 
@@ -284,7 +298,6 @@ int get_profondeur(char *name){
 			profondeur++;
 		}
 	}
-	//printf("-%s %d-\n", name, profondeur);
 	return profondeur;
 }
 
@@ -292,110 +305,6 @@ void get_header_size(struct posix_header *header, int *read_size){
 	int taille = 0;
 	sscanf(header->size, "%o", &taille);
 	*read_size = ((taille + 512-1)/512);
-}
-
-
-
-int print_normal_dir(char* file){
-	DIR * dirp;
-	if((dirp = opendir(file)) == NULL){
-		perror("erreur");
-		exit(EXIT_FAILURE);
-	}
-	int taille_totale = 2;
-	struct dirent *entry;
-	while((entry = readdir(dirp)) != NULL){
-		if(entry->d_name[0] != '.'){
-			taille_totale += strlen(entry->d_name) + 2;
-		}
-	}
-	closedir(dirp);
-	char format[taille_totale];
-	format[0] = '\0';
-	if((dirp = opendir(file)) == NULL){
-		perror("erreur");
-		exit(EXIT_FAILURE);
-	}
-	while((entry = readdir(dirp)) != NULL){
-		if(entry->d_name[0] != '.'){
-			strcat(format, entry->d_name);
-			strcat(format, "  ");
-		}
-	}
-	strcat(format, "\n");
-	if (write(STDOUT_FILENO, format, taille_totale) < taille_totale) {
-		perror("Erreur d'écriture dans le shell!");
-		exit(EXIT_FAILURE);
-	}
-	closedir(dirp);
-	return 0;
-}
-
-int print_complete_normal_dir(char* file){
-	DIR *dirp;
-	if((dirp = opendir(file)) == NULL){
-		perror("erreur");
-		exit(EXIT_FAILURE);
-	}
-	struct dirent *entry;
-	struct stat statbuf;
-	while((entry = readdir(dirp)) != NULL){
-		if(entry->d_name[0] != '.'){
-			char name[strlen(entry->d_name)];
-			sscanf(entry->d_name, "%s", name);
-			char savefile[strlen(file) + strlen(name)+ 2];
-			strcpy(savefile, file);
-			strcat(savefile, "/");
-			strcat(savefile, name);
-			stat(savefile, &statbuf);
-			char typeformat[2];
-			int uid, gid, mode, taille, nlink;
-			uid = statbuf.st_uid;
-			gid = statbuf.st_gid;
-			mode = statbuf.st_mode;
-			taille = statbuf.st_size;
-			nlink = statbuf.st_nlink;
-			char nlink_str[nbdigit(nlink)];
-			sprintf(nlink_str, "%d", nlink);
-			char *pw_name = getpwuid(uid)->pw_name;
-			char *gr_name = getgrgid(gid)->gr_name;
-			char mode_str[10]; //taille prédéfinie (drwxrwxrwx)
-			convert_mode(mode, mode_str);
-			long int time = statbuf.st_mtime;
-			char *date= ctime(&time);
-			date[strlen(date) - 1] = '\0';
-			char taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1):6]; //Les tailles ne sont plus alignés au dessus de 6 chiffres
-			sprintf(taille_str, "%d", taille);
-			for(int i = nbdigit(taille); i < 6; i++){ //On complète la string avec des espaces afin d'avoir un alignement
-				taille_str[i] = ' ';
-			}
-			taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1)-1:5] = '\0';
-			typeformat[0] = ((S_ISDIR(mode))?'d':'-');
-			typeformat[1] = '\0';
-			char format[2*sizeof(int) + 1 + strlen(name) + strlen(date) + strlen(nlink_str) + strlen(pw_name) + strlen(gr_name)+ 1]; //calcul de taille faux
-			strcpy(format, typeformat);
-			strcat(format, mode_str);
-			strcat(format, " ");
-			strcat(format, nlink_str);
-			strcat(format, " ");
-			strcat(format, pw_name);
-			strcat(format, " ");
-			strcat(format, gr_name);
-			strcat(format, " ");
-			strcat(format, taille_str);
-			strcat(format, " ");
-			strcat(format, date);
-			strcat(format, " ");
-			strcat(format, name);
-			strcat(format, "\n");
-			if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
-				perror("Erreur d'écriture dans le shell!");
-				exit(EXIT_FAILURE);
-			}
-		}
-	}
-	closedir(dirp);
-	return 0;
 }
 
 int contains_tar(char *file){
@@ -439,7 +348,9 @@ int nbdigit(int n){
 	}
 	return count;
 }
-
+/*
+*Convertis le mode (en octal) en une string rwxrwxrwx
+*/
 void convert_mode(mode_t mode, char* res){
 	//UTILISATEUR
 	if (mode & S_IRUSR)
