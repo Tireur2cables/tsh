@@ -122,7 +122,7 @@ int print_inside_tar(char *file, char *options){
 		if (strstr(header.name, namefile) != NULL){ //Inutile de faire plus de tests si le fichier ne contient pas le nom recherché
 			int namepos = strstr(header.name, namefile) - header.name;
 			//Si le nom du fichier est exactement celui qu'on recherche (c'est un fichier) ou si on trouve un dossier qui porte se nom, on affiche le contenu a profondeur + 1
-			if(strcmp(header.name, namefile) == 0 || (header.name[namepos + strlen(namefile)] == '/' && header.name[namepos + strlen(namefile)+1] != '\0' && get_profondeur(header.name) == profondeur + 1)){
+			if(strcmp(header.name, namefile) == 0 || (header.name[namepos + strlen(namefile)] == '/' && get_profondeur(header.name) == profondeur + 1)){
 				if(strcmp(options, "\0") == 0){ //pas d'option
 					write(STDOUT_FILENO, "yes", 3);
 					show_simple_header_infos(&header, &read_size);
