@@ -51,8 +51,6 @@ int ls(int argc, char *argv[]){
 			}else{
 				if(getenv("TWD") != NULL){
 					if(is_tar(getenv("TWD"))){
-						write(STDOUT_FILENO, argv[1], strlen(argv[1]));
-						write(STDOUT_FILENO, "\n", 1);
 						if(argv[1][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
 							print_dir(argv[1], "\0");
 						}else{
@@ -81,7 +79,6 @@ int ls(int argc, char *argv[]){
 }
 
 int print_dir(char *file, char *options){ //Fonction générale qui gère dans quel cas on se trouve
-	write(STDOUT_FILENO, file, strlen(file));
 	char cp[strlen(file)+1];
 	strcpy(cp, file);
 	if(is_tar(cp)){
