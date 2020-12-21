@@ -33,8 +33,26 @@ void write_content(int fd, int read_size){
 * Appel de la fonction, gestion des options et du nom du fichier a cat
 */
 int cat(int argc, char *argv[]) {
-	char *file = argv[1];
-	cat_file(file, "\0");
+	if(argc == 1){
+		cat_file(NULL, "\0");
+	}
+	if(getenv("TWD") != NULL){
+		if(is_tar_cat(getenv("TWD"))){
+			if(argv[1][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
+				cat_file(argv[1], "\0");
+			}else{
+				char file[strlen(getenv("TWD")) + strlen(argv[1])];
+				sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
+				cat_file(file, "\0");
+			}
+		}else{
+			char file[strlen(getenv("TWD")) + strlen(argv[1])];
+			sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
+			cat_file(file, "\0");
+		}
+	}else{
+		cat_file(argv[1], "\0");
+	}
 	return 0;
 }
 
@@ -46,6 +64,9 @@ Fonction générale qui gére les différents cas dans lesquels on peut se trouv
 
 */
 int cat_file(char *file, char *options){
+	if(file == NULL){
+		execlp("cat", "cat", NULL);
+	}
 	char cp[strlen(file)+1];
 	strcpy(cp, file);
 	if(contains_tar_cat(cp)){
@@ -59,9 +80,9 @@ int cat_file(char *file, char *options){
 		}else{
 			cat_tar(file, options);
 		}
-
 	}else{
-		char *format = "Erreur du programme, la fonction cat eterne aurait du etre appelée";
+		execlp("cat", "cat", file, NULL);
+		char *format = "Erreur du programme, la fonction cat externe aurait du etre appelée";
 		if(write(STDOUT_FILENO, format, strlen(format)) < strlen(format))  {
 			perror("Erreur d'écriture dans le shell!");
 			exit(EXIT_FAILURE);
@@ -97,9 +118,16 @@ int cat_tar(char *file, char *options){
 				break;
 			}
 			if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) == 0)) {
-				get_header_size_cat(&header, &read_size);
-				found = 1;
-				write_content(fd, read_size);
+				if(header.typeflag == '5'){
+					char format[25 + strlen(file)];
+					sprintf(format, "cat : %s: est un dossier\n", file);
+					write(STDOUT_FILENO, format, strlen(format));
+					return 0;
+				}else{
+					get_header_size_cat(&header, &read_size);
+					found = 1;
+					write_content(fd, read_size);
+				}
 			}else{
 				get_header_size_cat(&header, &read_size);
 			}
