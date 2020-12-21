@@ -118,9 +118,16 @@ int cat_tar(char *file, char *options){
 				break;
 			}
 			if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) == 0)) {
-				get_header_size_cat(&header, &read_size);
-				found = 1;
-				write_content(fd, read_size);
+				if(header.typeflag == '5'){
+					char format[25 + strlen(file)];
+					sprintf(format, "cat : %s: est un dossier\n", file);
+					write(STDOUT_FILENO, format, strlen(format));
+					return 0;
+				}else{
+					get_header_size_cat(&header, &read_size);
+					found = 1;
+					write_content(fd, read_size);
+				}
 			}else{
 				get_header_size_cat(&header, &read_size);
 			}
