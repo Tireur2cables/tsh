@@ -51,7 +51,15 @@ int ls(int argc, char *argv[]){
 			}else{
 				if(getenv("TWD") != NULL){
 					if(is_tar(getenv("TWD"))){
-						print_dir(argv[1], "\0");
+						write(STDOUT_FILENO, argv[1], strlen(argv[1]));
+						write(STDOUT_FILENO, "\n", 1);
+						if(argv[1][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
+							print_dir(argv[1], "\0");
+						}else{
+							char file[strlen(getenv("TWD")) + strlen(argv[1])];
+							sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
+							print_dir(file, "\0");
+						}
 					}else{
 						char file[strlen(getenv("TWD")) + strlen(argv[1])];
 						sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
@@ -73,14 +81,16 @@ int ls(int argc, char *argv[]){
 }
 
 int print_dir(char *file, char *options){ //Fonction générale qui gère dans quel cas on se trouve
+	write(STDOUT_FILENO, file, strlen(file));
 	char cp[strlen(file)+1];
 	strcpy(cp, file);
 	if(is_tar(cp)){
+		write(STDOUT_FILENO, "yes", 3);
 		print_tar(file, options);
 	}else if(contains_tar(cp)){
+		write(STDOUT_FILENO, "yes", 3);
 		print_inside_tar(file, options);
 	}else{//On se trouve dans un tar, mais on fait ls sur un chemin qui ne contient pas de tar
-
 		execlp("ls", "ls", file, (options[0] == '\0')?NULL:options, NULL);
 	}
 	return 0;
