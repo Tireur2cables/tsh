@@ -82,10 +82,8 @@ int print_dir(char *file, char *options){ //Fonction générale qui gère dans q
 	char cp[strlen(file)+1];
 	strcpy(cp, file);
 	if(is_tar(cp)){
-		write(STDOUT_FILENO, "yes", 3);
 		print_tar(file, options);
 	}else if(contains_tar(cp)){
-		write(STDOUT_FILENO, "yes", 3);
 		print_inside_tar(file, options);
 	}else{//On se trouve dans un tar, mais on fait ls sur un chemin qui ne contient pas de tar
 		execlp("ls", "ls", file, (options[0] == '\0')?NULL:options, NULL);
