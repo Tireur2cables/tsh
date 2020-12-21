@@ -49,7 +49,25 @@ int ls(int argc, char *argv[]){
 				check_options(argv[1]);
 				print_dir(getenv("TWD"), argv[1]);
 			}else{
-				print_dir(argv[1], "\0");
+				if(getenv("TWD") != NULL){
+					if(is_tar(getenv("TWD"))){
+						if(argv[1][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
+							print_dir(argv[1], "\0");
+						}else{
+							char file[strlen(getenv("TWD")) + strlen(argv[1])];
+							sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
+							print_dir(file, "\0");
+						}
+					}else{
+						char file[strlen(getenv("TWD")) + strlen(argv[1])];
+						sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
+						print_dir(file, "\0");
+					}
+				}
+				else{
+					print_dir(argv[1], "\0");
+				}
+
 			}
 		}else if(argc == 3){
 			check_options(argv[1]);
@@ -67,12 +85,8 @@ int print_dir(char *file, char *options){ //Fonction générale qui gère dans q
 		print_tar(file, options);
 	}else if(contains_tar(cp)){
 		print_inside_tar(file, options);
-	}else{
-		char *format = "Erreur du programme, la commande ls externe aurait du etre utilisée";
-		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
-			perror("Erreur d'écriture dans le shell");
-			exit(EXIT_FAILURE);
-		}
+	}else{//On se trouve dans un tar, mais on fait ls sur un chemin qui ne contient pas de tar
+		execlp("ls", "ls", file, (options[0] == '\0')?NULL:options, NULL);
 	}
 	return 0;
 }
@@ -114,7 +128,7 @@ int print_inside_tar(char *file, char *options){
 		if (strstr(header.name, namefile) != NULL){ //Inutile de faire plus de tests si le fichier ne contient pas le nom recherché
 			int namepos = strstr(header.name, namefile) - header.name;
 			//Si le nom du fichier est exactement celui qu'on recherche (c'est un fichier) ou si on trouve un dossier qui porte se nom, on affiche le contenu a profondeur + 1
-			if(strcmp(header.name, namefile) == 0 || (header.name[namepos + strlen(namefile)] == '/' && get_profondeur(header.name) == profondeur + 1)){
+			if(strcmp(header.name, namefile) == 0 || (header.name[namepos + strlen(namefile)] == '/' && header.name[namepos + strlen(namefile)+1] != '\0' && get_profondeur(header.name) == profondeur + 1)){
 				if(strcmp(options, "\0") == 0){ //pas d'option
 					show_simple_header_infos(&header, &read_size);
 				}
@@ -148,7 +162,7 @@ int print_inside_tar(char *file, char *options){
 		strcpy(format, "ls : impossible d'acceder a '");
 		strcat(format, namefile);
 		strcat(format, "': Aucun fichier ou dossier de ce type\n");
-		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
+		if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)) {
 			perror("Erreur d'écriture dans le shell!");
 			exit(EXIT_FAILURE);
 		}
