@@ -38,7 +38,13 @@ int cat(int argc, char *argv[]) {
 	}
 	if(getenv("TWD") != NULL){
 		if(is_tar_cat(getenv("TWD"))){
-			cat_file(argv[1], "\0");
+			if(argv[1][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
+				cat_file(argv[1], "\0");
+			}else{
+				char file[strlen(getenv("TWD")) + strlen(argv[1])];
+				sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
+				cat_file(file, "\0");
+			}
 		}else{
 			char file[strlen(getenv("TWD")) + strlen(argv[1])];
 			sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
