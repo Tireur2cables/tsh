@@ -1,4 +1,4 @@
-#define _DEFAULT_SOURCE // utile pour setenv
+#define _DEFAULT_SOURCE // utile pour setenv et strtok_r
 
 #include <stdio.h>
 #include <unistd.h>
