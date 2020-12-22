@@ -41,38 +41,51 @@ int ls(int argc, char *argv[]){
 		perror("erreur du programme");
 		exit(EXIT_FAILURE);
 	}
-	else{
-		if(argc == 1){
-			print_dir(getenv("TWD"), "\0");
-		}else if(argc == 2){ // 2 cas - Options et repertoire =  . ou repertoire et pas d'options
-			if(is_options(argv[1])){
-				check_options(argv[1]);
-				print_dir(getenv("TWD"), argv[1]);
-			}else{
+	else if(argc == 1){ //ls du dossier courant sans option
+		print_dir(getenv("TWD"), "\0");
+	}
+	else if(argc == 2 && is_options(argv[1])){ //ls du dossier courant avec option
+		check_options(argv[1]);
+		print_dir(getenv("TWD"), argv[1]);
+	}
+	else{ //ls d'un dossier
+		char option[2];
+		int found = 0;
+		for(int i = 1; i < argc; i++){ //On cherche l'option
+			if(is_options(argv[i])){
+				strcpy(option, argv[1]);
+				found = 1;
+			}
+		}
+		if (found == 0){
+			strcpy(option, "\0");
+		}
+		for(int i = 1; i < argc; i++){
+			if(!is_options(argv[i])){
+				char format[strlen(argv[i]) + 4];
+				sprintf(format, "%s : \n", argv[i]);
+				write(STDOUT_FILENO, format, strlen(format));
 				if(getenv("TWD") != NULL){
 					if(is_tar(getenv("TWD"))){
-						if(argv[1][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
-							print_dir(argv[1], "\0");
+						if(argv[i][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
+							print_dir(argv[i], option);
 						}else{
-							char file[strlen(getenv("TWD")) + strlen(argv[1])];
-							sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
-							print_dir(file, "\0");
+							char file[strlen(getenv("TWD")) + strlen(argv[i])];
+							sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
+							print_dir(file, option);
 						}
 					}else{
-						char file[strlen(getenv("TWD")) + strlen(argv[1])];
-						sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
-						print_dir(file, "\0");
+						char file[strlen(getenv("TWD")) + strlen(argv[i])];
+						sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
+						print_dir(file, option);
 					}
 				}
 				else{
-					print_dir(argv[1], "\0");
+					print_dir(argv[i], option);
 				}
+				write(STDOUT_FILENO, "\n", 1);
 			}
-		}else if(argc == 3){
-			check_options(argv[1]);
-			print_dir(argv[2], argv[1]);
 		}
-
 	}
 	return 0;
 }
@@ -126,15 +139,21 @@ int print_inside_tar(char *file, char *options){
 		}
 		if (strstr(header.name, namefile) != NULL){ //Inutile de faire plus de tests si le fichier ne contient pas le nom recherché
 			int namepos = strstr(header.name, namefile) - header.name;
+			//write(STDOUT_FILENO, namefile, strlen(namefile));
 			//Si le nom du fichier est exactement celui qu'on recherche (c'est un fichier) ou si on trouve un dossier qui porte se nom, on affiche le contenu a profondeur + 1
-			if(strcmp(header.name, namefile) == 0 || (header.name[namepos + strlen(namefile)] == '/' && header.name[namepos + strlen(namefile)+1] != '\0' && get_profondeur(header.name) == profondeur + 1)){
+			if(strcmp(header.name, namefile) == 0 ||
+				((strncmp(&header.name[namepos], namefile, strlen(namefile)) == 0) &&
+				(header.name[namepos + strlen(namefile)] == '/' &&
+				header.name[namepos + strlen(namefile)+1] != '\0' &&
+				get_profondeur(header.name) == profondeur + 1))){
+
 				if(strcmp(options, "\0") == 0){ //pas d'option
-					write(STDOUT_FILENO, "yes", 3);
 					show_simple_header_infos(&header, &read_size);
 				}
 				else{ //ls -l
 					show_complete_header_infos(&header, &read_size);
 				}
+				//write(STDOUT_FILENO, "yes", 3);
 				found = 1;
 			}
 			else{
