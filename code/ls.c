@@ -83,7 +83,9 @@ int ls(int argc, char *argv[]){
 				else{
 					print_dir(argv[i], option);
 				}
-				write(STDOUT_FILENO, "\n", 1);
+				if(i != argc-1){
+					write(STDOUT_FILENO, "\n", 1);
+				}
 			}
 		}
 	}
