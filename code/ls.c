@@ -29,6 +29,7 @@ int nbdigit(int);
 void convert_mode(mode_t, char*);
 int get_profondeur(char *);
 int get_filename(char *, char*);
+int contains_filename(char *, char *);
 
 //FONCTION LS
 /*TODO :
@@ -141,18 +142,12 @@ int print_inside_tar(char *file, char *options){
 		}
 		if (strstr(header.name, namefile) != NULL){ //Inutile de faire plus de tests si le fichier ne contient pas le nom recherché
 			int namepos = strstr(header.name, namefile) - header.name;
-			/*char header_file_name[strlen(header.name)]; //beaucoup d'espace
-			get_filename(header.name, header_file_name);
-			write(STDOUT_FILENO, namefile, strlen(namefile));
-			write(STDOUT_FILENO, "\n", 1);
-			write(STDOUT_FILENO, header.name, strlen(header.name));
-			write(STDOUT_FILENO, "\n", 1);
-			printf("%c\n", header.name[namepos-7+strlen(namefile)]);*/
 			//Si le nom du fichier est exactement celui qu'on recherche (c'est un fichier) ou si on trouve un dossier qui porte se nom, on affiche le contenu a profondeur + 1
 			if( (strcmp(header.name, namefile) == 0 && namefile[strlen(namefile+1)] != '/') ||
+				((contains_filename(header.name, namefile) == 0) &&
 				(header.name[namepos + strlen(namefile)] == '/' &&
 				header.name[namepos + strlen(namefile)+1] != '\0' &&
-				get_profondeur(header.name) == profondeur + 1)) {
+				get_profondeur(header.name) == profondeur + 1))) {
 
 				if(strcmp(options, "\0") == 0){ //pas d'option
 					show_simple_header_infos(&header, &read_size);
@@ -160,7 +155,6 @@ int print_inside_tar(char *file, char *options){
 				else{ //ls -l
 					show_complete_header_infos(&header, &read_size);
 				}
-				//write(STDOUT_FILENO, "yes", 3);
 				found = 1;
 			}
 			else{
@@ -308,8 +302,22 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 	}
 }
 
+int contains_filename(char *haystack, char *needle){
+	char cp[strlen(haystack)];
+	strcpy(cp, haystack);
+	char *token = strtok(cp, "/");
+	if(strcmp(needle, token) == 0){
+		return 0;
+	}
+	while((token = strtok(NULL, "/")) != NULL){
+		if(strcmp(needle, token) == 0){
+			return 0;
+		}
+	}
+	return 1;
+}
+
 int get_filename(char *name, char* namecp){
-	//memset(namecp, '\0', strlen(namecp));
 	int index = 0;
 	int trailing_slash = ((name[strlen(name)-1] == '/')?1:0);
     for (int i = 0; i < strlen(name)-trailing_slash; i++) { //Cherche l'index du dernier /, ce qui se trouve après est le nom du fichier
