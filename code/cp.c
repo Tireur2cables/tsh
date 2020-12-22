@@ -1,3 +1,5 @@
+#define _DEFAULT_SOURCE //utile pour strtok_r
+
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -7,14 +9,21 @@
 #include <fcntl.h>
 #include "cp.h"
 #include "tar.h"
+#include "cat.h"
 
 void detectError(int);
 int optionDetection(int, char *[]);
+int isCorrectDest(char *);
 void copyto(char *, char *, int);
-int exist(char *);
-int existAbsolut(char *);
-int existInTar(char *, char *);
+int exist(char *, int);
+int existAbsolut(char *, int);
+int existInTar(char *, char *, int);
 int isSamedir(char *, char *);
+int isInTar(char *);
+
+/*
+ TODO : mettre les vrais droits au fichier
+*/
 
 int cp(int argc, char *argv[]) {
 // detect error in number of args
@@ -28,14 +37,14 @@ int cp(int argc, char *argv[]) {
 	char dest[strlen(argv[indexLastArg])+1];
 	strcpy(dest, argv[indexLastArg]);
 
-// first verify if dest exist
-	if (exist(dest)) {
+// first verify if dest is correct
+	if (isCorrectDest(dest)) {
 		// then for all sources copy to dest
 			for (int i = 1; i < indexLastArg; i++) {
 				if (i != indexOpt) { // skip option arg
 					char source[strlen(argv[i])+1];
 					strcpy(source, argv[i]);
-					if (exist(source)) //source must exist
+					if (exist(source, 1)) //source must exist
 						copyto(source, dest, (indexOpt != 0));
 				}
 			}
@@ -61,18 +70,37 @@ int optionDetection(int argc, char *argv[]) { //return the position of the optio
 	return 0;
 }
 
-int exist(char *path) { //verify if path exist even inside tar
+int isCorrectDest(char *dest) { // dest must respect certain convention
+	if (exist(dest, 0)) return 1;
+	char dest_copy[strlen(dest)+1];
+	strcpy(dest_copy, dest);
+	char *tmp = dest_copy;
+	char *saveptr;
+	char *tok;
+	int last = 0;
+	while ((tok = strtok_r(tmp, "/", &saveptr)) != NULL) {
+		tmp = saveptr;
+		if (strlen(tok) != 0) last = strlen(tok);
+	}
+	int indice = strlen(dest_copy) - last - 1;
+	dest_copy[indice] = '\0';
+	if (exist(dest_copy, 1)) return 1;
+
+	return 0;
+}
+
+int exist(char *path, int error) { //verify if path exist even inside tar
 	if (path[0] == '/') {
 		char *pos = strstr(path, ".tar");
-		if (pos == NULL) return existAbsolut(path);
+		if (pos == NULL) return existAbsolut(path, error);
 		else {
 			int tarlen = strlen(path) - strlen(pos) + 4;
 			char absolutetar[tarlen + 1];
 			strncpy(absolutetar, path, tarlen);
 			absolutetar[tarlen] = '\0';
-			if (existAbsolut(absolutetar)) {
+			if (existAbsolut(absolutetar, error)) {
 				char *rest = (strlen(absolutetar) == strlen(path))? "" : &path[strlen(absolutetar)+1];
-				return existInTar(absolutetar, rest);
+				return existInTar(absolutetar, rest, error);
 			}
 		}
 	}else {
@@ -88,7 +116,7 @@ int exist(char *path) { //verify if path exist even inside tar
 			strcpy(absolutetar, pwd);
 			strcat(absolutetar, "/");
 			strcat(absolutetar, tar);
-			if (existAbsolut(absolutetar)) {
+			if (existAbsolut(absolutetar, error)) {
 				char *tmp = (strlen(twd) == strlen(tar))? "" : &twd[strlen(tar)+1];
 				int tmplen = strlen(tmp);
 				if (tmplen != 0) tmplen++;
@@ -96,7 +124,7 @@ int exist(char *path) { //verify if path exist even inside tar
 				strcpy(rest, tmp);
 				if (tmplen != 0) strcat(rest, "/");
 				strcat(rest, path);
-				return existInTar(absolutetar, rest);
+				return existInTar(absolutetar, rest, error);
 			}
 		}else {
 			char *pos = strstr(path, ".tar");
@@ -109,48 +137,52 @@ int exist(char *path) { //verify if path exist even inside tar
 				strcpy(absolutetar, pwd);
 				strcat(absolutetar, "/");
 				strcat(absolutetar, tar);
-				if (existAbsolut(absolutetar)) {
+				if (existAbsolut(absolutetar, error)) {
 					char *rest = (strlen(tar) == strlen(path))? "" : &path[strlen(tar)+1];
-					return existInTar(absolutetar, rest);
+					return existInTar(absolutetar, rest, error);
 				}
 			}else {
 				char absolutepath[strlen(pwd) + 1 + strlen(path) + 1];
 				strcpy(absolutepath, pwd);
 				strcat(absolutepath, "/");
 				strcat(absolutepath, path);
-				return existAbsolut(absolutepath);
+				return existAbsolut(absolutepath, error);
 			}
 		}
 	}
 	return 0;
 }
 
-int existAbsolut(char *absolutepath) { // verify if absolutepath exist outside a tar
+int existAbsolut(char *absolutepath, int error) { // verify if absolutepath exist outside a tar
 	struct stat st;
 	if (stat(absolutepath, &st) < 0) {
-		char *error_fin = " n'existe pas!\n";
-		char error[strlen(absolutepath)+strlen(error_fin)+1];
-		strcpy(error, absolutepath);
-		strcat(error, error_fin);
-		int errorlen = strlen(error);
-		if (write(STDERR_FILENO, error, errorlen) < errorlen)
-			perror("Erreur d'écriture dans le shell!");
+		if (error) {
+			char *error_fin = " n'existe pas!\n";
+			char error[strlen(absolutepath)+strlen(error_fin)+1];
+			strcpy(error, absolutepath);
+			strcat(error, error_fin);
+			int errorlen = strlen(error);
+			if (write(STDERR_FILENO, error, errorlen) < errorlen)
+				perror("Erreur d'écriture dans le shell!");
+		}
 		return 0;
 	}
 	return 1;
 }
 
-int existInTar(char *tar, char *chemin) {
+int existInTar(char *tar, char *chemin, int error) {
 	int fd = open(tar, O_RDONLY);
 	if (fd == -1) {
-		char *error_debut = "cp : Erreur! Impossible d'ouvrir l'archive ";
-		char error[strlen(error_debut) + strlen(tar) + 1 + 1];
-		strcpy(error, error_debut);
-		strcat(error, tar);
-		strcat(error, "\n");
-		int errorlen = strlen(error);
-		if (write(STDERR_FILENO, error, errorlen) < errorlen)
-			perror("Erreur d'écriture dans le shell!");
+		if (error) {
+			char *error_debut = "cp : Erreur! Impossible d'ouvrir l'archive ";
+			char error[strlen(error_debut) + strlen(tar) + 1 + 1];
+			strcpy(error, error_debut);
+			strcat(error, tar);
+			strcat(error, "\n");
+			int errorlen = strlen(error);
+			if (write(STDERR_FILENO, error, errorlen) < errorlen)
+				perror("Erreur d'écriture dans le shell!");
+		}
 		return 0;
 	}
 
@@ -177,8 +209,8 @@ int existInTar(char *tar, char *chemin) {
 	}else found = 1;
 
 	close(fd);
-	if (!found) {
-		char *deb  = "cp :";
+	if (!found && error) {
+		char *deb  = "cp : ";
 		char *end = " n'existe pas!\n";
 		char error[strlen(deb) + strlen(tar) + 1 + strlen(chemin) + strlen(end) + 1];
 		strcpy(error, deb);
@@ -203,27 +235,86 @@ int isSamedir(char *dir1, char *dir2) {
 }
 
 void copyto(char *source, char *dest, int option) { // copy source to dest with or without option
+	struct stat stsource;
+	stat(source, &stsource); // verifications déjà faites
+	struct stat stdest;
+	stat(dest, &stdest); // verifications déjà faites
 
+	if (isInTar(source)) { // source est dans un tar
+		// is a tar
+		// or is in tar
+	}
 
-	if (option) write(STDOUT_FILENO, "-r\n", 3);
-	write(STDOUT_FILENO, source, strlen(source));
-	write(STDOUT_FILENO, "\n", 1);
-	write(STDOUT_FILENO, dest, strlen(dest));
-	write(STDOUT_FILENO, "\n", 1);
+	else if (S_ISDIR(stsource.st_mode)) { // source est un dossier
+		if (!option) { // -r pas spécifié
+			char *error = "cp : l'option -r doit être spécifiée pour les dossiers!\n";
+			int errorlen = strlen(error);
+			if (write(STDERR_FILENO, error, errorlen) < errorlen)
+				perror("Erreur d'écriture dans le shell!");
+			return;
+		}
+		if (!exist(dest, 0)) {
+			//créer le dossier dest
+		}
+		if (isInTar(dest)) { // dest est dans un tar
+			// is a tar
+			// or is in tar
+		}
+		else if (!S_ISDIR(stdest.st_mode)) { // dest n'est pas un dossier
+			char *deb  = "cp : ";
+			char *end = " n'est pas un dossier!\n";
+			char error[strlen(deb) + strlen(dest) + strlen(end) + 1];
+			strcpy(error, deb);
+			strcat(error, dest);
+			strcat(error, end);
+			int errorlen = strlen(error);
+			if (write(STDERR_FILENO, error, errorlen) < errorlen)
+				perror("Erreur d'écriture dans le shell!");
+			return;
+		}else { // dest est un dossier et -r est spécifié
+			//doss to doss : create a doss1 directory in doss2 with all the content if already exist ecrase ce qui a le meme nom avec le nouveau contenu
 
+		}
+	}
 
-	/*
-	outisde tar
-		sans -r
-			file to file : copy contenu de 1 vers 2 en remplaçant le contenu existant en entier et ne change pas le nom
-			file to doss : create file in the doss if not exist puis fait file to file
-			doss to file : erreur
-			doss to doss : erreur
-		avec -r
-			file to file : pareil que sans -r
-			file to doss ; pareil que sans -r
-			doss to file : erreur
-			doss to doss : create a doss1 directory in doss2 with all the content if already exist ecrase ce qui a le meme nom avec le nouveau contenu
-	*/
+	else { // source est un fichier
+		if (isInTar(dest)) { // dest est dans un tar
+			// is a tar
+			// or is in tar
+		}
+		else if (!exist(dest, 0) || !S_ISDIR(stdest.st_mode)) { // dest est un fichier
+			//file to file : copy contenu de 1 vers 2 en remplaçant le contenu existant en entier et ne change pas le nom
+			int oldout = dup(STDOUT_FILENO);
+			int fddest;
+			if ((fddest = open(dest, O_WRONLY + O_TRUNC + O_CREAT, stdest.st_mode)) < 0) {
+				char *deb  = "cp : Impossible d'accèder à ";
+				char error[strlen(deb) + strlen(dest) + 1 + 1];
+				strcpy(error, deb);
+				strcat(error, dest);
+				strcat(error, "\n");
+				int errorlen = strlen(error);
+				if (write(STDERR_FILENO, error, errorlen) < errorlen)
+					perror("Erreur d'écriture dans le shell!");
+				return;
+			}
+			if (dup2(fddest, STDOUT_FILENO) < 0) {
+				perror("Erreur lors de la redirection vers la destination!");
+				return;
+			}
+			char *argv[3] = {"cat", source, NULL};
+			cat(2, argv);
+			close(fddest);
+			if (dup2(oldout, STDOUT_FILENO) < 0) {
+				perror("Erreur lors du retablissement de STDOUT!");
+				exit(EXIT_FAILURE); // pottentiellement dangeureux pour les autres itérations
+			}
+		}else { // dest un dossier
+			//file to doss : create file in the doss if not exist puis fait file to file
 
+		}
+	}
+}
+
+int isInTar(char *path) {
+	return (path[0] == '/' && strstr(path, ".tar") != NULL) || (path[0] != '/' && getenv("TWD") != NULL);
 }
