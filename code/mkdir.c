@@ -10,6 +10,7 @@
 #include "tar.h"
 
 int exist_dir(char *);
+<<<<<<< HEAD
 int exist_file(char *);
 int create_dir(char *);
 int create_tar(char *);
@@ -19,6 +20,10 @@ int create_header(char *, struct posix_header *);
 int is_tar_mk(char *);
 int write_block(int fd, struct posix_header *);
 int is_ext_mk(char *, char *);
+=======
+int create_dir(char *);
+int try_create_dir(char *);
+>>>>>>> avancement de mkdir
 void get_header_size_mk(struct posix_header *, int *);
 
 int mkdir_tar(int argc, char *argv[]) {
@@ -28,7 +33,11 @@ int mkdir_tar(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	else if(argc == 1){
+<<<<<<< HEAD
 		char *format = "rmdir: opérande manquant\n";
+=======
+		char *format = "rmdir: opérande manquant";
+>>>>>>> avancement de mkdir
 		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
 			perror("Erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
@@ -43,12 +52,20 @@ int mkdir_tar(int argc, char *argv[]) {
 					}else{
 						char file[strlen(getenv("TWD")) + strlen(argv[1])];
 						sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
+<<<<<<< HEAD
 						try_create_dir(file);
+=======
+						print_dir(file, "\0");
+>>>>>>> avancement de mkdir
 					}
 				}else{
 					char file[strlen(getenv("TWD")) + strlen(argv[1])];
 					sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
+<<<<<<< HEAD
 					try_create_dir(file);
+=======
+					print_dir(file, "\0");
+>>>>>>> avancement de mkdir
 				}
 			}
 			else{
@@ -60,6 +77,7 @@ int mkdir_tar(int argc, char *argv[]) {
 }
 
 int try_create_dir(char *name){
+<<<<<<< HEAD
 	//write(STDOUT_FILENO, name, strlen(name));
 	if(is_tar_mk(name)){ //On veut fabriquer un tar
 		create_tar(name);
@@ -92,11 +110,17 @@ int create_dir(char *name){ //Créer un dossier dans un tar si possible
 	if(exist_dir(name)){
 		char format[60 + strlen(name)];
 		sprintf(format, "mkdir: impossible de créer le répertoire « %s »: Le fichier existe\n", name);
+=======
+	if(exist_dir(name){
+		char format[60 + strlen(name)];
+		sprintf(format, "mkdir: impossible de créer le répertoire « %s »: Le fichier existe", name);
+>>>>>>> avancement de mkdir
 		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
 			perror("Erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
 		}
 	}else{
+<<<<<<< HEAD
 		struct posix_header header;
 		int fd = open(name, O_RDONLY);
 		if(fd == -1){
@@ -129,6 +153,12 @@ int exist_file(char *name){
 	struct stat buffer;
 	return (stat (name, &buffer) == 0);
 }
+=======
+		create_dir(name);
+	}
+}
+
+>>>>>>> avancement de mkdir
 
 int exist_dir(char *name){
 	struct posix_header header;
@@ -156,6 +186,7 @@ int exist_dir(char *name){
 	return 0;
 }
 
+<<<<<<< HEAD
 int create_header(char *name, struct posix_header *header){ //Meilleur méthode pour le faire ?
 	for(int i = 0; i < 100; i++){
 		if(i < strlen(name)){
@@ -223,8 +254,17 @@ int contains_tar_mk(char *file){
 	return (strstr(file,".tar") != NULL);
 }
 
+=======
+>>>>>>> avancement de mkdir
 void get_header_size_mk(struct posix_header *header, int *read_size){
 	int taille = 0;
 	sscanf(header->size, "%o", &taille);
 	*read_size = ((taille + 512-1)/512);
 }
+<<<<<<< HEAD
+=======
+
+int create_dir(char *name){
+	return 1;
+}
+>>>>>>> avancement de mkdir
