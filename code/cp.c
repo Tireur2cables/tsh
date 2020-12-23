@@ -381,7 +381,7 @@ void copyTar(char *source, char *dest, int option) {
 			char *twd = getenv("TWD");
 			if (source[0] != '/') pwdlen = strlen(pwd) + 1;
 			if (source[0] != '/' && twd != NULL && strlen(twd) != 0) twdlen = strlen(twd) + 1;
-			char absolutesource[pwdlen + twdlen + strlen(source)];
+			char absolutesource[pwdlen + twdlen + strlen(source) + 1];
 			strcpy(absolutesource, "");
 			if (source[0] != '/') {
 				strcat(absolutesource, pwd);
@@ -472,7 +472,7 @@ void copyTar(char *source, char *dest, int option) {
 		struct stat stsource;
 		stat(source, &stsource); // verifications déjà faites
 
-		if (isInTar(dest)) { // dest est dans un tar
+		if (isInTar(dest)) { // dest est dans un tar ou est un tar
 			// TODO
 			if (!exist(dest, 0)) {
 				// creer le fichier dest et mettre le contenu de source dedans
@@ -603,7 +603,7 @@ void copyDoss(char *source, char *dest, int option) {
 		if (!exist(dest, 0)) {
 			// creer le dossier dest et mettre le contenu de source dedans
 		}else {
-			if (isTarDir(dest)) { // dest un dossier dans le tar
+			if (isTarDir(dest)) { // dest un dossier dans le tar ou un tar
 				// creer le dossier dest/source et mettre le contenu de source dedans
 			}else { // dest est un fichier dans le tar
 				char *deb  = "cp : ";
@@ -747,22 +747,34 @@ void copyfiletartofile(char *source, char *dest, mode_t mode) { // ecrase conten
 }
 
 void copyfiletofiletar(char *source, char *dest, mode_t mode) { // ecrase contenu de dest avec contenu de source et ne change pas le nom de dest
-	int status;
-	int pid = fork();
-	switch(pid) {
-		case -1: {//erreur
-			perror("Erreur de fork!");
-			exit(EXIT_FAILURE);
-		}
-		case 0: {//fils
-			write(STDOUT_FILENO, "WIP\n", 4);
-			exit(EXIT_SUCCESS);
-		}
-		default: {//pere
-			if (waitpid(pid, &status, 0) < 0) {
-				perror("Erreur de wait!");
-				exit(EXIT_FAILURE);
-			}
+	int pwdlen = 0;
+	int twdlen = 0;
+	char *pwd = getcwd(NULL, 0);
+	char *twd = getenv("TWD");
+	if (source[0] != '/') pwdlen = strlen(pwd) + 1;
+	if (source[0] != '/' && twd != NULL && strlen(twd) != 0) twdlen = strlen(twd) + 1;
+
+	char absolutesource[pwdlen + twdlen + strlen(source) + 1];
+	strcpy(absolutesource, "");
+	if (source[0] != '/') {
+		strcat(absolutesource, pwd);
+		strcat(absolutesource, "/");
+		if (twdlen != 0) {
+			strcat(absolutesource, twd);
+			strcat(absolutesource, "/");
 		}
 	}
+	strcat(absolutesource, source);
+
+	char absolutedest[pwdlen + twdlen + strlen(dest) + 1];
+	strcpy(absolutedest, "");
+	if (dest[0] != '/') {
+		strcat(absolutedest, pwd);
+		strcat(absolutedest, "/");
+		if (twdlen != 0) {
+			strcat(absolutedest, twd);
+			strcat(absolutedest, "/");
+		}
+	}
+	strcat(absolutedest, dest);
 }
