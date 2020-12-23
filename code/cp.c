@@ -1,4 +1,4 @@
-#define _DEFAULT_SOURCE //utile pour strtok_r
+#define _DEFAULT_SOURCE // utile pour strtok_r
 
 #include <string.h>
 #include <unistd.h>
@@ -21,6 +21,10 @@ int existAbsolut(char *, int);
 int existInTar(char *, char *, int);
 int isSamedir(char *, char *);
 int isInTar(char *);
+int isTar(char *);
+void copyTar(char *, char *, int);
+void copyDoss(char *, char *, int);
+void copyFile(char *, char *, int);
 void copystandard(char *, char *);
 
 int cp(int argc, char *argv[]) {
@@ -169,7 +173,7 @@ int existAbsolut(char *absolutepath, int error) { // verify if absolutepath exis
 	return 1;
 }
 
-int existInTar(char *tar, char *chemin, int error) {
+int existInTar(char *tar, char *chemin, int error) { // verifie que chemin existe dans tar ou est tar
 	int fd = open(tar, O_RDONLY);
 	if (fd == -1) {
 		if (error) {
@@ -224,7 +228,7 @@ int existInTar(char *tar, char *chemin, int error) {
 	return found;
 }
 
-int isSamedir(char *dir1, char *dir2) {
+int isSamedir(char *dir1, char *dir2) { // verifie si dir1 à le même nom que dir2 avec dir2 dans un tar
 	return
 	(strcmp(dir1, dir2) == 0) ||
 	((strncmp(dir1, dir2, strlen(dir1)) == 0)
@@ -236,26 +240,36 @@ int isSamedir(char *dir1, char *dir2) {
 void copyto(char *source, char *dest, int option) { // copy source to dest with or without option
 	struct stat stsource;
 	stat(source, &stsource); // verifications déjà faites
+
+	if (isInTar(source)) // source est dans un tar ou est un tar
+		copyTar(source, dest, option);
+
+	else if (S_ISDIR(stsource.st_mode)) // source est un dossier
+		copyDoss(source, dest, option);
+
+	else // source est un fichier
+		copyFile(source, dest, option);
+}
+
+int isInTar(char *path) {
+	return (path[0] == '/' && strstr(path, ".tar") != NULL) || (path[0] != '/' && getenv("TWD") != NULL);
+}
+
+void copyTar(char *source, char *dest, int option) {
 	struct stat stdest;
 	stat(dest, &stdest); // verifications déjà faites
 
-	if (isInTar(source)) { // source est dans un tar
-		// is a tar
-		// or is in tar
-	}
-
-	else if (S_ISDIR(stsource.st_mode)) { // source est un dossier
+	if (isTar(source)) { // source est un tar
 		if (!option) { // -r pas spécifié
-			char *error = "cp : l'option -r doit être spécifiée pour les dossiers!\n";
+			char *error = "cp : l'option -r doit être spécifiée pour les tars!\n";
 			int errorlen = strlen(error);
 			if (write(STDERR_FILENO, error, errorlen) < errorlen)
 				perror("Erreur d'écriture dans le shell!");
 			return;
 		}
 
-		if (isInTar(dest)) { // dest est dans un tar
-			// is a tar
-			// or is in tar
+		if (isInTar(dest)) { // dest est dans un tar ne doit pas etre un tar
+			// TODO
 			if (!exist(dest, 0)) {
 				// créer le dossier dest
 			}else {
@@ -276,46 +290,109 @@ void copyto(char *source, char *dest, int option) { // copy source to dest with 
 			return;
 		}
 
-		else // dest est un dossier
-			copystandard(source, dest);
+		else { // dest est un dossier
+			// TODO
+			// detar les fichiers et dossier de source dans dest
+		}
 	}
 
-	else { // source est un fichier
-		if (isInTar(dest)) { // dest est dans un tar
-			// is a tar
-			// or is in tar
+	else { // source est dans un un tar
+		// TODO
+		if (isTarDir(source)) { // source est un dossier dans un tar
+
 		}
+		else { // source est un fichier dans un tar
 
-		else if (!exist(dest, 0) || !S_ISDIR(stdest.st_mode)) // dest est un fichier
-			copystandard(source, dest);
-
-		else { // dest un dossier
-			if (exist(dest, 1)) {
-				char source_copy[strlen(source)+1];
-				strcpy(source_copy, source);
-				char *sourcefile;
-				char *tok;
-				char *saveptr;
-				char *tmp = source_copy;
-				while ((tok = strtok_r(tmp, "/", &saveptr)) != NULL) {
-					tmp = saveptr;
-					sourcefile = tok;
-				}
-
-				int destlen = strlen(dest);
-				if (dest[destlen-1] != '/') destlen++;
-				char newDest[destlen + strlen(sourcefile) + 1];
-				strcpy(newDest, dest);
-				if (strlen(dest) != destlen) strcat(newDest, "/");
-				strcat(newDest, sourcefile);
-				copystandard(source, newDest);
-			}
 		}
 	}
 }
 
-int isInTar(char *path) {
-	return (path[0] == '/' && strstr(path, ".tar") != NULL) || (path[0] != '/' && getenv("TWD") != NULL);
+int isTar(char *path) { // verifie si path correspond au chemin d'un .tar
+	char *pos = strstr(path, ".tar");
+	if (pos == NULL) return 0;
+	return (strlen(pos) == 4 || strlen(pos) == 5);
+}
+
+int isTarDir(char *path) {
+	// TODO
+	return 1;
+}
+
+void copyDoss(char *source, char *dest, int option) {
+	struct stat stdest;
+	stat(dest, &stdest); // verifications déjà faites
+
+	if (!option) { // -r pas spécifié
+		char *error = "cp : l'option -r doit être spécifiée pour les dossiers!\n";
+		int errorlen = strlen(error);
+		if (write(STDERR_FILENO, error, errorlen) < errorlen)
+			perror("Erreur d'écriture dans le shell!");
+		return;
+	}
+
+	if (isInTar(dest)) { // dest est dans un tar
+		// TODO
+		// is a tar
+		// or is in tar
+		if (!exist(dest, 0)) {
+			// créer le dossier dest
+		}else {
+			// créer le dossier source dans dest s'il n'existe pas
+		}
+	}
+
+	else if (exist(dest, 0) && !S_ISDIR(stdest.st_mode)) { // dest n'est pas un dossier
+		char *deb  = "cp : ";
+		char *end = " n'est pas un dossier!\n";
+		char error[strlen(deb) + strlen(dest) + strlen(end) + 1];
+		strcpy(error, deb);
+		strcat(error, dest);
+		strcat(error, end);
+		int errorlen = strlen(error);
+		if (write(STDERR_FILENO, error, errorlen) < errorlen)
+			perror("Erreur d'écriture dans le shell!");
+		return;
+	}
+
+	else // dest est un dossier
+		copystandard(source, dest);
+}
+
+void copyFile(char *source, char *dest, int option) {
+	struct stat stdest;
+	stat(dest, &stdest); // verifications déjà faites
+
+	if (isInTar(dest)) { // dest est dans un tar
+		// TODO
+		// is a tar
+		// or is in tar
+	}
+
+	else if (!exist(dest, 0) || !S_ISDIR(stdest.st_mode)) // dest est un fichier
+		copystandard(source, dest);
+
+	else { // dest un dossier
+		if (exist(dest, 1)) {
+			char source_copy[strlen(source)+1];
+			strcpy(source_copy, source);
+			char *sourcefile;
+			char *tok;
+			char *saveptr;
+			char *tmp = source_copy;
+			while ((tok = strtok_r(tmp, "/", &saveptr)) != NULL) {
+				tmp = saveptr;
+				sourcefile = tok;
+			}
+
+			int destlen = strlen(dest);
+			if (dest[destlen-1] != '/') destlen++;
+			char newDest[destlen + strlen(sourcefile) + 1];
+			strcpy(newDest, dest);
+			if (strlen(dest) != destlen) strcat(newDest, "/");
+			strcat(newDest, sourcefile);
+			copystandard(source, newDest);
+		}
+	}
 }
 
 void copystandard(char *source, char *dest) { // cp -r standard
