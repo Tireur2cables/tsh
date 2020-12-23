@@ -11,217 +11,252 @@
 #include "tar.h"
 #include "rmdir.h"
 
-char * InitialRep = NULL;
-
-//TODO : inclure tar dans chemin (isTAR..)
+//TODO : gérer les tar dans les chemins et gérer le chemin commençant par "/"
 
 int rmdir_func(int argc,char **argv) {
 	
-	InitialRep = getcwd(NULL,0);
+	if(argc==0) {
+		errno=EINVAL;
+		perror("program error");
+		exit(EXIT_FAILURE);		
+	}
 	
-	/* a enlever pour compiler */
+	if(argc==1) {
+		errno=EINVAL;
+		perror("missing operand");
+		return -1;
+	}
+	
 	char *oldpwd = getcwd(NULL, 0);
 	if (setenv("TWD", oldpwd, 1) < 0) {
 		perror("Erreur de création de TWD!");
 		exit(EXIT_FAILURE);
 	}
 	free(oldpwd);
-	/**/
-	
-	if(argc <= 1 ) {
-		errno = EINVAL;
-		perror("manque d'arguments");
-		return -1;
-	}
-	
-	
-	struct stat s;
-	struct dirent * d;
-	DIR * dir_courant;
 	
 	for(int i=1;i<argc;i++) {
 		
-		int error_or_not = 1;
-		
 		char chemin[strlen(argv[i])+1];
-		strcpy(chemin,argv[i]);
+		strcpy(chemin,argv[i]);                       
 		
-		char CheminTMP[strlen(chemin)+1];
-		strcpy(CheminTMP,chemin);
-		
-		const char * separator = "/";
-		char * part=strtok(CheminTMP,separator);
-		char * lastRep = NULL;
-		int found;
-		int passage=1;  // pour passer a l'itération suivante dans for si erreur dans 1 chemin
-		if (setenv("TWD", InitialRep, 1) < 0) {
-		perror("Erreur de création de TWD!");
-		exit(EXIT_FAILURE);
-		}
-		
-		while(part!=NULL) {
-		
-		if(passage<1) break;
-		
-		found=0;
-		dir_courant=opendir(getenv("TWD"));
-		
-		if(openDetectError(dir_courant)!=0) return -1;
-		
-			while((d=readdir(dir_courant))!=NULL) {
-				
-				if(strcmp(part,d->d_name)==0) {
-		
-				found=1;
-				
-					if (stat(part, &s) < 0) {
-						perror("erreur de stat");
-						exit(EXIT_FAILURE);
-					} else {
-						if(S_ISDIR(s.st_mode)==0) {
-							NotDirectory(chemin);
-							error_or_not=0;
-							break;
-							}
-						
-						}
-													
-					
-					} 
-		
-		
-			} // fin while2
-		
-		if(fileFound(found)!=0)  { passage=0; error_or_not = 0; };
-		if(part!=NULL)  { 
-		lastRep=part; actuDir(part); 
-		}
-		part=strtok(NULL,separator);
-		
-		
-		
-		} // fin while1
-		
-		if(lastRep!=NULL && error_or_not!=0) {
+		if(chemin[0]!='/') {
+			char * pwd = getcwd(NULL,0);
+			parcoursChemin(chemin,pwd);
 			
-			if(DeletingDirectory(lastRep,chemin)<0) {
-				
-			}
+		} else {
 			
+			 // parcoursChemin(chemin,"/");
 		}
-		
-		error_or_not = 1 ;
-		
-	} // fin for
-	
-
-	
-	closedir(dir_courant);
+		 
+	}
 	
 	return 0;
 	
+	
 }
 
-int DeletingDirectory(char * rep , char * fullchemin) {
-	
-	DIR * c=opendir(getenv("TWD")); // normalement twd se finit par rep içi
-	assert(c);
-	struct dirent * d;
-	int nbFile=0;
-	
-	while((d=readdir(c))!=NULL) {
-		
-		if(nbFile>2) break;
-		nbFile++;
-		
-	}
 
-	if(nbFile<3) {
+int parcoursChemin(char * chemin, char * pwd) {
+	
+	char *saveptr;
+	char *doss;
+	char *currentpwd = malloc(strlen(pwd) + 1);
+	strcpy(currentpwd, pwd);
+	
+	while((doss=strtok_r(chemin,"/",&saveptr))!=NULL) {
 		
-		if(rmdir(rep)<0) {
+		if(isAccessibleFrom(doss,currentpwd) > 0) {
+			
+		if(strstr(doss,".tar")!=NULL) {  // tar dans chemin
+			char newcurr[strlen(currentpwd) + 1];
+				strcpy(newcurr, currentpwd);
+				free(currentpwd);
+				return parcoursCheminTar(newcurr,doss,saveptr);
+		}
+		
+		//maj pwd wow
+		int currentlen = strlen(currentpwd);
+		if (currentlen != 1) currentlen++;
+		char newcurr[currentlen + strlen(doss) + 1];
+		strcpy(newcurr, currentpwd);
+		if (currentlen != 1) strcat(newcurr, "/");
+		strcat(newcurr, doss);
+
+		currentpwd = realloc(currentpwd, strlen(newcurr)+1);
+		strcpy(currentpwd, newcurr);
+		
+		chemin=saveptr;
+		
+		} else {
+		free(currentpwd);
+		return -1;
+		}
+	
+	}
+	
+	char res[strlen(currentpwd+1)];
+	strcpy(res,currentpwd);
+	
+	deleteDir(res);
+	
+	return 0;
+	
+	
+}
+
+
+int isAccessibleFrom(char * doss , char * dir) {
+	
+	DIR * courant = opendir(dir);
+	
+	if (courant == NULL) {
+		char *error_debut = "rmdir : Erreur! Impossible d'ouvrir le répertoire ";
+		char error[strlen(error_debut) + strlen(dir) + 1 + 1];
+		strcpy(error, error_debut);
+		strcat(error, dir);
+		strcat(error, "\n");
+		int errorlen = strlen(error);
+		if (write(STDERR_FILENO, error, errorlen) < errorlen)
+			perror("Erreur d'écriture dans le shell!");
+		return -1;
+	}
+	
+	int found=0;
+	struct dirent * d;
+	struct stat st;
+	
+	while((d=readdir(courant))!=NULL) {
+		
+		if(strcmp(d->d_name,doss)==0) {
+			found=1;
+			if (strstr(doss, ".tar") == NULL) { //not tar so should be directory
+				char absolutedoss[strlen(dir) + 1 + strlen(doss) + 1];
+				strcpy(absolutedoss, dir);
+				strcat(absolutedoss, "/");
+				strcat(absolutedoss, doss);
+
+				if (stat(absolutedoss, &st) < 0) {
+					perror("Erreur de stat!");
+					return -1;
+				}
+
+				if (!S_ISDIR(st.st_mode)) { //not directory
+					char *deb  = "rmdir : ";
+					char *end = " n'est pas un répertoire!\n";
+					char error[strlen(deb) + strlen(doss) + strlen(end) + 1];
+					strcpy(error, deb);
+					strcat(error, doss);
+					strcat(error, end);
+					int errorlen = strlen(error);
+					if (write(STDERR_FILENO, error, errorlen) < errorlen)
+						perror("Erreur d'écriture dans le shell!");
+					return -1;
+				}
+			}
+			break;
+		}
+	}
+	
+	closedir(courant);
+	if (!found) {
+		char *deb  = "rmdir : ";
+		char *end = " n'existe pas!\n";
+		char error[strlen(deb) + strlen(doss) + strlen(end) + 1];
+		strcpy(error, deb);
+		//strcat(error, dir);
+		//strcat(error, "/");
+		strcat(error, doss);
+		strcat(error, end);
+		int errorlen = strlen(error);
+		if (write(STDERR_FILENO, error, errorlen) < errorlen)
+			perror("Erreur d'écriture dans le shell!");
+	}
+	
+	return found;
+}
+	
+	
+int parcoursCheminTar(char * pwd , char * dos , char *rest) {
+	
+	
+	
+	
+	return 0;
+}
+	
+int deleteDir(char * pwd) {
+	
+	
+	if(isDirEmpty(pwd)<0) {  // pas vide
+		
+		errno = ENOTEMPTY;
+		char * error1 = "le répertoire ";
+		char * error2 = " n'est pas vide !";
+		char error3[strlen(error1) + 1 + strlen(pwd) + 1 + strlen(error2) + 1]; 
+		strcpy(error3,error1);
+		strcat(error3,pwd);
+		strcat(error3,error2);
+		perror(error3);
+		return -1;
+	
+	} else { 
+
+	if(rmdir(pwd)<0) {
 			perror("erreur de suppression du répertoire");
 			return -1;
 		} 
-		
-	} else {
-		
-		char * error1 = "suppresion impossible , le répertoire ";
-		char * error2 = " n'est pas vide";
-		char * error3 = malloc(sizeof(char)*(strlen(error1)+strlen(error2)+strlen(fullchemin)));
-		strcpy(error3,error1);
-		strcat(error3,fullchemin);
-		strcat(error3,error2);
-		if (write(STDERR_FILENO, error3, strlen(error3)) < strlen(error3)) {
-				perror("Erreur d'écriture dans le shell!");
-						}
-		write(STDERR_FILENO,"\n",2);
+	
+	}		
+	
+	return 0;
+	
+}
+
+
+
+int isDirEmpty(char * pwd ) {
+	
+	DIR * dir = opendir(pwd);
+	struct dirent * d;
+	int nbFile=0;  // cb de fichiers dans le rep
+	
+	if (dir == NULL) {
+		char *error_debut = "rmdir : Erreur! Impossible d'ouvrir le répertoire ";
+		char error[strlen(error_debut) + strlen(pwd) + 1 + 1];
+		strcpy(error, error_debut);
+		strcat(error, pwd);
+		strcat(error, "\n");
+		int errorlen = strlen(error);
+		if (write(STDERR_FILENO, error, errorlen) < errorlen)
+			perror("Erreur d'écriture dans le shell!");
 		return -1;
 	}
 	
-	return 0;
-	
-}
-
-
-void actuDir(char * part) {
-	
-	char * newpath = malloc(sizeof(char)*(strlen(getenv("TWD"))+1+strlen(part)));
-	strcpy(newpath,getenv("TWD"));
-	strcat(newpath,"/");
-	strcat(newpath,part);
-	
-	if (setenv("TWD", newpath , 1) < 0) {
-		perror("Erreur de modification de TWD!");
-		exit(EXIT_FAILURE);
+	while((d=readdir(dir))!=NULL) {
+		nbFile++;
 	}
 	
-	
+	if(nbFile<3) return 0;
+	return -1;
 	
 }
 
-void NotDirectory(char * p ) {
-	
-	char * error1 = "suppresion impossible : ";
-	char * error2 = " n'est pas un répertoire!\n";
-	char error3[strlen(p)+strlen(error1)+strlen(error2)+1];
-	strcpy(error3 , error1);
-	strcat(error3 , p);
-	strcat(error3 , error2);
-	
-	if (write(STDERR_FILENO, error3, strlen(error3)) < strlen(error3)) {
-				perror("Erreur d'écriture dans le shell!");
-						}
-			
-}
 
 
-int fileFound(int f) {
-	if(f==0) {
-		char *error = "suppression impossible , fichier ou repertoire non existant !\n";
-			if(write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
-				perror("Erreur d'écriture dans le shell!");
-				}
-				write(STDERR_FILENO,"\n",2);
-		return -1;
-	}
-	
-	return 0;
-}
 
-int openDetectError(DIR * d) {
-	
-	if(d==NULL) {
-		char *error = "erreur d'ouverture du repertoire";
-			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
-				perror("Erreur d'écriture dans le shell");
-			} 	
-			write(STDERR_FILENO,"\n",2);
-			return -1;
-	}
-	
-	return 0;
-	
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

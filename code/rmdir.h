@@ -3,11 +3,11 @@
 
 extern int rmdir_func(int, char *[]); 
 
-int openDetectError(DIR *);
-int fileFound(int);
-void NotDirectory(char *);
-void actuDir(char *);
-int DeletingDirectory(char *, char *);
+int parcoursChemin(char *, char *);
+int isAccessibleFrom(char *, char *);
+int deleteDir(char *);
+int isDirEmpty(char *);
+int parcoursCheminTar(char *, char *, char *);
 
 #endif
 
