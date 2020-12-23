@@ -11,7 +11,11 @@
 
 int exist_dir(char *);
 int create_dir(char *);
+int create_tar(char *);
 int try_create_dir(char *);
+int contains_tar_mk(char *);
+int is_tar_mk(char *);
+int is_ext_mk(char *, char *);
 void get_header_size_mk(struct posix_header *, int *);
 
 int mkdir_tar(int argc, char *argv[]) {
@@ -21,7 +25,7 @@ int mkdir_tar(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	else if(argc == 1){
-		char *format = "rmdir: opérande manquant";
+		char *format = "rmdir: opérande manquant\n";
 		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
 			perror("Erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
@@ -36,12 +40,12 @@ int mkdir_tar(int argc, char *argv[]) {
 					}else{
 						char file[strlen(getenv("TWD")) + strlen(argv[1])];
 						sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
-						print_dir(file, "\0");
+						try_create_dir(file);
 					}
 				}else{
 					char file[strlen(getenv("TWD")) + strlen(argv[1])];
 					sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
-					print_dir(file, "\0");
+					try_create_dir(file);
 				}
 			}
 			else{
@@ -53,9 +57,26 @@ int mkdir_tar(int argc, char *argv[]) {
 }
 
 int try_create_dir(char *name){
-	if(exist_dir(name){
+	write(STDOUT_FILENO, name, strlen(name));
+	if(is_tar_mk(name)){ //On veut fabriquer un tar
+		create_tar(name);
+	}else if(contains_tar_mk(name)){ //On veut ajouter un dossier dans un tar
+		create_dir(name);
+	}else{//On se trouve dans un tar, mais on fait mkdir sur un chemin qui ne contient pas de tar
+		execlp("mkdir", "mkdir", name, NULL);
+	}
+	return 0;
+}
+
+int create_tar(char *name){ //Créer un tar
+	return 1;
+
+}
+
+int create_dir(char *name){ //Créer un dossier dans un tar si possible
+	if(exist_dir(name)){
 		char format[60 + strlen(name)];
-		sprintf(format, "mkdir: impossible de créer le répertoire « %s »: Le fichier existe", name);
+		sprintf(format, "mkdir: impossible de créer le répertoire « %s »: Le fichier existe\n", name);
 		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
 			perror("Erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
@@ -63,8 +84,8 @@ int try_create_dir(char *name){
 	}else{
 		create_dir(name);
 	}
+	return 0;
 }
-
 
 int exist_dir(char *name){
 	struct posix_header header;
@@ -92,12 +113,20 @@ int exist_dir(char *name){
 	return 0;
 }
 
+int is_ext_mk(char *file, char *ext){
+	return (strcmp(&file[strlen(file)-strlen(ext)], ext) == 0);
+}
+
+int is_tar_mk(char *file){
+	return is_ext_mk(file, ".tar") || is_ext_mk(file, ".tar/");
+}
+
+int contains_tar_mk(char *file){
+	return (strstr(file,".tar") != NULL);
+}
+
 void get_header_size_mk(struct posix_header *header, int *read_size){
 	int taille = 0;
 	sscanf(header->size, "%o", &taille);
 	*read_size = ((taille + 512-1)/512);
-}
-
-int create_dir(char *name){
-	return 1;
 }
