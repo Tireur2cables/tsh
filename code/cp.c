@@ -21,6 +21,7 @@ int existAbsolut(char *, int);
 int existInTar(char *, char *, int);
 int isSamedir(char *, char *);
 int isInTar(char *);
+int isTarDir(char *);
 int isTar(char *);
 void copyTar(char *, char *, int);
 void copyDoss(char *, char *, int);
