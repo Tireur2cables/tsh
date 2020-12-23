@@ -11,6 +11,12 @@
 #include "tar.h"
 #include "rmdir.h"
 
+int parcoursChemin(char *, char *);
+int isAccessibleFrom(char *, char *);
+int deleteDir(char *);
+int isDirEmpty(char *);
+int parcoursCheminTar(char *, char *, char *);
+
 //TODO : gérer les tar dans les chemins et gérer le chemin commençant par "/"
 
 int rmdir_func(int argc,char **argv) {
