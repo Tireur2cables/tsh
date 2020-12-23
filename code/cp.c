@@ -327,12 +327,11 @@ void copyTar(char *source, char *dest, int option) {
 			struct stat stsource;
 			stat(source, &stsource); // verifications déjà faites
 			if (!exist(dest, 0)) {
-				if (mkdir(dest, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) < 0) {
+				if (mkdir(dest, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH/*stsource.st_mode ?*/) < 0) {
 					perror("Impossible de créer le dossier!");
 					exit(EXIT_FAILURE);
 				}
-			}
-			int atleastonechange = 0;
+			}else copystandard(source, dest); // copie directement le .tar
 
 			int fdsource = open(source, O_RDONLY);
 			if (fdsource == -1) {
@@ -370,24 +369,20 @@ void copyTar(char *source, char *dest, int option) {
 							perror("Impossible de créer le dossier!");
 							exit(EXIT_FAILURE);
 						}
-						atleastonechange = 1;
 					}
 					tmp = pos+1;
 				}
-				if (header.typeflag != 5) { // n'est pas un dossier
+				if (header.typeflag != '5') { // n'est pas un dossier
 					char newDest[strlen(dest) + 1 + strlen(nom) + 1];
 					strcpy(newDest, dest);
 					strcat(newDest, "/");
 					strcat(newDest, nom);
 
-					if (!exist(newDest, 0)) {
-						char newSource[strlen(source) + 1 + strlen(nom) + 1];
-						strcpy(newSource, source);
-						strcat(newSource, "/");
-						strcat(newSource, nom);
-						copyfiletartofile(newSource, newDest, mode);
-						atleastonechange = 1;
-					}
+					char newSource[strlen(source) + 1 + strlen(nom) + 1];
+					strcpy(newSource, source);
+					strcat(newSource, "/");
+					strcat(newSource, nom);
+					copyfiletartofile(newSource, newDest, mode);
 				}
 
 				unsigned int taille;
@@ -397,15 +392,179 @@ void copyTar(char *source, char *dest, int option) {
 				if (lseek(fdsource, (off_t) taille, SEEK_CUR) == -1) break;
 			}
 			close(fdsource);
-			if (!atleastonechange) {
-				copystandard(source, dest);
-			}
 		}
 	}
 
 	else { // source est dans un un tar
 		if (isTarDir(source)) { // source est un dossier dans un tar
-			// TODO
+			if (!option) { // -r pas spécifié
+				char *error = "cp : l'option -r doit être spécifiée pour les dossiers!\n";
+				int errorlen = strlen(error);
+				if (write(STDERR_FILENO, error, errorlen) < errorlen)
+					perror("Erreur d'écriture dans le shell!");
+				return;
+			}
+
+			if (isInTar(dest)) { // dest est dans un tar
+				// TODO
+				if (!exist(dest, 0)) {
+					// creer le dossier dest et mettre le contenu de source dedans
+				}else {
+					if (isTarDir(dest)) { // dest est un dossier dans le tar
+						// creer le dossier dest/sourcefile et mettre le contenu de source dedans
+					}else { // dest est un fichier dasn le tar
+						char *deb  = "cp : ";
+						char *end = " n'est pas un dossier!\n";
+						char error[strlen(deb) + strlen(dest) + strlen(end) + 1];
+						strcpy(error, deb);
+						strcat(error, dest);
+						strcat(error, end);
+						int errorlen = strlen(error);
+						if (write(STDERR_FILENO, error, errorlen) < errorlen)
+							perror("Erreur d'écriture dans le shell!");
+						return;
+					}
+				}
+			}
+
+			else if (exist(dest, 0) && !S_ISDIR(stdest.st_mode)) { // dest n'est pas un dossier
+				char *deb  = "cp : ";
+				char *end = " n'est pas un dossier!\n";
+				char error[strlen(deb) + strlen(dest) + strlen(end) + 1];
+				strcpy(error, deb);
+				strcat(error, dest);
+				strcat(error, end);
+				int errorlen = strlen(error);
+				if (write(STDERR_FILENO, error, errorlen) < errorlen)
+					perror("Erreur d'écriture dans le shell!");
+				return;
+			}
+
+			else { // dest est un dossier
+				struct stat stsource;
+				stat(source, &stsource); // verifications déjà faites
+
+				char *sourcedoss;
+				char *iter = source;
+				char *tok;
+				while ((tok = strstr(iter, "/")) != NULL) {
+					iter = tok+1;
+					if (strlen(tok+1) != 0) sourcedoss = tok+1;
+				}
+
+				int destlen = strlen(dest);
+				if (dest[destlen-1] != '/') destlen++;
+				char tmpdest[destlen + strlen(sourcedoss) + 1];
+				strcpy(tmpdest, dest);
+				if (destlen != strlen(dest)) strcat(tmpdest, "/");
+				strcat(tmpdest, sourcedoss);
+
+				if (!exist(dest, 0)) {
+					if (mkdir(dest, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH /*stsource.st_mode ?*/) < 0) {
+						perror("Impossible de créer le dossier!");
+						exit(EXIT_FAILURE);
+					}
+				}else {
+					if (!exist(tmpdest, 0)) {
+						if (mkdir(tmpdest, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH /*stsource.st_mode ?*/) < 0) {
+							perror("Impossible de créer le dossier!");
+							exit(EXIT_FAILURE);
+						}
+					}
+					dest = tmpdest; // dest deveint dest/sourcedoss
+				}
+
+				int pwdlen = 0;
+				int twdlen = 0;
+				char *pwd = getcwd(NULL, 0);
+				char *twd = getenv("TWD");
+				if (source[0] != '/') pwdlen = strlen(pwd) + 1;
+				if (source[0] != '/' && twd != NULL && strlen(twd) != 0) twdlen = strlen(twd) + 1;
+				char absolutesource[pwdlen + twdlen + strlen(source)];
+				strcpy(absolutesource, "");
+				if (source[0] != '/') {
+					strcat(absolutesource, pwd);
+					strcat(absolutesource, "/");
+					if (twdlen != 0) {
+						strcat(absolutesource, twd);
+						strcat(absolutesource, "/");
+					}
+				}
+				strcat(absolutesource, source);
+
+				tok = strstr(absolutesource, ".tar"); //not null
+				int tarlen = strlen(absolutesource) - strlen(tok) + 4;
+				char tar[tarlen + 1];
+				strncpy(tar, absolutesource, tarlen);
+				tar[tarlen] = '\0';
+
+				char chemin[strlen(absolutesource) - strlen(tar) + 1];
+				strcpy(chemin, &absolutesource[strlen(tar)+1]); // source n'est pas juste un tar
+
+				int fdsource = open(tar, O_RDONLY);
+				if (fdsource == -1) {
+					char *error_debut = "cp : Erreur! Impossible d'ouvrir l'archive ";
+					char error[strlen(error_debut) + strlen(tar) + 1 + 1];
+					strcpy(error, error_debut);
+					strcat(error, tar);
+					strcat(error, "\n");
+					int errorlen = strlen(error);
+					if (write(STDERR_FILENO, error, errorlen) < errorlen)
+						perror("Erreur d'écriture dans le shell!");
+					return;
+				}
+				struct posix_header header;
+				while (1) {
+					if (read(fdsource, &header, BLOCKSIZE) < BLOCKSIZE) break;
+
+					char nom[strlen(header.name)+1];
+					strcpy(nom, header.name);
+					if (strcmp(nom, "") == 0) break;
+
+					if (strstr(nom, chemin) != NULL && strcmp(chemin, nom) <= 0) { // nom must start with chemin
+						mode_t mode;
+						sscanf(header.mode, "%o", &mode);
+
+						char *newnom = strstr(nom, chemin) + strlen(chemin) + 1;
+						char *tmp = newnom;
+						char *pos;
+						while ((pos = strstr(tmp, "/")) != NULL) { // parcours (et créer si besoin) les dossiers nécéssaires pour copier le fichier
+							char dossier[strlen(dest) + 1 + strlen(newnom) - strlen(pos) + 1];
+							strcpy(dossier, dest);
+							strcat(dossier, "/");
+							strncat(dossier, newnom, strlen(newnom) - strlen(pos));
+							if (!exist(dossier, 0) && header.typeflag == '5') {
+								// on suppose raisonnablement que les dossiers arrivent avant les fichier de ces dossiers dans le parcours du tar
+								if (mkdir(dossier, mode) < 0) {
+									perror("Impossible de créer le dossier!");
+									exit(EXIT_FAILURE);
+								}
+							}
+							tmp = pos+1;
+						}
+						if (header.typeflag != '5') { // n'est pas un dossier
+							char newDest[strlen(dest) + 1 + strlen(newnom) + 1];
+							strcpy(newDest, dest);
+							strcat(newDest, "/");
+							strcat(newDest, newnom);
+
+							char newSource[strlen(source) + 1 + strlen(newnom) + 1];
+							strcpy(newSource, source);
+							strcat(newSource, "/");
+							strcat(newSource, newnom);
+							copyfiletartofile(newSource, newDest, mode);
+						}
+					}
+
+					unsigned int taille;
+					sscanf(header.size, "%o", &taille);
+					taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
+					taille *= BLOCKSIZE;
+					if (lseek(fdsource, (off_t) taille, SEEK_CUR) == -1) break;
+				}
+				close(fdsource);
+			}
+
 		}
 		else { // source est un fichier dans un tar
 			struct stat stsource;
