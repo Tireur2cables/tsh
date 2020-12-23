@@ -12,7 +12,7 @@
 #include "tar.h"
 #include "cat.h"
 
-void detectError(int);
+void detectError(int, char *[]);
 int optionDetection(int, char *[]);
 int isCorrectDest(char *);
 void copyto(char *, char *, int);
@@ -29,10 +29,11 @@ void copyFile(char *, char *, int);
 void copystandard(char *, char *);
 void copyfiletartofile(char *, char *, mode_t);
 void copyfiletofiletar(char *, char *, mode_t);
+mode_t getmode(char *, char *);
 
 int cp(int argc, char *argv[]) {
 // detect error in number of args
-	detectError(argc);
+	detectError(argc, argv);
 
 // get the index of the option if speciefied
 	int indexOpt = optionDetection(argc, argv);
@@ -58,25 +59,54 @@ int cp(int argc, char *argv[]) {
 	return 0;
 }
 
-void detectError(int argc) { // vérifie qu'un nombre correct d'éléments est donné
+void detectError(int argc, char *argv[]) { // vérifie qu'un nombre correct d'éléments est donné
 	if (argc < 3) {
-		char *error = "cp : Il faut donner au moins 2 arguments à cp!";
+		char *error = "cp : Il faut donner au moins 2 chemins à cp!\n";
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
 			perror("Erreur d'écriture dans le shell!");
 		exit(EXIT_FAILURE);
 	}
+	if (argc == 3) {
+		if (argv[1][0] == '-' || argv[2][0] == '-') {
+			char *error = "cp : Il faut donner au moins 2 chemins à cp!\n";
+			int errorlen = strlen(error);
+			if (write(STDERR_FILENO, error, errorlen) < errorlen)
+				perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
+	}
 }
 
 int optionDetection(int argc, char *argv[]) { //return the position of the option '-r' if specified or return 0
+	int indice = 0;
 	for (int i = 1; i < argc; i++) {
-		if (strcmp(argv[i], "-r") == 0) return i;
+		if (strcmp(argv[i], "-r") == 0) {
+			if (indice == 0) indice = i;
+			else {
+				char *error = "cp : Erreur trop d'options -r !\n";
+				int errorlen = strlen(error);
+				if (write(STDERR_FILENO, error, errorlen) < errorlen)
+					perror("Erreur d'écriture dans le shell!");
+				exit(EXIT_FAILURE);
+			}
+		}else if (strncmp(argv[i], "-", 1) == 0) {
+			char *deb = "cp : Erreur option inconnue : ";
+			char error[strlen(deb) + strlen(argv[i]) + 1 + 1];
+			strcpy(error, deb);
+			strcat(error, argv[i]);
+			strcat(error, "\n");
+			int errorlen = strlen(error);
+			if (write(STDERR_FILENO, error, errorlen) < errorlen)
+				perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
 	}
-	return 0;
+	return indice;
 }
 
 int isCorrectDest(char *dest) { // dest must respect certain convention
-	if (exist(dest, 0)) return 1;
+	if (exist(dest, 0) || strstr(dest, "/") == NULL) return 1;
 	char dest_copy[strlen(dest)+1];
 	strcpy(dest_copy, dest);
 	char dest_copy_copy[strlen(dest)+1];
@@ -294,8 +324,82 @@ void copyTar(char *source, char *dest, int option) {
 		}
 
 		else { // dest est un dossier
-			// TODO
-			// detar les fichiers et dossier de source dans dest
+			struct stat stsource;
+			stat(source, &stsource); // verifications déjà faites
+			if (!exist(dest, 0)) {
+				if (mkdir(dest, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) < 0) {
+					perror("Impossible de créer le dossier!");
+					exit(EXIT_FAILURE);
+				}
+			}
+			int atleastonechange = 0;
+
+			int fdsource = open(source, O_RDONLY);
+			if (fdsource == -1) {
+				char *error_debut = "cp : Erreur! Impossible d'ouvrir l'archive ";
+				char error[strlen(error_debut) + strlen(source) + 1 + 1];
+				strcpy(error, error_debut);
+				strcat(error, source);
+				strcat(error, "\n");
+				int errorlen = strlen(error);
+				if (write(STDERR_FILENO, error, errorlen) < errorlen)
+					perror("Erreur d'écriture dans le shell!");
+				return;
+			}
+			struct posix_header header;
+			while (1) {
+				if (read(fdsource, &header, BLOCKSIZE) < BLOCKSIZE) break;
+
+				char nom[strlen(header.name)+1];
+				strcpy(nom, header.name);
+				if (strcmp(nom, "") == 0) break;
+
+				mode_t mode;
+				sscanf(header.mode, "%o", &mode);
+
+				char *tmp = nom;
+				char *pos;
+				while ((pos = strstr(tmp, "/")) != NULL) { // parcours (et créer si besoin) les dossiers nécéssaires pour copier le fichier
+					char dossier[strlen(dest) + 1 + strlen(nom) - strlen(pos) + 1];
+					strcpy(dossier, dest);
+					strcat(dossier, "/");
+					strncat(dossier, nom, strlen(nom) - strlen(pos));
+					if (!exist(dossier, 0) && header.typeflag == '5') {
+						// on suppose raisonnablement que les dossiers arrivent avant les fichier de ces dossiers dans le parcours du tar
+						if (mkdir(dossier, mode) < 0) {
+							perror("Impossible de créer le dossier!");
+							exit(EXIT_FAILURE);
+						}
+						atleastonechange = 1;
+					}
+					tmp = pos+1;
+				}
+				if (header.typeflag != 5) { // n'est pas un dossier
+					char newDest[strlen(dest) + 1 + strlen(nom) + 1];
+					strcpy(newDest, dest);
+					strcat(newDest, "/");
+					strcat(newDest, nom);
+
+					if (!exist(newDest, 0)) {
+						char newSource[strlen(source) + 1 + strlen(nom) + 1];
+						strcpy(newSource, source);
+						strcat(newSource, "/");
+						strcat(newSource, nom);
+						copyfiletartofile(newSource, newDest, mode);
+						atleastonechange = 1;
+					}
+				}
+
+				unsigned int taille;
+				sscanf(header.size, "%o", &taille);
+				taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
+				taille *= BLOCKSIZE;
+				if (lseek(fdsource, (off_t) taille, SEEK_CUR) == -1) break;
+			}
+			close(fdsource);
+			if (!atleastonechange) {
+				copystandard(source, dest);
+			}
 		}
 	}
 
