@@ -199,7 +199,7 @@ int existInTar(char *tar, char *chemin, int error) { // verifie que chemin exist
 
 			char nom[strlen(header.name)+1];
 			strcpy(nom, header.name);
-			if ((nom[strlen(nom)-1] == '/' && isSamedir(chemin, nom)) || (nom[strlen(nom)-1] != '/' && strcmp(nom, chemin) == 0))
+			if ((nom[strlen(nom)-1] == '/' && isSamedir(chemin, nom)) || strcmp(nom, chemin) == 0)
 				found = 1;
 			else {
 				if (strcmp(nom, "") == 0) break;
@@ -303,7 +303,7 @@ void copyTar(char *source, char *dest, int option) {
 
 		}
 		else { // source est un fichier dans un tar
-
+			
 		}
 	}
 }
@@ -315,7 +315,68 @@ int isTar(char *path) { // verifie si path correspond au chemin d'un .tar
 }
 
 int isTarDir(char *path) {
-	// TODO
+	if (path[0] == '/') {
+		char *pos = strstr(path, ".tar");
+		int tarlen = strlen(path) - strlen(pos) + 4;
+		char absolutetar[tarlen + 1];
+		strncpy(absolutetar, path, tarlen);
+		absolutetar[tarlen] = '\0';
+
+		int poslen = strlen(pos) - 5;
+		if (pos[strlen(pos)-1] != '/') poslen++;
+		char newpath[poslen + 1]; // exist because path is not just a tar
+		strcpy(newpath, &pos[5]);
+		if (pos[strlen(pos)-1] != '/') strcat(newpath, "/");
+
+		return existInTar(absolutetar, newpath, 0);
+	}
+	else {
+		char *pwd = getcwd(NULL, 0);
+		char *twd = getenv("TWD");
+		if (twd != NULL && strlen(twd) != 0) {
+			char twd_copy[strlen(twd)+1];
+			strcpy(twd_copy, twd);
+			char *tar = strtok(twd_copy, "/");
+			char absolutetar[strlen(pwd) + 1 + strlen(tar) + 1];
+			strcpy(absolutetar, pwd);
+			strcat(absolutetar, "/");
+			strcat(absolutetar, tar);
+
+			int pathlen = strlen(path);
+			if (path[pathlen-1] != '/') pathlen++;
+			if (strlen(tar) == strlen(twd)) {
+				char newpath[pathlen+1];
+				strcpy(newpath, path);
+				if (pathlen != strlen(path)) strcat(newpath, "/");
+				return existInTar(absolutetar, newpath, 0);
+			}else {
+				char newpath[strlen(twd) - strlen(tar) + pathlen + 1];
+				strcpy(newpath, &twd[strlen(tar)+1]);
+				strcat(newpath, "/");
+				strcat(newpath, path);
+				if (pathlen != strlen(path)) strcat(newpath, "/");
+				return existInTar(absolutetar, newpath, 0);
+			}
+		}else {
+			char *pos = strstr(path, ".tar");
+			int tarlen = strlen(path) - strlen(pos) + 4;
+			char tar[tarlen + 1];
+			strncpy(tar, path, tarlen);
+			tar[tarlen] = '\0';
+			char absolutetar[strlen(pwd) + 1 + strlen(tar) + 1];
+			strcpy(absolutetar, pwd);
+			strcat(absolutetar, "/");
+			strcat(absolutetar, tar);
+
+			int poslen = strlen(pos) - 5;
+			if (pos[strlen(pos)-1] != '/') poslen++;
+			char newpath[poslen + 1]; // exist because path is not just a tar
+			strcpy(newpath, &pos[5]);
+			if (pos[strlen(pos)-1] != '/') strcat(newpath, "/");
+
+			return existInTar(absolutetar, newpath, 0);
+		}
+	}
 	return 1;
 }
 
