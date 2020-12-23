@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include "cp.h"
 #include "tar.h"
@@ -20,8 +21,7 @@ int existAbsolut(char *, int);
 int existInTar(char *, char *, int);
 int isSamedir(char *, char *);
 int isInTar(char *);
-void copyfiletofile(char *, char *, mode_t);
-mode_t getmode(mode_t);
+void copystandard(char *, char *);
 
 int cp(int argc, char *argv[]) {
 // detect error in number of args
@@ -253,17 +253,17 @@ void copyto(char *source, char *dest, int option) { // copy source to dest with 
 			return;
 		}
 
-		if (!exist(dest, 0)) {
-			// créer le dossier dest
-		}else {
-			// créer le dossier source dans dest s'il n'existe pas
-		}
-
 		if (isInTar(dest)) { // dest est dans un tar
 			// is a tar
 			// or is in tar
+			if (!exist(dest, 0)) {
+				// créer le dossier dest
+			}else {
+				// créer le dossier source dans dest s'il n'existe pas
+			}
 		}
-		else if (!S_ISDIR(stdest.st_mode)) { // dest n'est pas un dossier
+
+		else if (exist(dest, 0) && !S_ISDIR(stdest.st_mode)) { // dest n'est pas un dossier
 			char *deb  = "cp : ";
 			char *end = " n'est pas un dossier!\n";
 			char error[strlen(deb) + strlen(dest) + strlen(end) + 1];
@@ -274,10 +274,10 @@ void copyto(char *source, char *dest, int option) { // copy source to dest with 
 			if (write(STDERR_FILENO, error, errorlen) < errorlen)
 				perror("Erreur d'écriture dans le shell!");
 			return;
-		}else { // dest est un dossier
-			//doss to doss : create a doss1 directory in doss2 with all the content if already exist ecrase ce qui a le meme nom avec le nouveau contenu
-
 		}
+
+		else // dest est un dossier
+			copystandard(source, dest);
 	}
 
 	else { // source est un fichier
@@ -287,15 +287,28 @@ void copyto(char *source, char *dest, int option) { // copy source to dest with 
 		}
 
 		else if (!exist(dest, 0) || !S_ISDIR(stdest.st_mode)) // dest est un fichier
-			copyfiletofile(source, dest, stsource.st_mode);
+			copystandard(source, dest);
 
 		else { // dest un dossier
 			if (exist(dest, 1)) {
+				char source_copy[strlen(source)+1];
+				strcpy(source_copy, source);
+				char *sourcefile;
+				char *tok;
+				char *saveptr;
+				char *tmp = source_copy;
+				while ((tok = strtok_r(tmp, "/", &saveptr)) != NULL) {
+					tmp = saveptr;
+					sourcefile = tok;
+				}
+
+				int destlen = strlen(dest);
+				if (dest[destlen-1] != '/') destlen++;
 				char newDest[destlen + strlen(sourcefile) + 1];
 				strcpy(newDest, dest);
 				if (strlen(dest) != destlen) strcat(newDest, "/");
 				strcat(newDest, sourcefile);
-				copyfiletofile(source, newDest, stsource.st_mode);
+				copystandard(source, newDest);
 			}
 		}
 	}
@@ -305,52 +318,101 @@ int isInTar(char *path) {
 	return (path[0] == '/' && strstr(path, ".tar") != NULL) || (path[0] != '/' && getenv("TWD") != NULL);
 }
 
-void copyfiletofile(char *source, char *dest, mode_t mode) { // ecrase contenu de dest avec contenu de source et ne change pas le nom de dest
-	int oldout = dup(STDOUT_FILENO);
-	int fddest;
-	if ((fddest = open(dest, O_WRONLY + O_TRUNC + O_CREAT, mode))) == -1) {
-		char *deb  = "cp : Impossible d'ouvrir ";
-		char error[strlen(deb) + strlen(dest) + 1 + 1];
-		strcpy(error, deb);
-		strcat(error, dest);
-		strcat(error, "\n");
-		int errorlen = strlen(error);
-		if (write(STDERR_FILENO, error, errorlen) < errorlen)
-			perror("Erreur d'écriture dans le shell!");
-		return;
-	}
-	if (dup2(fddest, STDOUT_FILENO) < 0) {
-		perror("Erreur lors de la redirection vers la destination!");
-		return;
-	}
-	char *argv[3] = {"cat", source, NULL};
-	cat(2, argv);
-	close(fddest);
-	if (dup2(oldout, STDOUT_FILENO) < 0) {
-		perror("Erreur lors du retablissement de STDOUT!");
-		exit(EXIT_FAILURE); // pottentiellement dangeureux pour les autres itérations
+void copystandard(char *source, char *dest) { // cp -r standard
+	int status;
+	int pid = fork();
+	switch(pid) {
+		case -1: {//erreur
+			perror("Erreur de fork!");
+			exit(EXIT_FAILURE);
+		}
+		case 0: {//fils
+			execlp("cp", "cp", "-r", source, dest, NULL);
+			exit(EXIT_SUCCESS);
+		}
+		default: {//pere
+			if (waitpid(pid, &status, 0) < 0) {
+				perror("Erreur de wait!");
+				exit(EXIT_FAILURE);
+			}
+		}
 	}
 }
 
-mode_t getmode(mode_t stmode) {
-	mode_t mode = 0;
-	if (S_IRWXU & stmode) mode += S_IRWXU;
-	else {
-		if (S_IRUSR & stmode) mode += S_IRWXU;
-		if (S_IWUSR & stmode) mode += S_IWUSR;
-		if (S_IXUSR & stmode) mode += S_IXUSR;
+void copyfiletartofile(char *source, char *dest, mode_t mode) { // ecrase contenu de dest avec contenu de source et ne change pas le nom de dest
+	int status;
+	int pid = fork();
+	switch(pid) {
+		case -1: {//erreur
+			perror("Erreur de fork!");
+			exit(EXIT_FAILURE);
+		}
+		case 0: {//fils
+			int fddest;
+			if ((fddest = open(dest, O_WRONLY + O_TRUNC + O_CREAT, mode)) == -1) {
+				char *deb  = "cp : Impossible d'ouvrir ";
+				char error[strlen(deb) + strlen(dest) + 1 + 1];
+				strcpy(error, deb);
+				strcat(error, dest);
+				strcat(error, "\n");
+				int errorlen = strlen(error);
+				if (write(STDERR_FILENO, error, errorlen) < errorlen)
+					perror("Erreur d'écriture dans le shell!");
+				return;
+			}
+			if (dup2(fddest, STDOUT_FILENO) < 0) {
+				perror("Erreur lors de la redirection vers la destination!");
+				return;
+			}
+			char *argv[3] = {"cat", source, NULL};
+			cat(2, argv);
+			close(fddest);
+			exit(EXIT_SUCCESS);
+		}
+		default: {//pere
+			if (waitpid(pid, &status, 0) < 0) {
+				perror("Erreur de wait!");
+				exit(EXIT_FAILURE);
+			}
+		}
 	}
-	if (S_IRWXG & stmode) mode += S_IRWXG;
-	else {
-		if (S_IRGRP & stmode) mode += S_IRGRP;
-		if (S_IWGRP & stmode) mode += S_IWGRP;
-		if (S_IXGRP & stmode) mode += S_IXGRP;
+}
+
+void copyfiletofiletar(char *source, char *dest, mode_t mode) { // ecrase contenu de dest avec contenu de source et ne change pas le nom de dest
+	int status;
+	int pid = fork();
+	switch(pid) {
+		case -1: {//erreur
+			perror("Erreur de fork!");
+			exit(EXIT_FAILURE);
+		}
+		case 0: {//fils
+			int fddest;
+			if ((fddest = open(dest, O_WRONLY + O_TRUNC + O_CREAT, mode)) == -1) {
+				char *deb  = "cp : Impossible d'ouvrir ";
+				char error[strlen(deb) + strlen(dest) + 1 + 1];
+				strcpy(error, deb);
+				strcat(error, dest);
+				strcat(error, "\n");
+				int errorlen = strlen(error);
+				if (write(STDERR_FILENO, error, errorlen) < errorlen)
+					perror("Erreur d'écriture dans le shell!");
+				return;
+			}
+			if (dup2(fddest, STDOUT_FILENO) < 0) {
+				perror("Erreur lors de la redirection vers la destination!");
+				return;
+			}
+			char *argv[3] = {"cat", source, NULL};
+			cat(2, argv);
+			close(fddest);
+			exit(EXIT_SUCCESS);
+		}
+		default: {//pere
+			if (waitpid(pid, &status, 0) < 0) {
+				perror("Erreur de wait!");
+				exit(EXIT_FAILURE);
+			}
+		}
 	}
-	if (S_IRWXO & stmode) mode += S_IRWXO;
-	else {
-		if (S_IROTH & stmode) mode += S_IROTH;
-		if (S_IWOTH & stmode) mode += S_IWOTH;
-		if (S_IXOTH & stmode) mode += S_IXOTH;
-	}
-	return mode;
 }
