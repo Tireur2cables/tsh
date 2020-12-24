@@ -12,9 +12,9 @@ cat.o : cat.c cat.h tar.h
 test.o : test.c ls.h cd.h pwd.h
 exit.o : exit.c exit.h
 ls.o : ls.c tar.h ls.h
-tsh.o : tsh.c couple.h ls.h cd.h pwd.h cat.h help.h exit.h cdIn.h tar.h
+tsh.o : tsh.c couple.h ls.h cd.h pwd.h cat.h help.h exit.h cdIn.h cp.h
 pwd.o : pwd.c pwd.h
-cp.o : cp.c cp.h tar.h cat.h
+cp.o : cp.c cp.h
 clean :
 	rm -rf *~
 cleanall : clean
