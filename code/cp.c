@@ -35,6 +35,7 @@ void copyfiletofiletar(char *, char *);
 mode_t getmode(char *, char *);
 int getHeader(struct posix_header *, char *, mode_t, uid_t, gid_t, off_t, struct timespec);
 int ecritInTar(struct posix_header *, int, char *, unsigned int);
+void copyfiletartofiletar(char *, char *);
 
 int cp(int argc, char *argv[]) {
 // detect error in number of args
@@ -308,22 +309,115 @@ void copyTar(char *source, char *dest, int option) {
 		if (isInTar(dest)) { // dest est dans un tar
 			// TODO
 			if (!exist(dest, 0)) {
-				// creer le dossier dest et mettre le contenu de source dedans
-			}else {
-				if (isTarDir(dest)) { // dest est un dossier dans un tar ou un tar
-					// creer le dossier dest/sourcefile et mettre le contenu de source dedans
-				}else { // dest est un fichier dasn le tar
-					char *deb  = "cp : ";
-					char *end = " n'est pas un dossier!\n";
-					char error[strlen(deb) + strlen(dest) + strlen(end) + 1];
-					strcpy(error, deb);
-					strcat(error, dest);
-					strcat(error, end);
-					int errorlen = strlen(error);
-					if (write(STDERR_FILENO, error, errorlen) < errorlen)
-						perror("Erreur d'écriture dans le shell!");
-					return;
+				if (isTar(dest)) {
+					// creer le tar dest
+					// mkdir?
 				}
+				else {
+					// creer le dossier dest
+					// mkdir
+				}
+			}else if (isTarDir(dest)) { // dest un dossier dans le tar ou un tar
+				// creer le dossier dest/sourcedoss
+				// mkdir
+				// dest = dest/sourcedoss
+			}else { // dest est un fichier dans le tar
+				char *deb  = "cp : ";
+				char *end = " n'est pas un dossier!\n";
+				char error[strlen(deb) + strlen(dest) + strlen(end) + 1];
+				strcpy(error, deb);
+				strcat(error, dest);
+				strcat(error, end);
+				int errorlen = strlen(error);
+				if (write(STDERR_FILENO, error, errorlen) < errorlen)
+					perror("Erreur d'écriture dans le shell!");
+				return;
+			}
+
+			int pwdlen = 0;
+			int twdlen = 0;
+			char *pwd = getcwd(NULL, 0);
+			char *twd = getenv("TWD");
+			if (source[0] != '/') pwdlen = strlen(pwd) + 1;
+			if (source[0] != '/' && twd != NULL && strlen(twd) != 0) twdlen = strlen(twd) + 1;
+			char absolutesource[pwdlen + twdlen + strlen(source) + 1];
+			strcpy(absolutesource, "");
+			if (source[0] != '/') {
+				strcat(absolutesource, pwd);
+				strcat(absolutesource, "/");
+				if (twdlen != 0) {
+					strcat(absolutesource, twd);
+					strcat(absolutesource, "/");
+				}
+			}
+			strcat(absolutesource, source);
+
+			char *tok = strstr(absolutesource, ".tar"); //not null
+			int tarlen = strlen(absolutesource) - strlen(tok) + 4;
+			char tar[tarlen + 1];
+			strncpy(tar, absolutesource, tarlen);
+			tar[tarlen] = '\0';
+
+			char chemin[strlen(absolutesource) - strlen(tar) + 1];
+			strcpy(chemin, "");
+			if (strlen(absolutesource) == strlen(tar)) strcat(chemin, &absolutesource[strlen(tar)+1]); // source n'est pas juste un tar
+
+			int fdsource = open(tar, O_RDONLY);
+			if (fdsource == -1) {
+				char *error_debut = "cp : Erreur! Impossible d'ouvrir l'archive ";
+				char error[strlen(error_debut) + strlen(tar) + 1 + 1];
+				strcpy(error, error_debut);
+				strcat(error, tar);
+				strcat(error, "\n");
+				int errorlen = strlen(error);
+				if (write(STDERR_FILENO, error, errorlen) < errorlen)
+					perror("Erreur d'écriture dans le shell!");
+				return;
+			}
+			struct posix_header header;
+			while (1) {
+				if (read(fdsource, &header, BLOCKSIZE) < BLOCKSIZE) break;
+
+				char nom[strlen(header.name)+1];
+				strcpy(nom, header.name);
+				if (strcmp(nom, "") == 0) break;
+
+				if (strstr(nom, chemin) != NULL && strcmp(chemin, nom) <= 0) { // nom must start with chemin
+					mode_t mode = atoi(header.mode);
+
+					char *newnom = strstr(nom, chemin) + strlen(chemin);
+					char *tmp = newnom;
+					char *pos;
+					while ((pos = strstr(tmp, "/")) != NULL) { // parcours (et créer si besoin) les dossiers nécéssaires pour copier le fichier
+						char dossier[strlen(dest) + 1 + strlen(newnom) - strlen(pos) + 1];
+						strcpy(dossier, dest);
+						strcat(dossier, "/");
+						strncat(dossier, newnom, strlen(newnom) - strlen(pos));
+						if (!exist(dossier, 0) && header.typeflag == '5') {
+							// TODO
+							// on suppose raisonnablement que les dossiers arrivent avant les fichier de ces dossiers dans le parcours du tar
+							// mkdir_tar(dossier, mode)
+						}
+						tmp = pos+1;
+					}
+					if (header.typeflag != '5') { // n'est pas un dossier
+						char newDest[strlen(dest) + 1 + strlen(newnom) + 1];
+						strcpy(newDest, dest);
+						strcat(newDest, "/");
+						strcat(newDest, newnom);
+
+						char newSource[strlen(source) + 1 + strlen(newnom) + 1];
+						strcpy(newSource, source);
+						strcat(newSource, "/");
+						strcat(newSource, newnom);
+						copyfiletartofiletar(newSource, newDest);
+					}
+				}
+
+				unsigned int taille = atoi(header.size);
+				taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
+				taille *= BLOCKSIZE;
+				if (lseek(fdsource, (off_t) taille, SEEK_CUR) == -1) break;
 			}
 		}
 
@@ -427,8 +521,7 @@ void copyTar(char *source, char *dest, int option) {
 				if (strcmp(nom, "") == 0) break;
 
 				if (strstr(nom, chemin) != NULL && strcmp(chemin, nom) <= 0) { // nom must start with chemin
-					mode_t mode;
-					sscanf(header.mode, "%o", &mode);
+					mode_t mode = atoi(header.mode);
 
 					char *newnom = strstr(nom, chemin) + strlen(chemin);
 					char *tmp = newnom;
@@ -476,16 +569,28 @@ void copyTar(char *source, char *dest, int option) {
 		stat(source, &stsource); // verifications déjà faites
 
 		if (isInTar(dest)) { // dest est dans un tar ou est un tar
-			// TODO
-			if (!exist(dest, 0)) {
-				// creer le fichier dest et mettre le contenu de source dedans
-			}else {
-				if (isTarDir(dest)) {
-					// creer le fichier dest/sourcefile et mettre le contenu de source dedans
-				}else {
-					// remplacer le contenu de dest par celui de source
+			if (isTarDir(dest)) { // dest est un dossier dans un tar ou un tar
+				char source_copy[strlen(source)+1];
+				strcpy(source_copy, source);
+				char *sourcefile;
+				char *tok;
+				char *saveptr;
+				char *tmp = source_copy;
+				while ((tok = strtok_r(tmp, "/", &saveptr)) != NULL) {
+					tmp = saveptr;
+					sourcefile = tok;
 				}
+
+				int destlen = strlen(dest);
+				if (dest[destlen-1] != '/') destlen++;
+				char newdest[destlen + strlen(sourcefile) + 1];
+				strcpy(newdest, dest);
+				if (strlen(dest) != destlen) strcat(newdest, "/");
+				strcat(newdest, sourcefile);
+				copyfiletartofiletar(source, newdest);
 			}
+			else // dest un fichier dans un tar
+				copyfiletartofiletar(source, dest);
 		}
 
 		else if (!exist(dest, 0) || !S_ISDIR(stdest.st_mode)) // dest est un fichier
@@ -655,7 +760,6 @@ void copyDoss(char *source, char *dest, int option) {
 			}
 		}
 		closedir(sourcedir);
-
 	}
 
 	else if (exist(dest, 0) && !S_ISDIR(stdest.st_mode)) { // dest n'est pas un dossier
@@ -786,6 +890,8 @@ void copyfiletartofile(char *source, char *dest, mode_t mode) { // ecrase conten
 }
 
 void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest avec contenu de source et ne change pas le nom de dest
+// TODO : fixme les fichiers de tailles > 1024 ça marche pas (exemple : tar.h dans tete.tar
+// faire les autres cas que ajouter à la fin
 	int pwdlen = 0;
 	int twdlen = 0;
 	char *pwd = getcwd(NULL, 0);
@@ -821,7 +927,6 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 		if (strlen(pos+1) != 0) cheminfile = pos+1;
 	}
 
-
 	int chemindosslen = 0;
 	if (strstr(chemin, "/") != NULL && cheminfile != NULL && strlen(chemin) > strlen(cheminfile))
 		chemindosslen = strlen(chemin) - strlen(cheminfile) - 1;
@@ -830,7 +935,7 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 		strncpy(chemindoss, chemin, chemindosslen);
 		chemindoss[chemindosslen] = '\0';
 	}
-	//write(STDOUT_FILENO, "\n", 1);
+
 	struct stat stsource;
 	stat(source, &stsource); // verifications déjà faites
 
@@ -1047,4 +1152,9 @@ int ecritInTar(struct posix_header *header, int fd, char *contenu, unsigned int 
 		return -1;
 	}
 	return 1;
+}
+
+void copyfiletartofiletar(char *source, char *dest) {
+	// TODO
+	write(STDOUT_FILENO, "WIP\n", 4);
 }
