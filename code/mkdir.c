@@ -90,12 +90,15 @@ int create_tar(char *name){ //Créer un tar
 
 int create_dir(char *name){ //Créer un dossier dans un tar si possible
 	char tarfile[strlen(name)]; //Contient le chemin jusqu'au tar pour l'ouvrir
-	char namefile[strlen(name)]; //Contient la suite du chemin pour l'affichage
+	char namefile[strlen(name)]; //Contient le nom du dossier a créer
 	int tarpos = strstr(name, ".tar") - name; //Existe car on sait qu'il y a un tar dans le chemin
 	strncpy(tarfile, name, tarpos+4);
 	strncpy(namefile, name+tarpos+5, strlen(name)-tarpos-4);
 	tarfile[tarpos+4] = '\0';
 	namefile[strlen(name)-tarpos-4] = '\0';
+	if(namefile[strlen(namefile)-1] == '/'){
+		namefile[strlen(namefile)-1] = '\0';
+	}
 	if (name[tarpos+4] != '/'){ //Si après le .tar il n'y a pas de / => Il y a une erreur dans le nom du fichier
 		char format[72 + strlen(name)];
 		sprintf(format, "mkdir : impossible d'accéder à '%s' : Aucun fichier ou dossier de ce type\n", name);
@@ -115,7 +118,7 @@ int create_dir(char *name){ //Créer un dossier dans un tar si possible
 		}
 	}else{
 		struct posix_header header;
-		int fd = open(tarfile, O_RDWR + O_APPEND);
+		int fd = open(tarfile, O_RDWR);
 		if(fd == -1){
 		  perror("erreur d'ouverture de l'archive");
 		  return -1;
@@ -128,12 +131,17 @@ int create_dir(char *name){ //Créer un dossier dans un tar si possible
 				write(STDOUT_FILENO, "yes", 3);
 				//On est a la fin du tar, on écrit un nouveau header de dossier, puis un nouveau block de 512 vide
 				struct posix_header header2;
+				lseek(fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
 				create_header(namefile, &header2);
 				write(fd, &header2, BLOCKSIZE);
+				write_block(fd, NULL);
 				write_block(fd, NULL);
 				break;
 			}else{
 				get_header_size_mk(&header, &read_size);
+				char format[15];
+				sprintf(format, "%d", read_size);
+				write(STDOUT_FILENO, format, strlen(format));
 				if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
 					perror("erreur de lecture de l'archive");
 					return -1;
@@ -183,6 +191,8 @@ int create_header(char *name, struct posix_header *header){ //Meilleur méthode 
 	for(int i = 0; i < 100; i++){
 		if(i < strlen(name)){
 			header->name[i] = name[i];
+		}else if (i == strlen(name)){
+			header->name[i] = '/';
 		}else{
 			header->name[i] = '\0';
 		}
@@ -247,7 +257,8 @@ int contains_tar_mk(char *file){
 }
 
 void get_header_size_mk(struct posix_header *header, int *read_size){
-	int taille = 0;
-	sscanf(header->size, "%o", &taille);
+	int taille = atoi(header->size);
+	write(STDOUT_FILENO, header->size, strlen(header->size));
+	write(STDOUT_FILENO, "\n", 1);
 	*read_size = ((taille + 512-1)/512);
 }
