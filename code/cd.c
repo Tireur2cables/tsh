@@ -276,8 +276,7 @@ int parcoursCheminTar(char *pwd, char *twd, char *rest) {
 			else {
 				if (strcmp(nom, chemin) == 0) found = -1;
 				if (strcmp(nom, "") == 0) break;
-				unsigned int taille;
-				sscanf(header.size, "%o", &taille);
+				unsigned int taille = atoi(header.size);
 				taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
 				taille *= BLOCKSIZE;
 				if (lseek(fd, (off_t) taille, SEEK_CUR) == -1) break;
