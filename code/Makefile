@@ -4,7 +4,7 @@ LDLIBS = -lreadline
 ALL = test tsh
 all : $(ALL)
 test : test.o ls.o cd.o pwd.o
-tsh : tsh.o ls.o cd.o pwd.o cat.o help.o exit.o cdIn.o tar.o
+tsh : tsh.o ls.o cd.o pwd.o cat.o help.o exit.o cdIn.o mkdir.o tar.o
 help.o : help.c help.h
 cd.o : cd.c tar.h cd.h
 cdIn.o : cdIn.c cdIn.h
