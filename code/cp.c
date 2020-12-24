@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <pwd.h>
 #include <grp.h>
+#include <dirent.h>
 #include "cp.h"
 #include "cat.h"
 #include "tar.h"
@@ -591,6 +592,8 @@ int isTarDir(char *path) { // verifie que path est un chemin de dossier dans un 
 void copyDoss(char *source, char *dest, int option) {
 	struct stat stdest;
 	stat(dest, &stdest); // verifications déjà faites
+	struct stat stsource;
+	stat(source, &stsource); // verifications déjà faites
 
 	if (!option) { // -r pas spécifié
 		char *error = "cp : l'option -r doit être spécifiée pour les dossiers!\n";
@@ -603,32 +606,63 @@ void copyDoss(char *source, char *dest, int option) {
 	if (isInTar(dest)) { // dest est dans un tar
 		// TODO
 		if (!exist(dest, 0)) {
-			// creer le dossier dest et mettre le contenu de source dedans
-		}else {
-			if (isTarDir(dest)) { // dest un dossier dans le tar ou un tar
-				// creer le dossier dest/source et mettre le contenu de source dedans
-			}else { // dest est un fichier dans le tar
-				char *deb  = "cp : ";
-				char *end = " n'est pas un dossier!\n";
-				char error[strlen(deb) + strlen(dest) + strlen(end) + 1];
-				strcpy(error, deb);
-				strcat(error, dest);
-				strcat(error, end);
-				int errorlen = strlen(error);
-				if (write(STDERR_FILENO, error, errorlen) < errorlen)
-					perror("Erreur d'écriture dans le shell!");
-				return;
+			if (isTar(dest)) {
+				// creer le tar dest et mettre le contenu de source dedans
+			}
+			else {
+				// creer le dossier dest et mettre le contenu de source dedans
+				// mkdir
+			}
+		}else if (isTarDir(dest)) { // dest un dossier dans le tar ou un tar
+			// creer le dossier dest/sourcedoss et mettre le contenu de source dedans
+			// mkdir
+			// dest = dest/sourcedoss
+		}else { // dest est un fichier dans le tar
+			char *deb  = "cp : ";
+			char *end = " n'est pas un dossier!\n";
+			char error[strlen(deb) + strlen(dest) + strlen(end) + 1];
+			strcpy(error, deb);
+			strcat(error, dest);
+			strcat(error, end);
+			int errorlen = strlen(error);
+			if (write(STDERR_FILENO, error, errorlen) < errorlen)
+				perror("Erreur d'écriture dans le shell!");
+			return;
+		}
+
+		DIR *sourcedir = opendir(source);
+		if (sourcedir == NULL) {
+			char *error_debut = "cp : Erreur! Impossible d'ouvrir le répertoire ";
+			char error[strlen(error_debut) + strlen(source) + 1 + 1];
+			sscanf(error, "%s%s\n", error_debut, source);
+			int errorlen = strlen(error);
+			if (write(STDERR_FILENO, error, errorlen) < errorlen)
+				perror("Erreur d'écriture dans le shell!");
+			return;
+		}
+
+		int sourcelen = strlen(source);
+		if (source[sourcelen-1] != '/') sourcelen++;
+		struct dirent *d;
+		while ((d = readdir(sourcedir)) != NULL) {
+			if (strcmp(d->d_name, ".") != 0 && strcmp(d->d_name, "..") != 0) {
+				char absolute[sourcelen + strlen(d->d_name) + 1];
+				strcpy(absolute, source);
+				if (sourcelen != strlen(source)) strcat(absolute, "/");
+				strcat(absolute, d->d_name);
+
+				copyto(absolute, dest, option);
 			}
 		}
+		closedir(sourcedir);
+
 	}
 
 	else if (exist(dest, 0) && !S_ISDIR(stdest.st_mode)) { // dest n'est pas un dossier
 		char *deb  = "cp : ";
 		char *end = " n'est pas un dossier!\n";
 		char error[strlen(deb) + strlen(dest) + strlen(end) + 1];
-		strcpy(error, deb);
-		strcat(error, dest);
-		strcat(error, end);
+		sscanf(error, "%s%s%s", deb, dest, end);
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
 			perror("Erreur d'écriture dans le shell!");
@@ -787,14 +821,16 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 		if (strlen(pos+1) != 0) cheminfile = pos+1;
 	}
 
+
 	int chemindosslen = 0;
-	if (strlen(chemin) > strlen(cheminfile)) chemindosslen = strlen(chemin) - strlen(cheminfile) - 1;
+	if (strstr(chemin, "/") != NULL && cheminfile != NULL && strlen(chemin) > strlen(cheminfile))
+		chemindosslen = strlen(chemin) - strlen(cheminfile) - 1;
 	char chemindoss[chemindosslen + 1];
 	if (chemindosslen != 0) {
 		strncpy(chemindoss, chemin, chemindosslen);
 		chemindoss[chemindosslen] = '\0';
 	}
-
+	//write(STDOUT_FILENO, "\n", 1);
 	struct stat stsource;
 	stat(source, &stsource); // verifications déjà faites
 
