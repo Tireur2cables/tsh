@@ -964,7 +964,6 @@ int ecritInTar(struct posix_header *header, int fd, char *contenu, unsigned int 
 
 	unsigned int taillefin = lseek(fd, 0, SEEK_END) - zone; // taille de ce qu'il reste jusqua la fin du tar
 	char buf[taillefin];
-	printf("%ld\n", zone2);
 
 	if (lseek(fd, zone, SEEK_SET) == -1) { // on se remet à l'emplacement du header
 		perror("Erreur de déplacement dans le tar!");
