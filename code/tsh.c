@@ -19,6 +19,7 @@
 #include "help.h"
 #include "exit.h"
 #include "cdIn.h"
+#include "tar.h"
 #include "cp.h"
 
 //todo list
