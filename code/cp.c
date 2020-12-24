@@ -28,7 +28,7 @@ void copyDoss(char *, char *, int);
 void copyFile(char *, char *, int);
 void copystandard(char *, char *);
 void copyfiletartofile(char *, char *, mode_t);
-void copyfiletofiletar(char *, char *, mode_t);
+void copyfiletofiletar(char *, char *);
 mode_t getmode(char *, char *);
 
 int cp(int argc, char *argv[]) {
@@ -235,8 +235,7 @@ int existInTar(char *tar, char *chemin, int error) { // verifie que chemin exist
 				found = 1;
 			else {
 				if (strcmp(nom, "") == 0) break;
-				unsigned int taille;
-				sscanf(header.size, "%o", &taille);
+				unsigned int taille = atoi(header.size);
 				taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
 				taille *= BLOCKSIZE;
 				if (lseek(fd, (off_t) taille, SEEK_CUR) == -1) break;
@@ -457,8 +456,7 @@ void copyTar(char *source, char *dest, int option) {
 					}
 				}
 
-				unsigned int taille;
-				sscanf(header.size, "%o", &taille);
+				unsigned int taille = atoi(header.size);
 				taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
 				taille *= BLOCKSIZE;
 				if (lseek(fdsource, (off_t) taille, SEEK_CUR) == -1) break;
@@ -644,19 +642,24 @@ void copyFile(char *source, char *dest, int option) {
 	stat(source, &stsource); // verifications déjà faites
 
 	if (isInTar(dest)) { // dest est dans un tar
-		// TODO
-		if (!exist(dest, 0)) {
-			// creer le fichier dest et mettre le contenu de source dedans
-			char *newdest = dest;
-			copyfiletofiletar(source, newdest, stsource.st_mode);
-		}else {
-			if (isTarDir(dest)) {
-				// creer le fichier dest/sourcefile et mettre le contenu de source dedans
-				char *newdest = dest;
-				copyfiletofiletar(source, newdest, stsource.st_mode);
-			}else
-				copyfiletofiletar(source, dest, stsource.st_mode);
-		}
+		if (isTarDir(dest)) { // dest est un dossier dans un tar ou un tar
+			char source_copy[strlen(source)+1];
+			strcpy(source_copy, source);
+			char *sourcefile;
+			char *tok;
+			char *saveptr;
+			char *tmp = source_copy;
+			while ((tok = strtok_r(tmp, "/", &saveptr)) != NULL) {
+				tmp = saveptr;
+				sourcefile = tok;
+			}
+			char newdest[strlen(dest) + 1 + strlen(sourcefile) + 1];
+			strcpy(newdest, dest);
+			strcat(newdest, "/");
+			strcat(newdest, sourcefile);
+			copyfiletofiletar(source, newdest);
+		}else // dest est un fichier dans un tar
+			copyfiletofiletar(source, dest);
 	}
 
 	else if (!exist(dest, 0) || !S_ISDIR(stdest.st_mode)) // dest est un fichier
@@ -746,7 +749,7 @@ void copyfiletartofile(char *source, char *dest, mode_t mode) { // ecrase conten
 	}
 }
 
-void copyfiletofiletar(char *source, char *dest, mode_t mode) { // ecrase contenu de dest avec contenu de source et ne change pas le nom de dest
+void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest avec contenu de source et ne change pas le nom de dest
 	int pwdlen = 0;
 	int twdlen = 0;
 	char *pwd = getcwd(NULL, 0);
@@ -775,18 +778,23 @@ void copyfiletofiletar(char *source, char *dest, mode_t mode) { // ecrase conten
 	char chemin[strlen(absolutedest) - strlen(tar) - 1 + 1];
 	strcpy(chemin, &absolutedest[strlen(tar)+1]); // existe car dest n'est pas un tar
 
-	char *chemindoss;
+	char *cheminfile;
 	char *tmp = chemin;
 	while ((pos = strstr(tmp, "/")) != NULL) {
 		tmp = pos+1;
-		if (strlen(pos+1) != 0) chemindoss = pos+1;
+		if (strlen(pos+1) != 0) cheminfile = pos+1;
+	}
+
+	int chemindosslen = 0;
+	if (strlen(chemin) != strlen(cheminfile)) chemindosslen = strlen(chemin) - strlen(cheminfile) - 1;
+	char chemindoss[chemindosslen + 1];
+	if (chemindosslen != 0) {
+		strncpy(chemindoss, chemin, chemindosslen);
+		chemindoss[chemindosslen] = '\0';
 	}
 
 	struct stat stsource;
 	stat(source, &stsource); // verifications déjà faites
-
-	printf("%011ld\n", stsource.st_size);
-
 
 	int fd = open(tar, O_RDWR);
 	if (fd == -1) {
@@ -811,31 +819,50 @@ void copyfiletofiletar(char *source, char *dest, mode_t mode) { // ecrase conten
 
 		if (existdest) {
 			if (strcmp(nom, chemin) == 0) {
+				char *deb = "Remplace le fichier ";
+				char buf[strlen(deb) + strlen(nom) + 1];
+				strcpy(buf, deb);
+				strcat(buf, nom);
+				write(STDOUT_FILENO, buf, strlen(buf));
+				write(STDOUT_FILENO, "\n", 1);
 				break;
 			}
 		}else {
-			if (chemindoss != NULL) { // chemin est dans un dossier
+			if (chemindoss != NULL && chemindosslen != 0) { // chemin est dans un dossier
 				if (strstr(nom, chemindoss) != NULL && strcmp(chemindoss, nom) <= 0) { // nom commence par chemindoss
+					char *deb = "Insere le fichier dans le dossier ";
+					char buf[strlen(deb) + strlen(nom) + 1];
+					strcpy(buf, deb);
+					strcat(buf, nom);
+					write(STDOUT_FILENO, buf, strlen(buf));
+					write(STDOUT_FILENO, "\n", 1);
 					break;
 				}
 			}
 
 			if (strcmp(nom, "") == 0) { // block vide = fin du tar
+				char *deb = "Met le fichier à la fin!";
+				char buf[strlen(deb) + 1];
+				strcpy(buf, deb);
+				write(STDOUT_FILENO, buf, strlen(buf));
+				write(STDOUT_FILENO, "\n", 1);
 				break;
 			}
 		}
 
-		unsigned int taille;
-		sscanf(header.size, "%o", &taille);
+		unsigned int taille = atoi(header.size);
 		taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
 		taille *= BLOCKSIZE;
-		if (lseek(fd, (off_t) taille, SEEK_CUR) == -1) break;
+		if (lseek(fd, (off_t) taille, SEEK_CUR) == -1) {
+			perror("Erreur de déplacement dans le tar!");
+			break;
+		}
 
 	}
 	close(fd);
 }
 
-int getHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid, gid_t gid, unsigned int taille, struct timespec mtime) {
+int getHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid, gid_t gid, off_t taille, struct timespec mtime) {
 	int decalage = 0;
 	for (int i = 0; i < 155; i++) {
 		if (strlen(chemin) > 99 && i < strlen(chemin) - 99) {
@@ -850,10 +877,10 @@ int getHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid,
 	}
 
 	sprintf(header->mode, "%o", mode);
-	sprintf(header->uid, "%07o", uid);
-	sprintf(header->gid, "%07o", gid);
-	sprintf(header->size, "%011o", taille);
-	sprintf(header->mtime, "%11lo", mtime.tv_sec*1000);
+	sprintf(header->uid, "%07d", uid);
+	sprintf(header->gid, "%07d", gid);
+	sprintf(header->size, "%011ld", taille);
+	sprintf(header->mtime, "%11ld", mtime.tv_sec*1000);
 
 	for (int i = 0; i < 8; i++) header->chksum[i] = '\0'; // on le set à la fin
 	header->typeflag = '0'; // fichier
