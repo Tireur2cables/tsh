@@ -19,7 +19,10 @@
 #include "help.h"
 #include "exit.h"
 #include "cdIn.h"
+<<<<<<< HEAD
 #include "tar.h"
+=======
+>>>>>>> b5b4f253881bd62d1eae601ea15272b61d75c6d1
 #include "mkdir.h"
 
 //todo list
