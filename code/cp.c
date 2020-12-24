@@ -9,8 +9,8 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include "cp.h"
-#include "tar.h"
 #include "cat.h"
+#include "tar.h"
 
 void detectError(int, char *[]);
 int optionDetection(int, char *[]);
@@ -754,18 +754,6 @@ void copyfiletofiletar(char *source, char *dest, mode_t mode) { // ecrase conten
 	if (source[0] != '/') pwdlen = strlen(pwd) + 1;
 	if (source[0] != '/' && twd != NULL && strlen(twd) != 0) twdlen = strlen(twd) + 1;
 
-	char absolutesource[pwdlen + twdlen + strlen(source) + 1];
-	strcpy(absolutesource, "");
-	if (source[0] != '/') {
-		strcat(absolutesource, pwd);
-		strcat(absolutesource, "/");
-		if (twdlen != 0) {
-			strcat(absolutesource, twd);
-			strcat(absolutesource, "/");
-		}
-	}
-	strcat(absolutesource, source);
-
 	char absolutedest[pwdlen + twdlen + strlen(dest) + 1];
 	strcpy(absolutedest, "");
 	if (dest[0] != '/') {
@@ -777,4 +765,111 @@ void copyfiletofiletar(char *source, char *dest, mode_t mode) { // ecrase conten
 		}
 	}
 	strcat(absolutedest, dest);
+
+	char *pos = strstr(absolutedest, ".tar");
+	int tarlen = strlen(absolutedest) - strlen(pos) + 4;
+	char tar[tarlen+1];
+	strncpy(tar, absolutedest, tarlen);
+	tar[tarlen] = '\0';
+
+	char chemin[strlen(absolutedest) - strlen(tar) - 1 + 1];
+	strcpy(chemin, &absolutedest[strlen(tar)+1]); // existe car dest n'est pas un tar
+
+	char *chemindoss;
+	char *tmp = chemin;
+	while ((pos = strstr(tmp, "/")) != NULL) {
+		tmp = pos+1;
+		if (strlen(pos+1) != 0) chemindoss = pos+1;
+	}
+
+	struct stat stsource;
+	stat(source, &stsource); // verifications déjà faites
+
+	printf("%011ld\n", stsource.st_size);
+
+
+	int fd = open(tar, O_RDWR);
+	if (fd == -1) {
+		char *deb  = "cp : Impossible d'ouvrir ";
+		char error[strlen(deb) + strlen(tar) + 1 + 1];
+		strcpy(error, deb);
+		strcat(error, tar);
+		strcat(error, "\n");
+		int errorlen = strlen(error);
+		if (write(STDERR_FILENO, error, errorlen) < errorlen)
+			perror("Erreur d'écriture dans le shell!");
+		return;
+	}
+
+	int existdest = exist(dest, 0);
+
+	struct posix_header header;
+	while (1) {
+		if (read(fd, &header, BLOCKSIZE) < BLOCKSIZE) break;
+		char nom[strlen(header.name)+1];
+		strcpy(nom, header.name);
+
+		if (existdest) {
+			if (strcmp(nom, chemin) == 0) {
+				break;
+			}
+		}else {
+			if (chemindoss != NULL) { // chemin est dans un dossier
+				if (strstr(nom, chemindoss) != NULL && strcmp(chemindoss, nom) <= 0) { // nom commence par chemindoss
+					break;
+				}
+			}
+
+			if (strcmp(nom, "") == 0) { // block vide = fin du tar
+				break;
+			}
+		}
+
+		unsigned int taille;
+		sscanf(header.size, "%o", &taille);
+		taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
+		taille *= BLOCKSIZE;
+		if (lseek(fd, (off_t) taille, SEEK_CUR) == -1) break;
+
+	}
+	close(fd);
+}
+
+int getHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid, gid_t gid, unsigned int taille, struct timespec mtime) {
+	int decalage = 0;
+	for (int i = 0; i < 155; i++) {
+		if (strlen(chemin) > 99 && i < strlen(chemin) - 99) {
+			header->prefix[i] = chemin[i];
+			decalage++;
+		}
+		else header->prefix[i] = '\0';
+	}
+	for (int i = 0; i < 100; i++) {
+		if (i+decalage < strlen(chemin)) header->name[i] = chemin[i+decalage];
+		else header->name[i] = '\0';
+	}
+
+	sprintf(header->mode, "%o", mode);
+	sprintf(header->uid, "%07o", uid);
+	sprintf(header->gid, "%07o", gid);
+	sprintf(header->size, "%011o", taille);
+	sprintf(header->mtime, "%11lo", mtime.tv_sec*1000);
+
+	for (int i = 0; i < 8; i++) header->chksum[i] = '\0'; // on le set à la fin
+	header->typeflag = '0'; // fichier
+	for (int i = 0; i < 100; i++) header->linkname[i] = '\0'; //pas un lien
+	sprintf(header->magic, "ustar"); // version courante
+
+	header->version[0] = '0';
+	header->version[1] = '0';
+
+	// useless ?
+	for (int i = 0; i < 32; i++) header->uname[i] = '\0';
+	for (int i = 0; i < 32; i++) header->gname[i] = '\0';
+	for (int i = 0; i < 8; i++) header->devmajor[i] = '\0';
+	for (int i = 0; i < 8; i++) header->devminor[i] = '\0';
+	for (int i = 0; i < 12; i++) header->junk[i] = '\0';
+
+	set_checksum(header);
+	return 1;
 }
