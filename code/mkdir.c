@@ -10,11 +10,14 @@
 #include "tar.h"
 
 int exist_dir(char *);
+int exist_file(char *);
 int create_dir(char *);
 int create_tar(char *);
 int try_create_dir(char *);
 int contains_tar_mk(char *);
+int create_header(char *, struct posix_header *);
 int is_tar_mk(char *);
+int write_block(int fd, struct posix_header *);
 int is_ext_mk(char *, char *);
 void get_header_size_mk(struct posix_header *, int *);
 
@@ -57,7 +60,7 @@ int mkdir_tar(int argc, char *argv[]) {
 }
 
 int try_create_dir(char *name){
-	write(STDOUT_FILENO, name, strlen(name));
+	//write(STDOUT_FILENO, name, strlen(name));
 	if(is_tar_mk(name)){ //On veut fabriquer un tar
 		create_tar(name);
 	}else if(contains_tar_mk(name)){ //On veut ajouter un dossier dans un tar
@@ -69,6 +72,18 @@ int try_create_dir(char *name){
 }
 
 int create_tar(char *name){ //Créer un tar
+	if(exist_file(name)){
+		char format[60 + strlen(name)];
+		sprintf(format, "mkdir: impossible de créer le repertoire « %s »: le fichier existe\n", name);
+		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+			perror("Erreur d'écriture dans le shell");
+			exit(EXIT_FAILURE);
+		}
+	}
+	int fd = open(name, O_WRONLY + O_CREAT, S_IRWXU + S_IRGRP + S_IXGRP + S_IROTH + S_IXOTH);
+	//ecriture d'un block de BLOCKSIZE \0 pour indiquer la fin de l'archive
+	write_block(fd, NULL);
+	close(fd);
 	return 1;
 
 }
@@ -82,9 +97,37 @@ int create_dir(char *name){ //Créer un dossier dans un tar si possible
 			exit(EXIT_FAILURE);
 		}
 	}else{
-		create_dir(name);
+		struct posix_header header;
+		int fd = open(name, O_RDONLY);
+		if(fd == -1){
+		  perror("erreur d'ouverture de l'archive");
+		  return -1;
+		}
+		int n = 0;
+		int read_size = 0;
+		while((n=read(fd, &header, BLOCKSIZE))>0){
+			if(strcmp(header.name, "\0") == 0){
+				//On est a la fin du tar, on écrit un nouveau header de dossier, puis un nouveau block de 512 vide
+				struct posix_header header;
+				create_header(name, &header);
+				write_block(fd, &header);
+			}else{
+				get_header_size_mk(&header, &read_size);
+				if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+					perror("erreur de lecture de l'archive");
+					return -1;
+				}
+			}
+
+		}
+		close(fd);
 	}
 	return 0;
+}
+
+int exist_file(char *name){
+	struct stat buffer;
+	return (stat (name, &buffer) == 0);
 }
 
 int exist_dir(char *name){
@@ -113,12 +156,67 @@ int exist_dir(char *name){
 	return 0;
 }
 
+int create_header(char *name, struct posix_header *header){ //Meilleur méthode pour le faire ?
+	for(int i = 0; i < 100; i++){
+		if(i < strlen(name)){
+			header->name[i] = name[i];
+		}else{
+			header->name[i] = '\0';
+		}
+	}
+	sprintf(header->mode,"0000755");
+	for (int i = 0; i < 8; i++) header->uid[i] = '\0';
+	for (int i = 0; i < 8; i++) header->gid[i] = '\0';
+	unsigned int taille = 0;
+	sprintf(header->size, "%011o", taille);
+
+	for (int i = 0; i < 12; i++) header->mtime[i] = '\0';
+	for (int i = 0; i < 8; i++) header->chksum[i] = '\0';
+	header->typeflag = '5';
+	for (int i = 0; i < 100; i++) header->linkname[i] = '\0';
+	header->magic[0] = 'u';
+	header->magic[1] = 's';
+	header->magic[2] = 't';
+	header->magic[3] = 'a';
+	header->magic[4] = 'r';
+	header->magic[5] = '\0';
+
+	header->version[0] = '0';
+	header->version[1] = '0';
+	for (int i = 0; i < 32; i++) header->uname[i] = '\0';
+	for (int i = 0; i < 32; i++) header->gname[i] = '\0';
+	for (int i = 0; i < 8; i++) header->devmajor[i] = '\0';
+	for (int i = 0; i < 8; i++) header->devminor[i] = '\0';
+	for (int i = 0; i < 155; i++) header->prefix[i] = '\0';
+	for (int i = 0; i < 12; i++) header->junk[i] = '\0';
+
+	set_checksum(header);
+	return 0;
+}
+
 int is_ext_mk(char *file, char *ext){
 	return (strcmp(&file[strlen(file)-strlen(ext)], ext) == 0);
 }
 
 int is_tar_mk(char *file){
 	return is_ext_mk(file, ".tar") || is_ext_mk(file, ".tar/");
+}
+
+int writ_block(int fd, struct posix_header header){
+	if (header == NULL){
+		char block[BLOCKSIZE];
+		memset(block, '\0', 512);
+		if(write(fd, block, BLOCKSIZE) < BLOCKSIZE){
+			perror("Erreur d'écriture dans l'archive");
+			exit(EXIT_FAILURE);
+		}
+	}else{
+		if(write(fd, header, BLOCKSIZE) < BLOCKSIZE){
+			perror("Erreur d'écriture dans l'archive");
+			exit(EXIT_FAILURE);
+		}
+	}
+
 }
 
 int contains_tar_mk(char *file){
