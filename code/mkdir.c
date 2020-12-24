@@ -213,7 +213,7 @@ int create_header(char *name, struct posix_header *header){ //Meilleur méthode 
 	for (int i = 0; i < 155; i++) header->prefix[i] = '\0';
 	for (int i = 0; i < 12; i++) header->junk[i] = '\0';
 
-	//set_checksum(header);
+	set_checksum(header);
 	return 0;
 }
 
