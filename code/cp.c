@@ -30,6 +30,8 @@ void copystandard(char *, char *);
 void copyfiletartofile(char *, char *, mode_t);
 void copyfiletofiletar(char *, char *);
 mode_t getmode(char *, char *);
+int getHeader(struct posix_header *, char *, mode_t, uid_t, gid_t, off_t, struct timespec);
+int ecritInTar(struct posix_header *, int, char *, unsigned int);
 
 int cp(int argc, char *argv[]) {
 // detect error in number of args
@@ -690,33 +692,31 @@ void copyFile(char *source, char *dest, int option) {
 }
 
 void copystandard(char *source, char *dest) { // cp -r standard
-	int status;
 	int pid = fork();
 	switch(pid) {
 		case -1: {//erreur
 			perror("Erreur de fork!");
-			exit(EXIT_FAILURE);
+			return;
 		}
 		case 0: {//fils
 			execlp("cp", "cp", "-r", source, dest, NULL);
 			exit(EXIT_SUCCESS);
 		}
 		default: {//pere
-			if (waitpid(pid, &status, 0) < 0) {
+			if (waitpid(pid, NULL, 0) < 0) {
 				perror("Erreur de wait!");
-				exit(EXIT_FAILURE);
+				return;
 			}
 		}
 	}
 }
 
 void copyfiletartofile(char *source, char *dest, mode_t mode) { // ecrase contenu de dest avec contenu de source et ne change pas le nom de dest
-	int status;
 	int pid = fork();
 	switch(pid) {
 		case -1: {//erreur
 			perror("Erreur de fork!");
-			exit(EXIT_FAILURE);
+			return;
 		}
 		case 0: {//fils
 			int fddest;
@@ -741,9 +741,9 @@ void copyfiletartofile(char *source, char *dest, mode_t mode) { // ecrase conten
 			exit(EXIT_SUCCESS);
 		}
 		default: {//pere
-			if (waitpid(pid, &status, 0) < 0) {
+			if (waitpid(pid, NULL, 0) < 0) {
 				perror("Erreur de wait!");
-				exit(EXIT_FAILURE);
+				return;
 			}
 		}
 	}
@@ -786,7 +786,7 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 	}
 
 	int chemindosslen = 0;
-	if (strlen(chemin) != strlen(cheminfile)) chemindosslen = strlen(chemin) - strlen(cheminfile) - 1;
+	if (strlen(chemin) > strlen(cheminfile)) chemindosslen = strlen(chemin) - strlen(cheminfile) - 1;
 	char chemindoss[chemindosslen + 1];
 	if (chemindosslen != 0) {
 		strncpy(chemindoss, chemin, chemindosslen);
@@ -841,11 +841,58 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 			}
 
 			if (strcmp(nom, "") == 0) { // block vide = fin du tar
-				char *deb = "Met le fichier à la fin!";
-				char buf[strlen(deb) + 1];
-				strcpy(buf, deb);
+				char *buf = "Met le fichier à la fin!";
 				write(STDOUT_FILENO, buf, strlen(buf));
 				write(STDOUT_FILENO, "\n", 1);
+				if (getHeader(&header, chemin, stsource.st_mode, stsource.st_uid, stsource.st_gid, stsource.st_size, stsource.st_mtim) < 0)
+					return;
+
+				unsigned int taille = stsource.st_size;
+				unsigned int taille_finale = BLOCKSIZE * ((taille + BLOCKSIZE - 1) >> BLOCKBITS);
+				char contenu[taille_finale];
+
+				int fd_tube[2];
+				if (pipe(fd_tube) == -1) {
+			    	perror("Erreur de création du tube!");
+			    	return;
+				}
+				int pid = fork();
+				switch(pid) {
+			  		case -1: { // erreur
+						perror("erreur de fork!");
+				   		return;
+					}
+					case 0: { // fils
+						close(fd_tube[0]);
+					    dup2(fd_tube[1], STDOUT_FILENO);
+
+						char *argv[3] = {"cat", source, NULL};
+						cat(2, argv);
+
+					    close(fd_tube[1]);
+						exit(EXIT_SUCCESS);
+					}
+					default: { //pere
+						close(fd_tube[1]);
+						if (waitpid(pid, NULL, 0) < 0) {
+							perror("Erreur de wait!");
+							exit(EXIT_FAILURE);
+						}
+						char tmp[500];
+						int readen;
+						int indice = 0;
+						while ((readen = read(fd_tube[0], tmp, 500)) != 0) {
+							for (int i = 0; i < readen; i++) contenu[indice+i] = tmp[i];
+							indice += readen;
+						}
+						close(fd_tube[0]);
+					}
+				}
+
+				for (int i = taille; i < taille_finale; i++) contenu[i] = '\0';
+
+				if (ecritInTar(&header, fd, contenu, taille_finale) < 0) return;
+
 				break;
 			}
 		}
@@ -853,7 +900,8 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 		unsigned int taille = atoi(header.size);
 		taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
 		taille *= BLOCKSIZE;
-		if (lseek(fd, (off_t) taille, SEEK_CUR) == -1) {
+		off_t position;
+		if ((position = lseek(fd, (off_t) taille, SEEK_CUR)) == -1) {
 			perror("Erreur de déplacement dans le tar!");
 			break;
 		}
@@ -898,5 +946,63 @@ int getHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid,
 	for (int i = 0; i < 12; i++) header->junk[i] = '\0';
 
 	set_checksum(header);
+	if (!check_checksum(header)) {
+		char *error = "cp : Erreur le header n'est pas conforme!\n";
+		if (write(STDERR_FILENO, error, strlen(error)) < strlen(error))
+			perror("Erreur d'écriture dans le shell!");
+		return -1;
+	}
+	return 1;
+}
+
+int ecritInTar(struct posix_header *header, int fd, char *contenu, unsigned int taille) {
+	off_t zone;
+	if ((zone = lseek(fd, -BLOCKSIZE, SEEK_CUR)) == -1) { // on se remet à l'emplacement du header
+		perror("Erreur de déplacement dans le tar!");
+		return -1;
+	}
+
+	unsigned int taillefin = lseek(fd, 0, SEEK_END) - zone; // taille de ce qu'il reste jusqua la fin du tar
+	char buf[taillefin];
+	printf("%ld\n", zone2);
+
+	if (lseek(fd, zone, SEEK_SET) == -1) { // on se remet à l'emplacement du header
+		perror("Erreur de déplacement dans le tar!");
+		return -1;
+	}
+
+	if (read(fd, buf, taillefin) < taillefin) {
+		perror("Erreur de lecture de la fin du tar!");
+		return -1;
+	}
+
+	if (lseek(fd, zone, SEEK_SET) == -1) { // on se remet à l'emplacement du header
+		perror("Erreur de déplacement dans le tar!");
+		return -1;
+	}
+
+	if (write(fd, header, BLOCKSIZE) < BLOCKSIZE) { // on écrit le header
+		char *error  = "cp : Impossible d'écrire le header!\n";
+		int errorlen = strlen(error);
+		if (write(STDERR_FILENO, error, errorlen) < errorlen)
+			perror("Erreur d'écriture dans le shell!");
+		return -1;
+	}
+
+	if (write(fd, contenu, taille) < taille) {
+		char *error  = "cp : Impossible d'écrire le contenu du fichier!\n";
+		int errorlen = strlen(error);
+		if (write(STDERR_FILENO, error, errorlen) < errorlen)
+			perror("Erreur d'écriture dans le shell!");
+		return -1;
+	}
+
+	if (write(fd, buf, taillefin) < taillefin) {
+		char *error  = "cp : Impossible de réécrire la fin du tar!\n";
+		int errorlen = strlen(error);
+		if (write(STDERR_FILENO, error, errorlen) < errorlen)
+			perror("Erreur d'écriture dans le shell!");
+		return -1;
+	}
 	return 1;
 }
