@@ -37,25 +37,22 @@ int mkdir_tar(int argc, char *argv[]) {
 	else{
 		for(int i = 1; i < argc; i++){
 			if(getenv("TWD") != NULL){
-				write(STDOUT_FILENO, getenv("TWD"), strlen(getenv("TWD")));
-				write(STDOUT_FILENO, "\n", 1);
 				if(is_tar_mk(getenv("TWD"))){
-					if(argv[1][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
-						try_create_dir(argv[1]);
+					if(argv[i][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
+						try_create_dir(argv[i]);
 					}else{
-						char file[strlen(getenv("TWD")) + strlen(argv[1])];
-						sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
-						write(STDOUT_FILENO, file, strlen(file));
+						char file[strlen(getenv("TWD")) + strlen(argv[i])];
+						sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
 						try_create_dir(file);
 					}
 				}else{
-					char file[strlen(getenv("TWD")) + strlen(argv[1])];
-					sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
+					char file[strlen(getenv("TWD")) + strlen(argv[i])];
+					sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
 					try_create_dir(file);
 				}
 			}
 			else{
-				try_create_dir(argv[1]);
+				try_create_dir(argv[i]);
 			}
 		}
 	}
@@ -83,7 +80,7 @@ int create_tar(char *name){ //Créer un tar
 			exit(EXIT_FAILURE);
 		}
 	}
-	int fd = open(name, O_WRONLY + O_CREAT, S_IRWXU + S_IRGRP + S_IXGRP + S_IROTH + S_IXOTH);
+	int fd = open(name, O_WRONLY + O_CREAT, S_IRUSR + S_IWUSR + S_IRGRP + S_IROTH);
 	//ecriture d'un block de BLOCKSIZE \0 pour indiquer la fin de l'archive
 	write_block(fd, NULL);
 	close(fd);
@@ -118,7 +115,7 @@ int create_dir(char *name){ //Créer un dossier dans un tar si possible
 		}
 	}else{
 		struct posix_header header;
-		int fd = open(name, O_RDONLY);
+		int fd = open(tarfile, O_RDWR + O_APPEND);
 		if(fd == -1){
 		  perror("erreur d'ouverture de l'archive");
 		  return -1;
@@ -126,11 +123,15 @@ int create_dir(char *name){ //Créer un dossier dans un tar si possible
 		int n = 0;
 		int read_size = 0;
 		while((n=read(fd, &header, BLOCKSIZE))>0){
+			//write(STDOUT_FILENO, "yes", 3);
 			if(strcmp(header.name, "\0") == 0){
+				write(STDOUT_FILENO, "yes", 3);
 				//On est a la fin du tar, on écrit un nouveau header de dossier, puis un nouveau block de 512 vide
-				struct posix_header header;
-				create_header(name, &header);
-				write_block(fd, &header);
+				struct posix_header header2;
+				create_header(namefile, &header2);
+				write(fd, &header2, BLOCKSIZE);
+				write_block(fd, NULL);
+				break;
 			}else{
 				get_header_size_mk(&header, &read_size);
 				if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
@@ -151,8 +152,8 @@ int exist_file(char *name){
 }
 
 int exist_dir(char *namefile, char *tarfile){
-	write(STDOUT_FILENO, "\n",1);
-	write(STDOUT_FILENO, tarfile, strlen(tarfile));
+	//write(STDOUT_FILENO, "\n",1);
+	//write(STDOUT_FILENO, tarfile, strlen(tarfile));
 	struct posix_header header;
 	int fd = open(tarfile, O_RDONLY);
 	if(fd == -1){
@@ -233,8 +234,8 @@ int write_block(int fd, struct posix_header* header){
 			exit(EXIT_FAILURE);
 		}
 	}else{
-		if(write(fd, header, BLOCKSIZE) < BLOCKSIZE){
-			perror("Erreur d'écriture dans l'archive");
+		if(write(fd, &header, BLOCKSIZE) < BLOCKSIZE){
+			perror("Erreur d'écriture dans l'aarchive");
 			exit(EXIT_FAILURE);
 		}
 	}
