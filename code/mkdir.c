@@ -37,12 +37,11 @@ int mkdir_tar(int argc, char *argv[]) {
 	else{
 		for(int i = 1; i < argc; i++){
 			if(getenv("TWD") != NULL){
-				write(STDOUT_FILENO, getenv("TWD"), strlen(getenv("TWD")));
-				write(STDOUT_FILENO, "\n", 1);
 				if(is_tar_mk(getenv("TWD"))){
 					if(argv[i][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
 						try_create_dir(argv[i]);
 					}else{
+<<<<<<< HEAD
 <<<<<<< HEAD
 						char file[strlen(getenv("TWD")) + strlen(argv[i])];
 						sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
@@ -51,6 +50,10 @@ int mkdir_tar(int argc, char *argv[]) {
 						sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
 						write(STDOUT_FILENO, file, strlen(file));
 >>>>>>> avancement mkdiré
+=======
+						char file[strlen(getenv("TWD")) + strlen(argv[i])];
+						sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
+>>>>>>> Mkdir écrit bien le nouveau dossier dans le tar, mais créer un tar invalide pour le moment
 						try_create_dir(file);
 					}
 				}else{
@@ -161,12 +164,17 @@ int exist_file(char *name){
 
 int exist_dir(char *namefile, char *tarfile){
 <<<<<<< HEAD
+<<<<<<< HEAD
 	//write(STDOUT_FILENO, "\n",1);
 	//write(STDOUT_FILENO, tarfile, strlen(tarfile));
 =======
 	write(STDOUT_FILENO, "\n",1);
 	write(STDOUT_FILENO, tarfile, strlen(tarfile));
 >>>>>>> avancement mkdiré
+=======
+	//write(STDOUT_FILENO, "\n",1);
+	//write(STDOUT_FILENO, tarfile, strlen(tarfile));
+>>>>>>> Mkdir écrit bien le nouveau dossier dans le tar, mais créer un tar invalide pour le moment
 	struct posix_header header;
 	int fd = open(tarfile, O_RDONLY);
 	if(fd == -1){
