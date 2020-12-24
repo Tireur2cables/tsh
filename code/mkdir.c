@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include "tar.h"
 
-int exist_dir(char *);
+int exist_dir(char *, char *);
 int exist_file(char *);
 int create_dir(char *);
 int create_tar(char *);
@@ -37,12 +37,15 @@ int mkdir_tar(int argc, char *argv[]) {
 	else{
 		for(int i = 1; i < argc; i++){
 			if(getenv("TWD") != NULL){
+				write(STDOUT_FILENO, getenv("TWD"), strlen(getenv("TWD")));
+				write(STDOUT_FILENO, "\n", 1);
 				if(is_tar_mk(getenv("TWD"))){
 					if(argv[1][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
 						try_create_dir(argv[1]);
 					}else{
 						char file[strlen(getenv("TWD")) + strlen(argv[1])];
 						sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
+						write(STDOUT_FILENO, file, strlen(file));
 						try_create_dir(file);
 					}
 				}else{
@@ -89,7 +92,24 @@ int create_tar(char *name){ //Créer un tar
 }
 
 int create_dir(char *name){ //Créer un dossier dans un tar si possible
-	if(exist_dir(name)){
+	char tarfile[strlen(name)]; //Contient le chemin jusqu'au tar pour l'ouvrir
+	char namefile[strlen(name)]; //Contient la suite du chemin pour l'affichage
+	int tarpos = strstr(name, ".tar") - name; //Existe car on sait qu'il y a un tar dans le chemin
+	strncpy(tarfile, name, tarpos+4);
+	strncpy(namefile, name+tarpos+5, strlen(name)-tarpos-4);
+	tarfile[tarpos+4] = '\0';
+	namefile[strlen(name)-tarpos-4] = '\0';
+	if (name[tarpos+4] != '/'){ //Si après le .tar il n'y a pas de / => Il y a une erreur dans le nom du fichier
+		char format[72 + strlen(name)];
+		sprintf(format, "mkdir : impossible d'accéder à '%s' : Aucun fichier ou dossier de ce type\n", name);
+		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+			perror("Erreur d'écriture dans le shell");
+			exit(EXIT_FAILURE);
+		}
+		return -1;
+	}
+	//write(STDOUT_FILENO, tarfile, strlen(tarfile));
+	if(exist_dir(namefile, tarfile)){
 		char format[60 + strlen(name)];
 		sprintf(format, "mkdir: impossible de créer le répertoire « %s »: Le fichier existe\n", name);
 		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
@@ -130,9 +150,11 @@ int exist_file(char *name){
 	return (stat (name, &buffer) == 0);
 }
 
-int exist_dir(char *name){
+int exist_dir(char *namefile, char *tarfile){
+	write(STDOUT_FILENO, "\n",1);
+	write(STDOUT_FILENO, tarfile, strlen(tarfile));
 	struct posix_header header;
-	int fd = open(name, O_RDONLY);
+	int fd = open(tarfile, O_RDONLY);
 	if(fd == -1){
 	  perror("erreur d'ouverture de l'archive");
 	  return -1;
@@ -143,7 +165,7 @@ int exist_dir(char *name){
 		if(strcmp(header.name, "\0") == 0){
 			break;
 		}
-		if(strcmp(name, header.name) == 0){
+		if(strcmp(namefile, header.name) == 0){
 			return 1;
 		}
 		get_header_size_mk(&header, &read_size);
@@ -190,7 +212,7 @@ int create_header(char *name, struct posix_header *header){ //Meilleur méthode 
 	for (int i = 0; i < 155; i++) header->prefix[i] = '\0';
 	for (int i = 0; i < 12; i++) header->junk[i] = '\0';
 
-	set_checksum(header);
+	//set_checksum(header);
 	return 0;
 }
 
@@ -202,7 +224,7 @@ int is_tar_mk(char *file){
 	return is_ext_mk(file, ".tar") || is_ext_mk(file, ".tar/");
 }
 
-int writ_block(int fd, struct posix_header header){
+int write_block(int fd, struct posix_header* header){
 	if (header == NULL){
 		char block[BLOCKSIZE];
 		memset(block, '\0', 512);
@@ -216,7 +238,7 @@ int writ_block(int fd, struct posix_header header){
 			exit(EXIT_FAILURE);
 		}
 	}
-
+	return 0;
 }
 
 int contains_tar_mk(char *file){
