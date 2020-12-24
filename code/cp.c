@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <pwd.h>
+#include <grp.h>
 #include "cp.h"
 #include "cat.h"
 #include "tar.h"
@@ -928,7 +930,7 @@ int getHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid,
 	sprintf(header->uid, "%07d", uid);
 	sprintf(header->gid, "%07d", gid);
 	sprintf(header->size, "%011ld", taille);
-	sprintf(header->mtime, "%11ld", mtime.tv_sec*1000);
+	sprintf(header->mtime, "%11ld", mtime.tv_sec*1000 + mtime.tv_nsec/1000000);
 
 	for (int i = 0; i < 8; i++) header->chksum[i] = '\0'; // on le set à la fin
 	header->typeflag = '0'; // fichier
@@ -938,12 +940,17 @@ int getHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid,
 	header->version[0] = '0';
 	header->version[1] = '0';
 
+	struct passwd *pws = getpwuid(uid);
+	sprintf(header->uname, "%s", pws->pw_name);
+
+	struct group *grp = getgrgid(gid);
+	sprintf(header->gname, "%s", grp->gr_name);
+
 	// useless ?
-	for (int i = 0; i < 32; i++) header->uname[i] = '\0';
-	for (int i = 0; i < 32; i++) header->gname[i] = '\0';
 	for (int i = 0; i < 8; i++) header->devmajor[i] = '\0';
 	for (int i = 0; i < 8; i++) header->devminor[i] = '\0';
 	for (int i = 0; i < 12; i++) header->junk[i] = '\0';
+
 
 	set_checksum(header);
 	if (!check_checksum(header)) {
