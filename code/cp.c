@@ -33,7 +33,7 @@ void copystandard(char *, char *);
 void copyfiletartofile(char *, char *, mode_t);
 void copyfiletofiletar(char *, char *);
 mode_t getmode(char *, char *);
-int getHeader(struct posix_header *, char *, mode_t, uid_t, gid_t, off_t, struct timespec);
+int getHeader(struct posix_header *, char *, mode_t, uid_t, gid_t, off_t, time_t);
 int ecritInTar(struct posix_header *, int, char *, unsigned int);
 void copyfiletartofiletar(char *, char *);
 void archive(struct posix_header *, char *, char *, int);
@@ -396,7 +396,6 @@ void copyTar(char *source, char *dest, int option) {
 						strncat(dossier, newnom, strlen(newnom) - strlen(pos));
 						if (!exist(dossier, 0) && header.typeflag == '5') {
 							// TODO
-							// on suppose raisonnablement que les dossiers arrivent avant les fichier de ces dossiers dans le parcours du tar
 							// mkdir_tar(dossier)
 						}
 						tmp = pos+1;
@@ -533,7 +532,6 @@ void copyTar(char *source, char *dest, int option) {
 						strcat(dossier, "/");
 						strncat(dossier, newnom, strlen(newnom) - strlen(pos));
 						if (!exist(dossier, 0) && header.typeflag == '5') {
-							// on suppose raisonnablement que les dossiers arrivent avant les fichier de ces dossiers dans le parcours du tar
 							if (mkdir(dossier, mode) < 0) {
 								perror("Impossible de créer le dossier!");
 								exit(EXIT_FAILURE);
@@ -967,6 +965,9 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 				strcat(buf, nom);
 				write(STDOUT_FILENO, buf, strlen(buf));
 				write(STDOUT_FILENO, "\n", 1);
+
+				archive(&header, source, chemin, fd);
+
 				break;
 			}
 		}else {
@@ -978,6 +979,9 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 					strcat(buf, nom);
 					write(STDOUT_FILENO, buf, strlen(buf));
 					write(STDOUT_FILENO, "\n", 1);
+
+					archive(&header, source, chemin, fd);
+
 					break;
 				}
 			}
@@ -1010,7 +1014,7 @@ void archive(struct posix_header *header, char *source, char *chemin, int fd) {
 	struct stat stsource;
 	stat(source, &stsource); // verifications déjà faites
 
-	if (getHeader(header, chemin, stsource.st_mode, stsource.st_uid, stsource.st_gid, stsource.st_size, stsource.st_mtim) < 0)
+	if (getHeader(header, chemin, stsource.st_mode, stsource.st_uid, stsource.st_gid, stsource.st_size, stsource.st_mtime) < 0)
 		return;
 
 	unsigned int taille = stsource.st_size;
@@ -1059,7 +1063,7 @@ void archive(struct posix_header *header, char *source, char *chemin, int fd) {
 	if (ecritInTar(header, fd, contenu, taille_finale) < 0) return;
 }
 
-int getHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid, gid_t gid, off_t taille, struct timespec mtime) {
+int getHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid, gid_t gid, off_t taille, time_t mtime) {
 	int decalage = 0;
 	for (int i = 0; i < 155; i++) {
 		if (strlen(chemin) > 99 && i < strlen(chemin) - 99) {
@@ -1073,19 +1077,19 @@ int getHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid,
 		else header->name[i] = '\0';
 	}
 
-	sprintf(header->mode, "%o", mode);
-	sprintf(header->uid, "%07d", uid);
-	sprintf(header->gid, "%07d", gid);
-	sprintf(header->size, "%011ld", taille);
-	sprintf(header->mtime, "%11ld", mtime.tv_sec*1000 + mtime.tv_nsec/1000000);
+	sprintf(header->mode, "%07o", mode);
+	sprintf(header->uid, "%07o", uid);
+	sprintf(header->gid, "%07o", gid);
+	sprintf(header->size, "%011lo", taille);
+	sprintf(header->mtime, "%11lo", mtime);
 
 	for (int i = 0; i < 8; i++) header->chksum[i] = '\0'; // on le set à la fin
 	header->typeflag = '0'; // fichier
 	for (int i = 0; i < 100; i++) header->linkname[i] = '\0'; //pas un lien
 	sprintf(header->magic, "ustar"); // version courante
 
-	header->version[0] = '0';
-	header->version[1] = '0';
+	header->version[0] = ' ';
+	header->version[1] = ' ';
 
 	struct passwd *pws = getpwuid(uid);
 	sprintf(header->uname, "%s", pws->pw_name);
