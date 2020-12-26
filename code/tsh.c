@@ -36,6 +36,7 @@ int exec(int, char *[]);
 int cdIn(int, char *[]);
 int hasTarIn(char const *, int);
 char *traiterArguements(char *, int *);
+void parse_command(char *, int);
 char *traiterHome(char *, int *);
 
 //tableau (et sa taille) des commandes implémentées (non built-in) pour les tar
@@ -75,7 +76,8 @@ int main(int argc, char const *argv[]) { //main
 		if ((line = readline(new_prompt)) != NULL) {
 			int readen = strlen(line);
 			if (readen > 0 && !isOnlySpace(line, readen)) //if not empty line
-				selectCommand(line, readen);
+				parse_command(line, readen);
+				//selectCommand(line, readen);
 		}else { //EOF detected
 			char *newline = "\n";
 			int newline_len = strlen(newline);
@@ -88,6 +90,29 @@ int main(int argc, char const *argv[]) { //main
 	}
 
 	return 0;
+}
+
+void parse_command(char *line, int readen){
+	if(!strstr(line, "|")){
+		selectCommand(line, readen);
+	}else{
+		char cp[strlen(line)];
+		memset(cp, '\0', strlen(cp));
+		int k = 0;
+		for(int i = 0; i < strlen(line); i++){
+			if(!isspace(line[i])){
+				cp[k++] = line[i];
+			}
+			if (line[i] == '|'){
+				cp[--k] = '\0';
+				printf("%s\n", cp);
+				selectCommand(cp, k);
+				memset(cp, '\0', strlen(cp));
+				k = 0;
+			}
+		}
+		selectCommand(cp, k);
+	}
 }
 
 void selectCommand(char *line, int readen) { //lance la bonne commande ou lance avec exec
