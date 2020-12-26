@@ -37,6 +37,8 @@ int cdIn(int, char *[]);
 int hasTarIn(char const *, int);
 char *traiterArguements(char *, int *);
 void parse_command(char *, int);
+void parse_tube(char *, int);
+void parse_redirection(char *, int);
 char *traiterHome(char *, int *);
 
 //tableau (et sa taille) des commandes implémentées (non built-in) pour les tar
@@ -93,6 +95,40 @@ int main(int argc, char const *argv[]) { //main
 }
 
 void parse_command(char *line, int readen){
+	parse_redirection(line, readen);
+	//parse_tube(line, readen);
+
+}
+
+void parse_redirection(char *line, int readen){
+	char * pos;
+	if((pos = strstr(line, ">")) != NULL){
+		//printf("%d", pos);
+		char command[strlen(line)];
+		char file[strlen(line)];
+		strncpy(command, line, pos-line);
+		strcpy(file, pos+2);
+		int fd;
+		if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
+			perror("Erreur d'ouverture");
+			exit(EXIT_FAILURE);
+		}
+		int save = dup(1);
+		if((dup2(fd, STDOUT_FILENO) < 0)){
+			perror("Erreur de redirection");
+			exit(EXIT_FAILURE);
+		}
+		selectCommand(command, strlen(command));
+		close(fd);
+		if(dup2(save, STDOUT_FILENO) < 0){
+			perror("erreur de redirection");
+			exit(EXIT_FAILURE);
+		}
+		close(save);
+	}
+}
+
+void parse_tube(char *line, int readen){
 	if(!strstr(line, "|")){
 		selectCommand(line, readen);
 	}else{
