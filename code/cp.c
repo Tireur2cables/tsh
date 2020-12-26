@@ -1009,8 +1009,7 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 						close(fd_tube[0]);
 					    dup2(fd_tube[1], STDOUT_FILENO);
 
-						char *argv[3] = {"cat", source, NULL};
-						cat(2, argv);
+						execlp("cat", "cat", source, NULL);
 
 					    close(fd_tube[1]);
 						exit(EXIT_SUCCESS);
