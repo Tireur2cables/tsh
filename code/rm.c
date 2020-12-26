@@ -104,20 +104,13 @@ int parcoursChemin(char * chemin, char * pwd , int option) {
 		free(currentpwd);
 		return -1;
 		}
-	
 	}
-	
-	//free(cpydoss);
 	
 	char res[strlen(currentpwd+1)];
 	strcpy(res,currentpwd);
 	
 	char resdoss[strlen(cpydoss+1)];
 	strcpy(resdoss,cpydoss);
-	
-	//printf("%s\n",res);    
-	//printf("%s\n",oldpwd);
-	//printf("%s\n",resdoss);
 
 	dir_or_file(resdoss,oldpwd,res);
 	
@@ -216,7 +209,6 @@ int dir_or_file(char * doss , char * oldpwd , char * pwd ) {
 		return -1;
 	}
 	
-	int boolean_dir=0;
 	struct dirent * d;
 	struct stat st;
 	
@@ -294,9 +286,6 @@ int delete_dir(char * pwd) {
 			perror("erreur de suppression du répertoire");
 			return -1;
 		}
-	
-	
-	
 	
 	return 0;
 }
