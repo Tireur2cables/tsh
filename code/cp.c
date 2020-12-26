@@ -37,6 +37,8 @@ int getHeader(struct posix_header *, char *, mode_t, uid_t, gid_t, off_t, struct
 int ecritInTar(struct posix_header *, int, char *, unsigned int);
 void copyfiletartofiletar(char *, char *);
 
+// TODO générale régler tous les TODO dans le code :)
+
 int cp(int argc, char *argv[]) {
 // detect error in number of args
 	detectError(argc, argv);
@@ -892,6 +894,7 @@ void copyfiletartofile(char *source, char *dest, mode_t mode) { // ecrase conten
 void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest avec contenu de source et ne change pas le nom de dest
 // TODO : fixme les fichiers de tailles > 1024 ça marche pas (exemple : tar.h dans tete.tar
 // faire les autres cas que ajouter à la fin
+// le test pour set la variable existdest ne marche pas tout le temps par exemple pour Makefile dans tete.tar je sais pas pourquoi!
 	int pwdlen = 0;
 	int twdlen = 0;
 	char *pwd = getcwd(NULL, 0);
