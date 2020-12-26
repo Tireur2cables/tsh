@@ -352,7 +352,7 @@ int get_profondeur(char *name){
 
 void get_header_size(struct posix_header *header, int *read_size){
 	int taille = 0;
-	sscanf(header->size, "%o", &taille);
+	sscanf(header->size, "%d", &taille);
 	*read_size = ((taille + 512-1)/512);
 }
 
