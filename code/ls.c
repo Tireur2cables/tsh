@@ -256,8 +256,8 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	sscanf(header->uid, "%o", &uid);
 	sscanf(header->gid, "%o", &gid);
 	sscanf(header->mtime, "%lo", &mtime);
-	char *pw_name = getpwuid(uid)->pw_name;
-	char *gr_name = getgrgid(gid)->gr_name;
+	char *pw_name = header->uname;
+	char *gr_name = header->gname;
 	char *date= ctime(&mtime);
 	typeformat[0] = ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-');
 	typeformat[1] = '\0';
