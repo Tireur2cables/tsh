@@ -116,8 +116,10 @@ void parse_redirection(char *line, int readen){
 		if((pos = strstr(line, "2>"))){ //redirection de la sortie erreur
 			int fd;
 			char command[strlen(line)];
+			char file[strlen(line)];
+			memset(command, '\0', strlen(line));
+			memset(file, '\0', strlen(line));
 			if(pos[2] == '>'){ //2>>
-				char file[strlen(line)];
 				strncpy(command, line, pos-line);
 				strcpy(file, (pos[2] == ' ')?pos+4:pos+3);
 				if((fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
@@ -125,7 +127,6 @@ void parse_redirection(char *line, int readen){
 					exit(EXIT_FAILURE);
 				}
 			}else{ //2>
-				char file[strlen(line)];
 				strncpy(command, line, pos-line);
 				strcpy(file, (pos[2] == ' ')?pos+3:pos+2);
 				if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
@@ -188,6 +189,8 @@ void parse_redirection(char *line, int readen){
 		int fd;
 		char command[strlen(line)];
 		char file[strlen(line)];
+		memset(command, '\0', strlen(line));
+		memset(file, '\0', strlen(line));
 		strncpy(command, line, pos-line);
 		strcpy(file, (pos[1] == ' ')?pos+2:pos+1);
 		if((fd = open(file, O_RDONLY)) < 0){
