@@ -143,8 +143,8 @@ int print_inside_tar(char *file, char *options){
 		if (strstr(header.name, namefile) != NULL){ //Inutile de faire plus de tests si le fichier ne contient pas le nom recherché
 			int namepos = strstr(header.name, namefile) - header.name;
 			//Si le nom du fichier est exactement celui qu'on recherche (c'est un fichier) ou si on trouve un dossier qui porte se nom, on affiche le contenu a profondeur + 1
-			if( (strcmp(header.name, namefile) == 0 && namefile[strlen(namefile+1)] != '/') ||
-				((contains_filename(header.name, namefile) == 0) &&
+			if( (strcmp(header.name, namefile) == 0 && namefile[strlen(namefile)+1] != '/') ||
+				(contains_filename(header.name, namefile) &&
 				(header.name[namepos + strlen(namefile)] == '/' &&
 				header.name[namepos + strlen(namefile)+1] != '\0' &&
 				get_profondeur(header.name) == profondeur + 1))) {
@@ -303,18 +303,18 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 }
 
 int contains_filename(char *haystack, char *needle){
-	char cp[strlen(haystack)];
+	char cp[strlen(haystack) + 1];
 	strcpy(cp, haystack);
 	char *token = strtok(cp, "/");
 	if(strcmp(needle, token) == 0){
-		return 0;
+		return 1;
 	}
 	while((token = strtok(NULL, "/")) != NULL){
 		if(strcmp(needle, token) == 0){
-			return 0;
+			return 1;
 		}
 	}
-	return 1;
+	return 0;
 }
 
 int get_filename(char *name, char* namecp){
