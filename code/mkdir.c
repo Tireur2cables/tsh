@@ -220,7 +220,6 @@ int create_header(char *name, struct posix_header *header){ //Meilleur méthode 
 	}else{
 		sprintf(uname, "%s", p->pw_name);
 	}
-	write(STDOUT_FILENO, g->gr_name, strlen(g->gr_name));
 	if(g->gr_name == NULL){
 		for (int i = 0; i < 32; i++) gname[i] = '\0';
 	}else{
