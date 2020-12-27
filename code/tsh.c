@@ -29,6 +29,7 @@ int iscmd(char *, char *);
 int isOnlySpace(char *, int);
 void selectCommand(char *, int);
 void selectCustomCommand(char *, int);
+void get_header_size_tsh(struct posix_header *, int *);
 int getNbArgs(char const *, int);
 int launchFunc(int (*)(int, char *[]), char *, int);
 int launchBuiltInFunc(int (*)(int, char *[]), char *, int);
@@ -41,6 +42,9 @@ void parse_tube(char *, int);
 void parse_redirection(char *, int);
 void traite_redirection(char *, char *, int);
 char *traiterHome(char *, int *);
+int exist_path_in_tar(int, char *);
+void redirection_tar(char *, char*, int);
+void redirection_classique(char *, char *, int);
 
 //tableau (et sa taille) des commandes implémentées (non built-in) pour les tar
 int len_custom = 3; //8
@@ -101,63 +105,8 @@ void parse_command(char *line, int readen){
 
 }
 /*
-* Forme des redirection prise en charge :
-	fichier n'appartenant pas a un tar
-	command > fichier
-	command >> fichier
-	command 2> fichier
-	commad 2>> fichier
-	command < fichier
-	non fait
-	> fichier command
-
+* POUR LE MOMENT ON NE GERE PAS COMMAND < INPUT > OUTPUT
 */
-
-void traite_redirection(char *command, char *file, int type){
-	int fd;
-	if(type == 5){
-		if((fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
-			perror("Erreur d'ouverture");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else if(type == 4){
-		if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
-			perror("Erreur d'ouverture");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else if(type == 3){
-		if((fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
-			perror("Erreur d'ouverture");
-			exit(EXIT_FAILURE);
-		}
-	}else if(type == 2){
-		//write(STDOUT_FILENO, command, strlen(command));
-		if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
-			perror("Erreur d'ouvertureee");
-			exit(EXIT_FAILURE);
-		}
-	}else if(type == 1){
-		if((fd = open(file, O_RDONLY)) < 0){
-			perror("Erreur d'ouverture");
-			exit(EXIT_FAILURE);
-		}
-	}
-	int save = dup(type/2);
-	if((dup2(fd, (type < 4)?((type < 2)?STDIN_FILENO:STDOUT_FILENO):STDERR_FILENO) < 0)){
-		perror("Erreur de redirection");
-		exit(EXIT_FAILURE);
-	}
-	selectCommand(command, strlen(command));
-	close(fd);
-	if(dup2(save, (type < 4)?((type < 2)?STDIN_FILENO:STDOUT_FILENO):STDERR_FILENO) < 0){
-		perror("erreur de redirection");
-		exit(EXIT_FAILURE);
-	}
-	close(save);
-}
-
 void parse_redirection(char *line, int readen){
 	char *pos;
 	if((pos = strstr(line, ">")) != NULL){ //On doit faire une redirection de la sortie standard ou de la sortie erreur
@@ -190,7 +139,7 @@ void parse_redirection(char *line, int readen){
 			}
 		}
 	}
-	if((pos = strstr(line, "<")) != NULL){ //On doit faire une reditction de l'entrée
+	else if((pos = strstr(line, "<")) != NULL){ //On doit faire une reditction de l'entrée
 		char command[strlen(line)];
 		char file[strlen(line)];
 		memset(command, '\0', strlen(line));
@@ -199,6 +148,152 @@ void parse_redirection(char *line, int readen){
 		strcpy(file, (pos[1] == ' ')?pos+2:pos+1);
 		traite_redirection(command, file, 1);
 	}
+	else{
+		selectCommand(line, readen);
+	}
+}
+/*
+* Forme des redirection prise en charge :
+	fichier n'appartenant pas a un tar
+	command > fichier
+	command >> fichier
+	command 2> fichier
+	commad 2>> fichier
+	command < fichier
+	non fait
+	> fichier command
+
+*/
+
+void traite_redirection(char *command, char *file, int type){
+	char *tarpos;
+	if((tarpos = strstr(file, ".tar")) != NULL){
+		redirection_tar(command, file, type);
+	}
+	else{
+		redirection_classique(command, file, type);
+	}
+}
+void redirection_tar(char *command, char *file, int type){
+	char tarfile[strlen(file)]; //Contient le chemin jusqu'au tar pour l'ouvrir
+	char namefile[strlen(file)]; //Contient la suite du chemin pour l'affichage
+	int tarpos = strstr(file, ".tar") - file; //Existe car on sait qu'il y a un tar dans le chemin, arithmétique des pointers pour retrouver la position du .tar dans le nom de fichier
+	strncpy(tarfile, file, tarpos+4);
+	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
+	tarfile[tarpos+4] = '\0';
+	namefile[strlen(file)-tarpos-4] = '\0';
+	int fd = open(tarfile, O_RDWR);
+	if(fd == -1){
+	  perror("erreur d'ouverture de l'archive");
+	  exit(EXIT_FAILURE);
+	}
+	if(exist_path_in_tar(fd, namefile)){ //Pour le moment ne peut écrire que dans un fichier qui existe dans un tar
+		//goto fin du tar
+		//create header
+		//write header
+		//write stdout dans tar
+		//get size written (cat)
+		//update header
+		//close tar 
+		write(STDOUT_FILENO, "WIP", 3);
+	}else{
+		char format[strlen(file) + 60];
+		sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
+		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
+			perror("Erreur d'écriture dans le shell!");
+			exit(EXIT_FAILURE);
+		}
+		return;
+	}
+}
+
+int exist_path_in_tar(int fd, char *path){
+	struct posix_header header;
+	int n = 0;
+	int read_size = 0;
+	while((n=read(fd, &header, BLOCKSIZE))>0){
+		if(strcmp(header.name, path) == 0){
+			return 1;
+		}
+		get_header_size_tsh(&header, &read_size);
+		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+			perror("erreur de lecture de l'archive");
+			return -1;
+		}
+	}
+	return 0;
+}
+
+void redirection_classique(char *command, char *file, int type){
+	int fd;
+	if(type == 5){
+		if((fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
+			char format[strlen(file) + 60];
+			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
+			if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell!");
+				exit(EXIT_FAILURE);
+			}
+			return;
+		}
+	}
+	else if(type == 4){
+		if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
+			char format[strlen(file) + 60];
+			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
+			if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell!");
+				exit(EXIT_FAILURE);
+			}
+			return;
+		}
+	}
+	else if(type == 3){
+		if((fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
+			char format[strlen(file) + 60];
+			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
+			if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell!");
+				exit(EXIT_FAILURE);
+			}
+			return;
+		}
+	}
+	else if(type == 2){
+		//write(STDOUT_FILENO, command, strlen(command));
+		if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
+			char format[strlen(file) + 60];
+			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
+			if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell!");
+				exit(EXIT_FAILURE);
+			}
+			return;
+		}
+	}
+	else if(type == 1){
+		if((fd = open(file, O_RDONLY)) < 0){
+			char format[strlen(file) + 60];
+			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
+			if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell!");
+				exit(EXIT_FAILURE);
+			}
+			return;
+		}
+	}
+	int save = dup(type/2);
+	if((dup2(fd, (type < 4)?((type < 2)?STDIN_FILENO:STDOUT_FILENO):STDERR_FILENO) < 0)){
+		perror("Erreur de redirection");
+		exit(EXIT_FAILURE);
+	}
+	selectCommand(command, strlen(command));
+	close(fd);
+	if(dup2(save, (type < 4)?((type < 2)?STDIN_FILENO:STDOUT_FILENO):STDERR_FILENO) < 0){
+		perror("erreur de redirection");
+		exit(EXIT_FAILURE);
+	}
+	close(save);
 }
 
 void parse_tube(char *line, int readen){
@@ -498,4 +593,10 @@ char *traiterArguements(char *line, int *len) { //modifie les chemins contenant 
 		free(argv[i]);
 	}
 	return newline;
+}
+
+void get_header_size_tsh(struct posix_header *header, int *read_size){
+	int taille = 0;
+	sscanf(header->size, "%o", &taille);
+	*read_size = ((taille + 512-1)/512);
 }
