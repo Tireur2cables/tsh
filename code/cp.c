@@ -402,15 +402,15 @@ void copyTar(char *source, char *dest, int option) {
 				if (strstr(nom, chemin) != NULL && strcmp(chemin, nom) <= 0) { // nom must start with chemin
 					char *newnom = strstr(nom, chemin) + strlen(chemin);
 					tmp = newnom;
-					write(STDOUT_FILENO, newnom, strlen(newnom));
-					write(STDOUT_FILENO, "\n", 1);
 					char *pos;
 					while ((pos = strstr(tmp, "/")) != NULL) { // parcours (et créer si besoin) les dossiers nécéssaires pour copier le fichier
-						char dossier[destlen + strlen(newnom) - strlen(pos) + 1];
+						char dossier[destlen + strlen(pos+1) + 1];
 						strcpy(dossier, dest);
 						if (destlen != strlen(dest)) strcat(dossier, "/");
-						strncat(dossier, newnom, strlen(newnom) - strlen(pos));
+						strncat(dossier, pos+1, strlen(pos+1));
 						if (!exist(dossier, 0) && header.typeflag == '5') {
+							write(STDOUT_FILENO, dossier, strlen(dossier));
+							write(STDOUT_FILENO, "\n", 1);
 							char *argv[3] = {"mkdir", dossier, NULL};
 							mkdir_tar(2, argv);
 						}
