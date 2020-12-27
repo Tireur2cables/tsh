@@ -128,7 +128,6 @@ int create_dir(char *name){ //Créer un dossier dans un tar si possible
 		while((n=read(fd, &header, BLOCKSIZE))>0){
 			//write(STDOUT_FILENO, "yes", 3);
 			if(strcmp(header.name, "\0") == 0){
-				write(STDOUT_FILENO, "yes", 3);
 				//On est a la fin du tar, on écrit un nouveau header de dossier, puis un nouveau block de 512 vide
 				struct posix_header header2;
 				lseek(fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
@@ -257,8 +256,7 @@ int contains_tar_mk(char *file){
 }
 
 void get_header_size_mk(struct posix_header *header, int *read_size){
-	int taille = atoi(header->size);
-	write(STDOUT_FILENO, header->size, strlen(header->size));
-	write(STDOUT_FILENO, "\n", 1);
+	int taille = 0;
+	sscanf(header->size, "%o", &taille);
 	*read_size = ((taille + 512-1)/512);
 }
