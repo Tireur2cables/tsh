@@ -188,7 +188,33 @@ void redirection_tar(char *command, char *file, int type){
 	  exit(EXIT_FAILURE);
 	}
 	if(exist_path_in_tar(fd, namefile)){ //vérifie que l'arborescence de fichier existe dans le tar
-		//goto fin du tar
+		while((n=read(fd, &header, BLOCKSIZE))>0){
+			//write(STDOUT_FILENO, "yes", 3);
+			if(strcmp(header.name, "\0") == 0){
+				write(STDOUT_FILENO, "yes", 3);
+				//On est a la fin du tar, on écrit un nouveau header de dossier, puis un nouveau block de 512 vide
+				struct posix_header header2;
+				lseek(fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
+				create_header(namefile, &header2);
+				write(fd, &header2, BLOCKSIZE);
+				write_block(fd, NULL);
+				write_block(fd, NULL);
+				break;
+			}else{
+				get_header_size_tsh(&header, &read_size);
+				if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+					perror("erreur de lecture de l'archive");
+					return -1;
+				}
+			}
+
+		}
+		/*char block[BLOCKSIZE];
+		memset(block, '\0', 512);
+		if(write(fd, block, BLOCKSIZE) < BLOCKSIZE){
+			perror("Erreur d'écriture dans l'archive");
+			exit(EXIT_FAILURE);
+		}*/
 		//create header
 		//write header
 		//write stdout dans tar
