@@ -958,6 +958,31 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 
 	int existdest = exist(dest, 0);
 
+	unsigned int taille = stsource.st_size;
+	unsigned int taille_finale = BLOCKSIZE * ((taille + BLOCKSIZE - 1) >> BLOCKBITS);
+	char contenu[taille_finale];
+
+	int fdsource = open(source, O_RDONLY);
+	if (fdsource == -1) {
+		char *deb  = "cp : Impossible d'ouvrir ";
+		char error[strlen(deb) + strlen(source) + 1 + 1];
+		strcpy(error, deb);
+		strcat(error, source);
+		strcat(error, "\n");
+		int errorlen = strlen(error);
+		if (write(STDERR_FILENO, error, errorlen) < errorlen)
+			perror("Erreur d'écriture dans le shell!");
+		return;
+	}
+	if (read(fdsource, contenu, taille) < taille) {
+		char *error = "cp : Erreur de lecture du contenu du ficier source!\n";
+		if (write(STDERR_FILENO, error, strlen(error)) < strlen(error))
+			perror("Erreur d'écriture dans le shell!");
+		return;
+	}
+
+	for (int i = taille; i < taille_finale; i++) contenu[i] = '\0';
+
 	struct posix_header header;
 	while (1) {
 		if (read(fd, &header, BLOCKSIZE) < BLOCKSIZE) break;
@@ -967,11 +992,52 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 		if (existdest) { // on remplace le fichier existant
 			if (strcmp(nom, chemin) == 0) {
 				char *deb = "Remplace le fichier ";
-				char buf[strlen(deb) + strlen(nom) + 1];
-				strcpy(buf, deb);
-				strcat(buf, nom);
-				write(STDOUT_FILENO, buf, strlen(buf));
+				char str[strlen(deb) + strlen(nom) + 1];
+				strcpy(str, deb);
+				strcat(str, nom);
+				write(STDOUT_FILENO, str, strlen(str));
 				write(STDOUT_FILENO, "\n", 1);
+
+				if (setHeader(&header, chemin, stsource.st_mode, stsource.st_uid, stsource.st_gid, stsource.st_size, stsource.st_mtime) < 0)
+					return;
+
+				off_t zone;
+				if ((zone = lseek(fd, -BLOCKSIZE, SEEK_CUR)) == -1) { // on se remet à l'emplacement du header
+					perror("Erreur de déplacement dans le tar!");
+					return;
+				}
+
+				unsigned int taillefile;
+				sscanf(header.size, "%o", &taillefile);
+				taillefile = (taillefile + BLOCKSIZE - 1) >> BLOCKBITS;
+				taillefile *= BLOCKSIZE;
+				taillefile += BLOCKSIZE; // on est revenu avant le header
+
+				off_t zonebis;
+				if ((zonebis = lseek(fd, (off_t) taillefile, SEEK_CUR)) == -1) { // on se déplace après le fichier et son contenu
+					perror("Erreur de déplacement dans le tar!");
+					return;
+				}
+
+				unsigned int taillefin = lseek(fd, 0, SEEK_END) - zonebis; // taille de ce qu'il reste jusqua la fin du tar
+				char buf[taillefin];
+
+				if (lseek(fd, zonebis, SEEK_SET) == -1) { // on se remet après le contenu du fichier
+					perror("Erreur de déplacement dans le tar!");
+					return;
+				}
+
+				if (read(fd, buf, taillefin) < taillefin) { // recupère la suite du tar
+					perror("Erreur de lecture de la fin du tar!");
+					return;
+				}
+
+				if (lseek(fd, zone, SEEK_SET) == -1) { // on se remet à l'emplacement du header pour commencer à ecrire
+					perror("Erreur de déplacement dans le tar!");
+					return;
+				}
+
+				if (ecritInTar(fd, &header, contenu, taille_finale, buf, taillefin) < 0) return;
 
 				break;
 			}
@@ -980,31 +1046,6 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 
 				if (setHeader(&header, chemin, stsource.st_mode, stsource.st_uid, stsource.st_gid, stsource.st_size, stsource.st_mtime) < 0)
 					return;
-
-				unsigned int taille = stsource.st_size;
-				unsigned int taille_finale = BLOCKSIZE * ((taille + BLOCKSIZE - 1) >> BLOCKBITS);
-				char contenu[taille_finale];
-
-				int fdsource = open(source, O_RDONLY);
-				if (fdsource == -1) {
-					char *deb  = "cp : Impossible d'ouvrir ";
-					char error[strlen(deb) + strlen(source) + 1 + 1];
-					strcpy(error, deb);
-					strcat(error, source);
-					strcat(error, "\n");
-					int errorlen = strlen(error);
-					if (write(STDERR_FILENO, error, errorlen) < errorlen)
-						perror("Erreur d'écriture dans le shell!");
-					return;
-				}
-				if (read(fdsource, contenu, taille) < taille) {
-					char *error = "cp : Erreur de lecture du contenu du ficier source!\n";
-					if (write(STDERR_FILENO, error, strlen(error)) < strlen(error))
-						perror("Erreur d'écriture dans le shell!");
-					return;
-				}
-
-				for (int i = taille; i < taille_finale; i++) contenu[i] = '\0';
 
 				off_t zone;
 				if ((zone = lseek(fd, -BLOCKSIZE, SEEK_CUR)) == -1) { // on se remet à l'emplacement du header
@@ -1020,7 +1061,7 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 					return;
 				}
 
-				if (read(fd, buf, taillefin) < taillefin) { // recupère la suite du fichier
+				if (read(fd, buf, taillefin) < taillefin) { // recupère la suite du tar
 					perror("Erreur de lecture de la fin du tar!");
 					return;
 				}
