@@ -187,44 +187,46 @@ int exist_dir(char *namefile, char *tarfile){
 }
 
 int create_header(char *name, struct posix_header *header){ //Meilleur méthode pour le faire ?
-	for(int i = 0; i < 100; i++){
-		if(i < strlen(name)){
-			header->name[i] = name[i];
-		}else if (i == strlen(name)){
-			header->name[i] = '/';
-		}else{
-			header->name[i] = '\0';
+	int decalage = 0;
+	for (int i = 0; i < 155; i++) {
+		if (strlen(name) > 98 && i < strlen(name) - 98) {
+			header->prefix[i] = name[i];
+			decalage++;
 		}
+		else header->prefix[i] = '\0';
 	}
+	for (int i = 0; i < 100; i++) {
+		if (i+decalage < strlen(name)) header->name[i] = name[i+decalage];
+		else if (i+decalage == strlen(name)) header->name[i] = '/';
+		else header->name[i] = '\0';
+	}
+
 	sprintf(header->mode,"0000755");
 	char uid[8];
 	char gid[8];
+	char uname[32];
+	char gname[32];
 	struct passwd *p = getpwuid(getuid());
-	struct group *g = getgrgid(p->pw_gid);
 	if(p == NULL){
-		for (int i = 0; i < 8; i++) uid[i] = '\0';
+		for (int i = 0; i < 8; i++) {
+			uid[i] = '\0';
+			gid[i] = '\0';
+		}
+		for (int i = 0; i < 32; i++) uname[i] = '\0';
+		for (int i = 0; i < 32; i++) gname[i] = '\0';
 	}else{
 		sprintf(uid, "%07o", p->pw_uid);
-	}
-	if(p == NULL){
-		for (int i = 0; i < 8; i++) gid[i] = '\0';
-	}else{
 		sprintf(gid, "%07o", p->pw_gid);
+		sprintf(uname, "%s", p->pw_name);
+		struct group *g = getgrgid(p->pw_gid);
+		if (g == NULL) {
+			for (int i = 0; i < 32; i++) gname[i] = '\0';
+		}else {
+			sprintf(gname, "%s", g->gr_name);
+		}
 	}
 	sprintf(header->uid, "%s", uid);
 	sprintf(header->gid, "%s", gid);
-	char uname[32];
-	char gname[32];
-	if(p->pw_name == NULL){
-		for (int i = 0; i < 32; i++) uname[i] = '\0';
-	}else{
-		sprintf(uname, "%s", p->pw_name);
-	}
-	if(g->gr_name == NULL){
-		for (int i = 0; i < 32; i++) gname[i] = '\0';
-	}else{
-		sprintf(gname, "%s", g->gr_name);
-	}
 	sprintf(header->uname, "%s", uname);
 	sprintf(header->gname, "%s", gname);
 	unsigned int taille = 0;
@@ -246,7 +248,6 @@ int create_header(char *name, struct posix_header *header){ //Meilleur méthode 
 	header->version[1] = '0';
 	for (int i = 0; i < 8; i++) header->devmajor[i] = '\0';
 	for (int i = 0; i < 8; i++) header->devminor[i] = '\0';
-	for (int i = 0; i < 155; i++) header->prefix[i] = '\0';
 	for (int i = 0; i < 12; i++) header->junk[i] = '\0';
 
 	set_checksum(header);
