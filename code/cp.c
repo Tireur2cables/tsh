@@ -244,7 +244,8 @@ int existInTar(char *tar, char *chemin, int error) { // verifie que chemin exist
 				found = 1;
 			else {
 				if (strcmp(nom, "") == 0) break;
-				unsigned int taille = atoi(header.size);
+				unsigned int taille;
+				sscanf(header.size, "%o", &taille);
 				taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
 				taille *= BLOCKSIZE;
 				if (lseek(fd, (off_t) taille, SEEK_CUR) == -1) break;
@@ -414,7 +415,8 @@ void copyTar(char *source, char *dest, int option) {
 					}
 				}
 
-				unsigned int taille = atoi(header.size);
+				unsigned int taille;
+				sscanf(header.size, "%o", &taille);
 				taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
 				taille *= BLOCKSIZE;
 				if (lseek(fdsource, (off_t) taille, SEEK_CUR) == -1) break;
@@ -521,7 +523,8 @@ void copyTar(char *source, char *dest, int option) {
 				if (strcmp(nom, "") == 0) break;
 
 				if (strstr(nom, chemin) != NULL && strcmp(chemin, nom) <= 0) { // nom must start with chemin
-					mode_t mode = atoi(header.mode);
+					mode_t mode;
+					sscanf(header.mode, "%o", &mode);
 
 					char *newnom = strstr(nom, chemin) + strlen(chemin);
 					char *tmp = newnom;
@@ -553,7 +556,8 @@ void copyTar(char *source, char *dest, int option) {
 					}
 				}
 
-				unsigned int taille = atoi(header.size);
+				unsigned int taille;
+				sscanf(header.size, "%o", &taille);
 				taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
 				taille *= BLOCKSIZE;
 				if (lseek(fdsource, (off_t) taille, SEEK_CUR) == -1) break;
@@ -738,7 +742,7 @@ void copyDoss(char *source, char *dest, int option) {
 		if (sourcedir == NULL) {
 			char *error_debut = "cp : Erreur! Impossible d'ouvrir le répertoire ";
 			char error[strlen(error_debut) + strlen(source) + 1 + 1];
-			sscanf(error, "%s%s\n", error_debut, source);
+			sprintf(error, "%s%s\n", error_debut, source);
 			int errorlen = strlen(error);
 			if (write(STDERR_FILENO, error, errorlen) < errorlen)
 				perror("Erreur d'écriture dans le shell!");
@@ -765,7 +769,7 @@ void copyDoss(char *source, char *dest, int option) {
 		char *deb  = "cp : ";
 		char *end = " n'est pas un dossier!\n";
 		char error[strlen(deb) + strlen(dest) + strlen(end) + 1];
-		sscanf(error, "%s%s%s", deb, dest, end);
+		sprintf(error, "%s%s%s", deb, dest, end);
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
 			perror("Erreur d'écriture dans le shell!");
@@ -980,7 +984,8 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 			}
 		}
 
-		unsigned int taille = atoi(header.size);
+		unsigned int taille;
+		sscanf(header.size, "%o", &taille);
 		taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
 		taille *= BLOCKSIZE;
 		if (lseek(fd, (off_t) taille, SEEK_CUR) == -1) {
