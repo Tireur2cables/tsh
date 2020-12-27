@@ -33,12 +33,12 @@ void copystandard(char *, char *);
 void copyfiletartofile(char *, char *, mode_t);
 void copyfiletofiletar(char *, char *);
 mode_t getmode(char *, char *);
-int getHeader(struct posix_header *, char *, mode_t, uid_t, gid_t, off_t, time_t);
-int ecritInTar(struct posix_header *, int, char *, unsigned int);
+int setHeader(struct posix_header *, char *, mode_t, uid_t, gid_t, off_t, time_t);
+int ecritInTar(int ,struct posix_header *, char *, unsigned int, char *, unsigned int);
 void copyfiletartofiletar(char *, char *);
-void archive(struct posix_header *, char *, char *, int);
 
 // TODO générale régler tous les TODO dans le code :)
+// Tester les limites en copiant de gros fichiers
 
 int cp(int argc, char *argv[]) {
 // detect error in number of args
@@ -895,6 +895,10 @@ void copyfiletartofile(char *source, char *dest, mode_t mode) { // ecrase conten
 void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest avec contenu de source et ne change pas le nom de dest
 // TODO : ajouter un fichier qui existe deja (remplacer son contenu)
 // le test pour set la variable existdest ne marche pas tout le temps par exemple pour Makefile dans tete.tar je sais pas pourquoi!
+
+	struct stat stsource;
+	stat(source, &stsource); // verifications déjà faites
+
 	int pwdlen = 0;
 	int twdlen = 0;
 	char *pwd = getcwd(NULL, 0);
@@ -913,7 +917,7 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 		}
 	}
 	strcat(absolutedest, dest);
-	
+
 	char *pos = strstr(absolutedest, ".tar");
 	int tarlen = strlen(absolutedest) - strlen(pos) + 4;
 	char tar[tarlen+1];
@@ -969,17 +973,65 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 				write(STDOUT_FILENO, buf, strlen(buf));
 				write(STDOUT_FILENO, "\n", 1);
 
-				archive(&header, source, chemin, fd);
-
 				break;
 			}
 		}else { // on ajoute à la fin du tar le nouveau fichier
 			if (strcmp(nom, "") == 0) { // block vide = fin du tar
 
-				char *buf = "Met le fichier à la fin!\n";
-				write(STDOUT_FILENO, buf, strlen(buf));
+				if (setHeader(&header, chemin, stsource.st_mode, stsource.st_uid, stsource.st_gid, stsource.st_size, stsource.st_mtime) < 0)
+					return;
 
-				archive(&header, source, chemin, fd);
+				unsigned int taille = stsource.st_size;
+				unsigned int taille_finale = BLOCKSIZE * ((taille + BLOCKSIZE - 1) >> BLOCKBITS);
+				char contenu[taille_finale];
+
+				int fdsource = open(source, O_RDONLY);
+				if (fdsource == -1) {
+					char *deb  = "cp : Impossible d'ouvrir ";
+					char error[strlen(deb) + strlen(source) + 1 + 1];
+					strcpy(error, deb);
+					strcat(error, source);
+					strcat(error, "\n");
+					int errorlen = strlen(error);
+					if (write(STDERR_FILENO, error, errorlen) < errorlen)
+						perror("Erreur d'écriture dans le shell!");
+					return;
+				}
+				if (read(fdsource, contenu, taille) < taille) {
+					char *error = "cp : Erreur de lecture du contenu du ficier source!\n";
+					if (write(STDERR_FILENO, error, strlen(error)) < strlen(error))
+						perror("Erreur d'écriture dans le shell!");
+					return;
+				}
+
+				for (int i = taille; i < taille_finale; i++) contenu[i] = '\0';
+
+				off_t zone;
+				if ((zone = lseek(fd, -BLOCKSIZE, SEEK_CUR)) == -1) { // on se remet à l'emplacement du header
+					perror("Erreur de déplacement dans le tar!");
+					return;
+				}
+
+				unsigned int taillefin = lseek(fd, 0, SEEK_END) - zone; // taille de ce qu'il reste jusqua la fin du tar
+				char buf[taillefin];
+
+				if (lseek(fd, zone, SEEK_SET) == -1) { // on se remet à l'emplacement du header
+					perror("Erreur de déplacement dans le tar!");
+					return;
+				}
+
+				if (read(fd, buf, taillefin) < taillefin) { // recupère la suite du fichier
+					perror("Erreur de lecture de la fin du tar!");
+					return;
+				}
+
+				if (lseek(fd, zone, SEEK_SET) == -1) { // on se remet à l'emplacement du header pour commencer à ecrire
+					perror("Erreur de déplacement dans le tar!");
+					return;
+				}
+
+				if (ecritInTar(fd, &header, contenu, taille_finale, buf, taillefin) < 0) return;
+
 				break;
 			}
 		}
@@ -997,60 +1049,7 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 	close(fd);
 }
 
-void archive(struct posix_header *header, char *source, char *chemin, int fd) {
-	struct stat stsource;
-	stat(source, &stsource); // verifications déjà faites
-
-	if (getHeader(header, chemin, stsource.st_mode, stsource.st_uid, stsource.st_gid, stsource.st_size, stsource.st_mtime) < 0)
-		return;
-
-	unsigned int taille = stsource.st_size;
-	unsigned int taille_finale = BLOCKSIZE * ((taille + BLOCKSIZE - 1) >> BLOCKBITS);
-	char contenu[taille_finale];
-
-	int fd_tube[2];
-	if (pipe(fd_tube) == -1) {
-		perror("Erreur de création du tube!");
-		return;
-	}
-	int pid = fork();
-	switch(pid) {
-		case -1: { // erreur
-			perror("erreur de fork!");
-			return;
-		}
-		case 0: { // fils
-			close(fd_tube[0]);
-			dup2(fd_tube[1], STDOUT_FILENO);
-
-			execlp("cat", "cat", source, NULL);
-
-			close(fd_tube[1]);
-			exit(EXIT_SUCCESS);
-		}
-		default: { //pere
-			close(fd_tube[1]);
-			if (waitpid(pid, NULL, 0) < 0) {
-				perror("Erreur de wait!");
-				exit(EXIT_FAILURE);
-			}
-			char tmp[500];
-			int readen;
-			int indice = 0;
-			while ((readen = read(fd_tube[0], tmp, 500)) != 0) {
-				for (int i = 0; i < readen; i++) contenu[indice+i] = tmp[i];
-				indice += readen;
-			}
-			close(fd_tube[0]);
-		}
-	}
-
-	for (int i = taille; i < taille_finale; i++) contenu[i] = '\0';
-
-	if (ecritInTar(header, fd, contenu, taille_finale) < 0) return;
-}
-
-int getHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid, gid_t gid, off_t taille, time_t mtime) {
+int setHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid, gid_t gid, off_t taille, time_t mtime) {
 	int decalage = 0;
 	for (int i = 0; i < 155; i++) {
 		if (strlen(chemin) > 99 && i < strlen(chemin) - 99) {
@@ -1075,8 +1074,8 @@ int getHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid,
 	for (int i = 0; i < 100; i++) header->linkname[i] = '\0'; //pas un lien
 	sprintf(header->magic, "ustar"); // version courante
 
-	header->version[0] = ' ';
-	header->version[1] = ' ';
+	header->version[0] = '0';
+	header->version[1] = '0';
 
 	struct passwd *pws = getpwuid(uid);
 	sprintf(header->uname, "%s", pws->pw_name);
@@ -1100,31 +1099,7 @@ int getHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid,
 	return 1;
 }
 
-int ecritInTar(struct posix_header *header, int fd, char *contenu, unsigned int taille) {
-	off_t zone;
-	if ((zone = lseek(fd, -BLOCKSIZE, SEEK_CUR)) == -1) { // on se remet à l'emplacement du header
-		perror("Erreur de déplacement dans le tar!");
-		return -1;
-	}
-
-	unsigned int taillefin = lseek(fd, 0, SEEK_END) - zone; // taille de ce qu'il reste jusqua la fin du tar
-	char buf[taillefin];
-
-	if (lseek(fd, zone, SEEK_SET) == -1) { // on se remet à l'emplacement du header
-		perror("Erreur de déplacement dans le tar!");
-		return -1;
-	}
-
-	if (read(fd, buf, taillefin) < taillefin) {
-		perror("Erreur de lecture de la fin du tar!");
-		return -1;
-	}
-
-	if (lseek(fd, zone, SEEK_SET) == -1) { // on se remet à l'emplacement du header
-		perror("Erreur de déplacement dans le tar!");
-		return -1;
-	}
-
+int ecritInTar(int fd, struct posix_header *header, char *contenu, unsigned int taillecontenu, char *fin, unsigned int taillefin) {
 	if (write(fd, header, BLOCKSIZE) < BLOCKSIZE) { // on écrit le header
 		char *error  = "cp : Impossible d'écrire le header!\n";
 		int errorlen = strlen(error);
@@ -1133,7 +1108,7 @@ int ecritInTar(struct posix_header *header, int fd, char *contenu, unsigned int 
 		return -1;
 	}
 
-	if (write(fd, contenu, taille) < taille) { // on écrit le contenu
+	if (write(fd, contenu, taillecontenu) < taillecontenu) { // on écrit le contenu
 		char *error  = "cp : Impossible d'écrire le contenu du fichier!\n";
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
@@ -1141,7 +1116,7 @@ int ecritInTar(struct posix_header *header, int fd, char *contenu, unsigned int 
 		return -1;
 	}
 
-	if (write(fd, buf, taillefin) < taillefin) { // on réécrit la suite du tar
+	if (write(fd, fin, taillefin) < taillefin) { // on réécrit la suite du tar
 		char *error  = "cp : Impossible de réécrire la fin du tar!\n";
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
