@@ -187,14 +187,14 @@ void redirection_tar(char *command, char *file, int type){
 	  perror("erreur d'ouverture de l'archive");
 	  exit(EXIT_FAILURE);
 	}
-	if(exist_path_in_tar(fd, namefile)){ //Pour le moment ne peut écrire que dans un fichier qui existe dans un tar
+	if(exist_path_in_tar(fd, namefile)){ //vérifie que l'arborescence de fichier existe dans le tar
 		//goto fin du tar
 		//create header
 		//write header
 		//write stdout dans tar
 		//get size written (cat)
 		//update header
-		//close tar 
+		//close tar
 		write(STDOUT_FILENO, "WIP", 3);
 	}else{
 		char format[strlen(file) + 60];
@@ -208,11 +208,18 @@ void redirection_tar(char *command, char *file, int type){
 }
 
 int exist_path_in_tar(int fd, char *path){
+	if(strstr(path, "/") == NULL) return 1;
+	char *pos = strrchr(path, '/');
+	char pathbis[strlen(path)];
+	memset(pathbis, '\0', strlen(path));
+	strncpy(pathbis, path, pos-path);
+	strcat(pathbis, "/");
+	write(STDOUT_FILENO, pathbis, strlen(pathbis));
 	struct posix_header header;
 	int n = 0;
 	int read_size = 0;
 	while((n=read(fd, &header, BLOCKSIZE))>0){
-		if(strcmp(header.name, path) == 0){
+		if(strcmp(header.name, pathbis) == 0){
 			return 1;
 		}
 		get_header_size_tsh(&header, &read_size);
