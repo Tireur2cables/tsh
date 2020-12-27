@@ -889,8 +889,7 @@ void copyfiletartofile(char *source, char *dest, mode_t mode) { // ecrase conten
 }
 
 void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest avec contenu de source et ne change pas le nom de dest
-// TODO : fixme les fichiers de tailles > 1024 ça marche pas (exemple : tar.h dans tete.tar
-// faire les autres cas que ajouter à la fin
+// TODO : ajouter un fichier qui existe deja (remplacer son contenu)
 // le test pour set la variable existdest ne marche pas tout le temps par exemple pour Makefile dans tete.tar je sais pas pourquoi!
 	int pwdlen = 0;
 	int twdlen = 0;
@@ -957,7 +956,7 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 		char nom[strlen(header.name)+1];
 		strcpy(nom, header.name);
 
-		if (existdest) {
+		if (existdest) { // on remplace le fichier existant
 			if (strcmp(nom, chemin) == 0) {
 				char *deb = "Remplace le fichier ";
 				char buf[strlen(deb) + strlen(nom) + 1];
@@ -970,29 +969,13 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 
 				break;
 			}
-		}else {
-			if (chemindoss != NULL && chemindosslen != 0) { // chemin est dans un dossier
-				if (strstr(nom, chemindoss) != NULL && strcmp(chemindoss, nom) <= 0) { // nom commence par chemindoss
-					char *deb = "Insere le fichier dans le dossier ";
-					char buf[strlen(deb) + strlen(nom) + 1];
-					strcpy(buf, deb);
-					strcat(buf, nom);
-					write(STDOUT_FILENO, buf, strlen(buf));
-					write(STDOUT_FILENO, "\n", 1);
-
-					archive(&header, source, chemin, fd);
-
-					break;
-				}
-			}
-
+		}else { // on ajoute à la fin du tar le nouveau fichier
 			if (strcmp(nom, "") == 0) { // block vide = fin du tar
-				char *buf = "Met le fichier à la fin!";
+
+				char *buf = "Met le fichier à la fin!\n";
 				write(STDOUT_FILENO, buf, strlen(buf));
-				write(STDOUT_FILENO, "\n", 1);
 
 				archive(&header, source, chemin, fd);
-
 				break;
 			}
 		}
@@ -1000,8 +983,7 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 		unsigned int taille = atoi(header.size);
 		taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
 		taille *= BLOCKSIZE;
-		off_t position;
-		if ((position = lseek(fd, (off_t) taille, SEEK_CUR)) == -1) {
+		if (lseek(fd, (off_t) taille, SEEK_CUR) == -1) {
 			perror("Erreur de déplacement dans le tar!");
 			break;
 		}
