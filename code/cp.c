@@ -899,8 +899,8 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 	int twdlen = 0;
 	char *pwd = getcwd(NULL, 0);
 	char *twd = getenv("TWD");
-	if (source[0] != '/') pwdlen = strlen(pwd) + 1;
-	if (source[0] != '/' && twd != NULL && strlen(twd) != 0) twdlen = strlen(twd) + 1;
+	if (dest[0] != '/') pwdlen = strlen(pwd) + 1;
+	if (dest[0] != '/' && twd != NULL && strlen(twd) != 0) twdlen = strlen(twd) + 1;
 
 	char absolutedest[pwdlen + twdlen + strlen(dest) + 1];
 	strcpy(absolutedest, "");
@@ -913,7 +913,7 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 		}
 	}
 	strcat(absolutedest, dest);
-
+	
 	char *pos = strstr(absolutedest, ".tar");
 	int tarlen = strlen(absolutedest) - strlen(pos) + 4;
 	char tar[tarlen+1];
