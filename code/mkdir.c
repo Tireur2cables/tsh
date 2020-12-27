@@ -5,8 +5,11 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-#include "mkdir.h"
 #include <stdlib.h>
+#include <grp.h>
+#include <pwd.h>
+#include <time.h>
+#include "mkdir.h"
 #include "tar.h"
 
 int exist_dir(char *, char *);
@@ -138,9 +141,6 @@ int create_dir(char *name){ //Créer un dossier dans un tar si possible
 				break;
 			}else{
 				get_header_size_mk(&header, &read_size);
-				char format[15];
-				sprintf(format, "%d", read_size);
-				write(STDOUT_FILENO, format, strlen(format));
 				if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
 					perror("erreur de lecture de l'archive");
 					return -1;
@@ -197,12 +197,42 @@ int create_header(char *name, struct posix_header *header){ //Meilleur méthode 
 		}
 	}
 	sprintf(header->mode,"0000755");
-	for (int i = 0; i < 8; i++) header->uid[i] = '\0';
-	for (int i = 0; i < 8; i++) header->gid[i] = '\0';
+	char uid[8];
+	char gid[8];
+	struct passwd *p = getpwuid(getuid());
+	struct group *g = getgrgid(p->pw_gid);
+	if(p == NULL){
+		for (int i = 0; i < 8; i++) uid[i] = '\0';
+	}else{
+		sprintf(uid, "%07o", p->pw_uid);
+	}
+	if(p == NULL){
+		for (int i = 0; i < 8; i++) gid[i] = '\0';
+	}else{
+		sprintf(gid, "%07o", p->pw_gid);
+	}
+	sprintf(header->uid, "%s", uid);
+	sprintf(header->gid, "%s", gid);
+	char uname[32];
+	char gname[32];
+	if(p->pw_name == NULL){
+		for (int i = 0; i < 32; i++) uname[i] = '\0';
+	}else{
+		sprintf(uname, "%s", p->pw_name);
+	}
+	write(STDOUT_FILENO, g->gr_name, strlen(g->gr_name));
+	if(g->gr_name == NULL){
+		for (int i = 0; i < 32; i++) gname[i] = '\0';
+	}else{
+		sprintf(gname, "%s", g->gr_name);
+	}
+	sprintf(header->uname, "%s", uname);
+	sprintf(header->gname, "%s", gname);
 	unsigned int taille = 0;
 	sprintf(header->size, "%011o", taille);
 
-	for (int i = 0; i < 12; i++) header->mtime[i] = '\0';
+	time_t mtime = time(NULL);
+	sprintf(header->mtime, "%11lo", mtime);
 	for (int i = 0; i < 8; i++) header->chksum[i] = '\0';
 	header->typeflag = '5';
 	for (int i = 0; i < 100; i++) header->linkname[i] = '\0';
@@ -215,14 +245,18 @@ int create_header(char *name, struct posix_header *header){ //Meilleur méthode 
 
 	header->version[0] = '0';
 	header->version[1] = '0';
-	for (int i = 0; i < 32; i++) header->uname[i] = '\0';
-	for (int i = 0; i < 32; i++) header->gname[i] = '\0';
 	for (int i = 0; i < 8; i++) header->devmajor[i] = '\0';
 	for (int i = 0; i < 8; i++) header->devminor[i] = '\0';
 	for (int i = 0; i < 155; i++) header->prefix[i] = '\0';
 	for (int i = 0; i < 12; i++) header->junk[i] = '\0';
 
 	set_checksum(header);
+	if (!check_checksum(header)) {
+		char *format = "mkdir : Erreur le header n'est pas conforme!\n";
+		if (write(STDERR_FILENO, format, strlen(format)) < strlen(format))
+			perror("Erreur d'écriture dans le shell");
+		return -1;
+	}
 	return 0;
 }
 
