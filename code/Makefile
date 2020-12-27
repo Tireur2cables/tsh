@@ -13,9 +13,10 @@ test.o : test.c ls.h cd.h pwd.h
 mkdir.o : mkdir.c mkdir.h tar.h
 exit.o : exit.c exit.h
 ls.o : ls.c tar.h ls.h
-tsh.o : tsh.c couple.h ls.h cd.h pwd.h cat.h help.h exit.h cdIn.h tar.h
+tsh.o : tsh.c couple.h ls.h cd.h pwd.h cat.h help.h exit.h cdIn.h tar.h cp.h
 pwd.o : pwd.c pwd.h
 tar.o : tar.c tar.h
+cp.o : cp.c cp.h cat.h tar.h
 clean :
 	rm -rf *~
 cleanall : clean
