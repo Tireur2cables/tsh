@@ -15,6 +15,7 @@
 int parcoursChemin(char *, char *);
 int isAccessibleFrom(char *, char *);
 int deleteDir(char *);
+int deleteDirTar(char * , char * , char *);
 int isDirEmpty(char *);
 int parcoursCheminTar(char *, char *, char *);
 int is_ext(char *, char *);
@@ -40,19 +41,13 @@ int rmdir_func(int argc,char **argv) {
 	for(int i=1;i<argc;i++) {
 		
 		char chemin[strlen(argv[i])+1];
-		strcpy(chemin,argv[i]);                       
+		strcpy(chemin,argv[i]); 
+		char * pwd = getcwd(NULL,0);
 		
-		if(chemin[0]!='/') {
+		if(chemin[0]!='/') parcoursChemin(chemin,pwd);
+		else parcoursChemin(chemin,"/"); 
 			
-			char * pwd = getcwd(NULL,0);
-			parcoursChemin(chemin,pwd);
-			
-		} else {
-		
-		
-		  parcoursChemin(chemin,"/"); 
-		 
-		}
+	
 		 
 	}
 	
@@ -257,7 +252,8 @@ int parcoursCheminTar(char * pwd , char * twd , char *rest) {
 		}
 		if (res[strlen(res)-1] == '/') res[strlen(res)-1] = '\0';
 		
-		printf("%s\n",absolutetar);
+		deleteDirTar(absolutetar,chemin,res); /// suppression
+		
 		
 	}else {
 		char *deb  = "rmdir : ";
@@ -279,6 +275,37 @@ int parcoursCheminTar(char * pwd , char * twd , char *rest) {
 	
 }
 	
+int deleteDirTar(char * absolutetar , char * chemin , char * res) {
+	
+	//printf("%s\n",absolutetar);
+	//printf("%s\n",chemin);
+	
+	int fd = open (absolutetar,O_RDONLY);
+	struct posix_header * header;
+	
+	
+	if (fd == -1) {
+		char *error_debut = "cd : Erreur! Impossible d'ouvrir l'archive ";
+		char error[strlen(error_debut) + strlen(absolutetar) + 1 + 1];
+		strcpy(error, error_debut);
+		strcat(error, absolutetar);
+		strcat(error, "\n");
+		int errorlen = strlen(error);
+		if (write(STDERR_FILENO, error, errorlen) < errorlen)
+			perror("Erreur d'écriture dans le shell!");
+		return -1;
+	}
+	
+	int n=0;
+	
+	
+	
+	close(fd);
+	
+	return 0;
+	
+}
+
 int deleteDir(char * pwd) {
 	
 	

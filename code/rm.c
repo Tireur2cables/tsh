@@ -46,7 +46,8 @@ int rm_func(int argc , char ** argv) {
 		char chemin[strlen(argv[i]+1)];
 		strcpy(chemin,argv[i]);
 		
-		parcoursChemin(chemin,pwd,withOption);
+		if(chemin[0]!='/') parcoursChemin(chemin,pwd,withOption);
+		else parcoursChemin(chemin,"/",withOption);
 		
 		}
 		
