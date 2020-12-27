@@ -33,7 +33,7 @@ void copystandard(char *, char *);
 void copyfiletartofile(char *, char *, mode_t);
 void copyfiletofiletar(char *, char *);
 mode_t getmode(char *, char *);
-int setHeader(struct posix_header *, char *, mode_t, uid_t, gid_t, off_t, time_t);
+int setHeader(struct posix_header *, char *, mode_t, uid_t, gid_t, off_t, time_t, char *, char *);
 int ecritInTar(int ,struct posix_header *, char *, unsigned int, char *, unsigned int);
 void copyfiletartofiletar(char *, char *);
 
@@ -315,15 +315,15 @@ void copyTar(char *source, char *dest, int option) {
 			if (!exist(dest, 0)) {
 				if (isTar(dest)) {
 					// creer le tar dest
-					// mkdir?
+					// mkdir_tar?
 				}
 				else {
 					// creer le dossier dest
-					// mkdir
+					// mkdir_tar
 				}
 			}else if (isTarDir(dest)) { // dest un dossier dans le tar ou un tar
 				// creer le dossier dest/sourcedoss
-				// mkdir
+				// mkdir_tar
 				// dest = dest/sourcedoss
 			}else { // dest est un fichier dans le tar
 				char *deb  = "cp : ";
@@ -715,15 +715,16 @@ void copyDoss(char *source, char *dest, int option) {
 		// TODO
 		if (!exist(dest, 0)) {
 			if (isTar(dest)) {
-				// creer le tar dest et mettre le contenu de source dedans
+				// creer le tar dest
+				// mkdir_tar ?
 			}
 			else {
-				// creer le dossier dest et mettre le contenu de source dedans
-				// mkdir
+				// creer le dossier dest dans le tar
+				// mkdir_tar
 			}
 		}else if (isTarDir(dest)) { // dest un dossier dans le tar ou un tar
-			// creer le dossier dest/sourcedoss et mettre le contenu de source dedans
-			// mkdir
+			// creer le dossier dest/sourcedoss
+			// mkdir_tar ?
 			// dest = dest/sourcedoss
 		}else { // dest est un fichier dans le tar
 			char *deb  = "cp : ";
@@ -752,8 +753,8 @@ void copyDoss(char *source, char *dest, int option) {
 		int sourcelen = strlen(source);
 		if (source[sourcelen-1] != '/') sourcelen++;
 		struct dirent *d;
-		while ((d = readdir(sourcedir)) != NULL) {
-			if (strcmp(d->d_name, ".") != 0 && strcmp(d->d_name, "..") != 0) {
+		while ((d = readdir(sourcedir)) != NULL) { // pour chaque element dans le dossier
+			if (strcmp(d->d_name, ".") != 0 && strcmp(d->d_name, "..") != 0) { // sauf . et ..
 				char absolute[sourcelen + strlen(d->d_name) + 1];
 				strcpy(absolute, source);
 				if (sourcelen != strlen(source)) strcat(absolute, "/");
@@ -893,11 +894,19 @@ void copyfiletartofile(char *source, char *dest, mode_t mode) { // ecrase conten
 }
 
 void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest avec contenu de source et ne change pas le nom de dest
-// TODO : ajouter un fichier qui existe deja (remplacer son contenu)
-// le test pour set la variable existdest ne marche pas tout le temps par exemple pour Makefile dans tete.tar je sais pas pourquoi!
-
 	struct stat stsource;
 	stat(source, &stsource); // verifications déjà faites
+
+	int namelen = 32;
+	char uname[namelen];
+	char gname[namelen];
+	struct passwd *pw = getpwuid(stsource.st_uid);
+	if (pw == NULL) for (int i = 0; i < namelen; i++) uname[i] = '\0';
+	else sprintf(uname, "%s", pw->pw_name);
+	struct group *grp = getgrgid(stsource.st_gid);
+	if (grp == NULL) for (int i = 0; i < namelen; i++) gname[i] = '\0';
+	else sprintf(gname, "%s", grp->gr_name);
+
 
 	int pwdlen = 0;
 	int twdlen = 0;
@@ -925,7 +934,7 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 	tar[tarlen] = '\0';
 
 	char chemin[strlen(absolutedest) - strlen(tar) - 1 + 1];
-	strcpy(chemin, &absolutedest[strlen(tar)+1]); // existe car dest n'est pas un tar
+	strcpy(chemin, &absolutedest[strlen(tar)+1]); // existe car dest n'est pas juste un tar
 
 	char *cheminfile;
 	char *tmp = chemin;
@@ -991,14 +1000,7 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 
 		if (existdest) { // on remplace le fichier existant
 			if (strcmp(nom, chemin) == 0) {
-				char *deb = "Remplace le fichier ";
-				char str[strlen(deb) + strlen(nom) + 1];
-				strcpy(str, deb);
-				strcat(str, nom);
-				write(STDOUT_FILENO, str, strlen(str));
-				write(STDOUT_FILENO, "\n", 1);
-
-				if (setHeader(&header, chemin, stsource.st_mode, stsource.st_uid, stsource.st_gid, stsource.st_size, stsource.st_mtime) < 0)
+				if (setHeader(&header, chemin, stsource.st_mode, stsource.st_uid, stsource.st_gid, stsource.st_size, stsource.st_mtime, uname, gname) < 0)
 					return;
 
 				off_t zone;
@@ -1044,7 +1046,7 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 		}else { // on ajoute à la fin du tar le nouveau fichier
 			if (strcmp(nom, "") == 0) { // block vide = fin du tar
 
-				if (setHeader(&header, chemin, stsource.st_mode, stsource.st_uid, stsource.st_gid, stsource.st_size, stsource.st_mtime) < 0)
+				if (setHeader(&header, chemin, stsource.st_mode, stsource.st_uid, stsource.st_gid, stsource.st_size, stsource.st_mtime, uname, gname) < 0)
 					return;
 
 				off_t zone;
@@ -1090,7 +1092,7 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 	close(fd);
 }
 
-int setHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid, gid_t gid, off_t taille, time_t mtime) {
+int setHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid, gid_t gid, off_t taille, time_t mtime, char *uname, char *gname) {
 	int decalage = 0;
 	for (int i = 0; i < 155; i++) {
 		if (strlen(chemin) > 99 && i < strlen(chemin) - 99) {
@@ -1118,11 +1120,8 @@ int setHeader(struct posix_header *header, char *chemin, mode_t mode, uid_t uid,
 	header->version[0] = '0';
 	header->version[1] = '0';
 
-	struct passwd *pws = getpwuid(uid);
-	sprintf(header->uname, "%s", pws->pw_name);
-
-	struct group *grp = getgrgid(gid);
-	sprintf(header->gname, "%s", grp->gr_name);
+	sprintf(header->uname, "%s", uname);
+	sprintf(header->gname, "%s", gname);
 
 	// useless ?
 	for (int i = 0; i < 8; i++) header->devmajor[i] = '\0';
@@ -1168,6 +1167,254 @@ int ecritInTar(int fd, struct posix_header *header, char *contenu, unsigned int 
 }
 
 void copyfiletartofiletar(char *source, char *dest) {
-	// TODO
-	write(STDOUT_FILENO, "WIP\n", 4);
+	int pwdlen = 0;
+	int twdlen = 0;
+	char *pwd = getcwd(NULL, 0);
+	char *twd = getenv("TWD");
+	if (dest[0] != '/') pwdlen = strlen(pwd) + 1;
+	if (dest[0] != '/' && twd != NULL && strlen(twd) != 0) twdlen = strlen(twd) + 1;
+
+	char absolutedest[pwdlen + twdlen + strlen(dest) + 1];
+	strcpy(absolutedest, "");
+	if (dest[0] != '/') {
+		strcat(absolutedest, pwd);
+		strcat(absolutedest, "/");
+		if (twdlen != 0) {
+			strcat(absolutedest, twd);
+			strcat(absolutedest, "/");
+		}
+	}
+	strcat(absolutedest, dest);
+
+	pwdlen = 0;
+	twdlen = 0;
+	if (source[0] != '/') pwdlen = strlen(pwd) + 1;
+	if (source[0] != '/' && twd != NULL && strlen(twd) != 0) twdlen = strlen(twd) + 1;
+	char absolutesource[pwdlen + twdlen + strlen(source) + 1];
+	strcpy(absolutesource, "");
+	if (source[0] != '/') {
+		strcat(absolutesource, pwd);
+		strcat(absolutesource, "/");
+		if (twdlen != 0) {
+			strcat(absolutesource, twd);
+			strcat(absolutesource, "/");
+		}
+	}
+	strcat(absolutesource, source);
+
+	char *pos = strstr(absolutedest, ".tar");
+	int tarlen = strlen(absolutedest) - strlen(pos) + 4;
+	char tardest[tarlen+1];
+	strncpy(tardest, absolutedest, tarlen);
+	tardest[tarlen] = '\0';
+
+	pos = strstr(absolutesource, ".tar");
+	tarlen = strlen(absolutesource) - strlen(pos) + 4;
+	char tarsource[tarlen+1];
+	strncpy(tarsource, absolutesource, tarlen);
+	tarsource[tarlen] = '\0';
+
+	char chemindest[strlen(absolutedest) - strlen(tardest) - 1 + 1];
+	strcpy(chemindest, &absolutedest[strlen(tardest)+1]); // existe car dest n'est pas juste un tar
+
+	char cheminsource[strlen(absolutesource) - strlen(tarsource) - 1 + 1];
+	strcpy(cheminsource, &absolutesource[strlen(tarsource)+1]); // existe car source n'est pas juste un tar
+
+	char *chemindestfile;
+	char *tmp = chemindest;
+	while ((pos = strstr(tmp, "/")) != NULL) {
+		tmp = pos+1;
+		if (strlen(pos+1) != 0) chemindestfile = pos+1;
+	}
+
+	int chemindestdosslen = 0;
+	if (strstr(chemindest, "/") != NULL && chemindestfile != NULL && strlen(chemindest) > strlen(chemindestfile))
+		chemindestdosslen = strlen(chemindest) - strlen(chemindestfile) - 1;
+	char chemindestdoss[chemindestdosslen + 1];
+	if (chemindestdosslen != 0) {
+		strncpy(chemindestdoss, chemindest, chemindestdosslen);
+		chemindestdoss[chemindestdosslen] = '\0';
+	}
+
+	int fd = open(tardest, O_RDWR);
+	if (fd == -1) {
+		char *deb  = "cp : Impossible d'ouvrir ";
+		char error[strlen(deb) + strlen(tardest) + 1 + 1];
+		strcpy(error, deb);
+		strcat(error, tardest);
+		strcat(error, "\n");
+		int errorlen = strlen(error);
+		if (write(STDERR_FILENO, error, errorlen) < errorlen)
+			perror("Erreur d'écriture dans le shell!");
+		return;
+	}
+
+	int existdest = exist(dest, 0);
+
+	int fdsource;
+	if (strcmp(tardest, tarsource) != 0) { // source et dest ne sont pas dans le meme tar
+		fdsource = open(tarsource, O_RDONLY);
+		if (fdsource == -1) {
+			char *deb  = "cp : Impossible d'ouvrir ";
+			char error[strlen(deb) + strlen(source) + 1 + 1];
+			strcpy(error, deb);
+			strcat(error, source);
+			strcat(error, "\n");
+			int errorlen = strlen(error);
+			if (write(STDERR_FILENO, error, errorlen) < errorlen)
+				perror("Erreur d'écriture dans le shell!");
+			return;
+		}
+	}else // source et tar sont dans le meme tar
+		fdsource = fd;
+
+	unsigned int taille;
+	mode_t mode;
+	time_t mtime;
+	uid_t uid;
+	gid_t gid;
+	int namelen = 32;
+	char uname[namelen];
+	char gname[namelen];
+	struct posix_header header;
+	while (1) { // parcours du tar de source
+		if (read(fdsource, &header, BLOCKSIZE) < BLOCKSIZE) break;
+		char nom[strlen(header.name)+1];
+		strcpy(nom, header.name);
+
+		if (strcmp(nom, cheminsource) == 0) { // source existe donc on arrive toujours ici
+			sscanf(header.size, "%o", &taille);
+			sscanf(header.mode, "%o", &mode);
+			sscanf(header.mtime, "%lo", &mtime);
+			sscanf(header.uid, "%o", &uid);
+			sscanf(header.gid, "%o", &gid);
+			sscanf(header.uname, "%s", uname);
+			sscanf(header.gname, "%s", gname);
+			break;
+		}
+
+		unsigned int tailledeplacement;
+		sscanf(header.size, "%o", &tailledeplacement);
+		tailledeplacement = (tailledeplacement + BLOCKSIZE - 1) >> BLOCKBITS;
+		tailledeplacement *= BLOCKSIZE;
+		if (lseek(fdsource, (off_t) tailledeplacement, SEEK_CUR) == -1) {
+			perror("Erreur de déplacement dans le tar!");
+			break;
+		}
+	}
+
+	char contenu[taille]; // bonne taille car déjà formatée pour un tar
+
+	if (read(fdsource, contenu, taille) < taille) {
+		char *error = "cp : Erreur de lecture du contenu du ficier source!\n";
+		if (write(STDERR_FILENO, error, strlen(error)) < strlen(error))
+			perror("Erreur d'écriture dans le shell!");
+		return;
+	}
+
+	if (strcmp(tardest, tarsource) != 0) // source est dest ne sont pas dans le meme tar
+		close(fdsource);
+
+	if (lseek(fd, 0, SEEK_SET) == -1) { // on se remet au début du tar au cas ou on se soit déplacer
+		perror("Erreur de déplacement dans le tar!");
+		return;
+	}
+
+	while (1) { // parcours du tar de dest
+		if (read(fd, &header, BLOCKSIZE) < BLOCKSIZE) break;
+		char nom[strlen(header.name)+1];
+		strcpy(nom, header.name);
+
+		if (existdest) { // on remplace le fichier existant
+			if (strcmp(nom, chemindest) == 0) {
+				if (setHeader(&header, chemindest, mode, uid, gid, taille, mtime, uname, gname) < 0)
+					return;
+
+				off_t zone;
+				if ((zone = lseek(fd, -BLOCKSIZE, SEEK_CUR)) == -1) { // on se remet à l'emplacement du header
+					perror("Erreur de déplacement dans le tar!");
+					return;
+				}
+
+				unsigned int taillefile;
+				sscanf(header.size, "%o", &taillefile);
+				taillefile = (taillefile + BLOCKSIZE - 1) >> BLOCKBITS;
+				taillefile *= BLOCKSIZE;
+				taillefile += BLOCKSIZE; // on est revenu avant le header
+
+				off_t zonebis;
+				if ((zonebis = lseek(fd, (off_t) taillefile, SEEK_CUR)) == -1) { // on se déplace après le fichier et son contenu
+					perror("Erreur de déplacement dans le tar!");
+					return;
+				}
+
+				unsigned int taillefin = lseek(fd, 0, SEEK_END) - zonebis; // taille de ce qu'il reste jusqua la fin du tar
+				char buf[taillefin];
+
+				if (lseek(fd, zonebis, SEEK_SET) == -1) { // on se remet après le contenu du fichier
+					perror("Erreur de déplacement dans le tar!");
+					return;
+				}
+
+				if (read(fd, buf, taillefin) < taillefin) { // recupère la suite du tar
+					perror("Erreur de lecture de la fin du tar!");
+					return;
+				}
+
+				if (lseek(fd, zone, SEEK_SET) == -1) { // on se remet à l'emplacement du header pour commencer à ecrire
+					perror("Erreur de déplacement dans le tar!");
+					return;
+				}
+
+				if (ecritInTar(fd, &header, contenu, taille, buf, taillefin) < 0) return;
+
+				break;
+			}
+		}else { // on ajoute à la fin du tar le nouveau fichier
+			if (strcmp(nom, "") == 0) { // block vide = fin du tar
+
+				if (setHeader(&header, chemindest, mode, uid, gid, taille, mtime, uname, gname) < 0)
+					return;
+
+				off_t zone;
+				if ((zone = lseek(fd, -BLOCKSIZE, SEEK_CUR)) == -1) { // on se remet à l'emplacement du header
+					perror("Erreur de déplacement dans le tar!");
+					return;
+				}
+
+				unsigned int taillefin = lseek(fd, 0, SEEK_END) - zone; // taille de ce qu'il reste jusqua la fin du tar
+				char buf[taillefin];
+
+				if (lseek(fd, zone, SEEK_SET) == -1) { // on se remet à l'emplacement du header
+					perror("Erreur de déplacement dans le tar!");
+					return;
+				}
+
+				if (read(fd, buf, taillefin) < taillefin) { // recupère la suite du tar
+					perror("Erreur de lecture de la fin du tar!");
+					return;
+				}
+
+				if (lseek(fd, zone, SEEK_SET) == -1) { // on se remet à l'emplacement du header pour commencer à ecrire
+					perror("Erreur de déplacement dans le tar!");
+					return;
+				}
+
+				if (ecritInTar(fd, &header, contenu, taille, buf, taillefin) < 0) return;
+
+				break;
+			}
+		}
+
+		unsigned int tailledeplacement;
+		sscanf(header.size, "%o", &tailledeplacement);
+		tailledeplacement = (tailledeplacement + BLOCKSIZE - 1) >> BLOCKBITS;
+		tailledeplacement *= BLOCKSIZE;
+		if (lseek(fd, (off_t) tailledeplacement, SEEK_CUR) == -1) {
+			perror("Erreur de déplacement dans le tar!");
+			break;
+		}
+
+	}
+	close(fd);
 }
