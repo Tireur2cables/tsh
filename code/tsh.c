@@ -99,33 +99,84 @@ void parse_command(char *line, int readen){
 	//parse_tube(line, readen);
 
 }
-
+/*
+* Forme des redirection prise en chare : command > fichier
+*/
 void parse_redirection(char *line, int readen){
 	char * pos;
-	if((pos = strstr(line, ">")) != NULL){
-		//printf("%d", pos);
-		char command[strlen(line)];
-		char file[strlen(line)];
-		strncpy(command, line, pos-line);
-		strcpy(file, pos+2);
-		int fd;
-		if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
-			perror("Erreur d'ouverture");
-			exit(EXIT_FAILURE);
+	if((pos = strstr(line, ">")) != NULL){ //On doit faire une redirection de la sortie standard ou de la sortie erreur
+		if((pos = strstr(line, "2>"))){ //redirection de la sortie erreur
+			int fd;
+			char command[strlen(line)];
+			if(pos[2] == '>'){ //2>>
+				char file[strlen(line)];
+				strncpy(command, line, pos-line);
+				strcpy(file, pos+2);
+				if((fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
+					perror("Erreur d'ouverture");
+					exit(EXIT_FAILURE);
+				}
+			}else{ //2>
+				char file[strlen(line)];
+				strncpy(command, line, pos-line);
+				strcpy(file, pos+2);
+				if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
+					perror("Erreur d'ouverture");
+					exit(EXIT_FAILURE);
+				}
+			}
+			int save = dup(2);
+			if((dup2(fd, STDERR_FILENO) < 0)){
+				perror("Erreur de redirection");
+				exit(EXIT_FAILURE);
+			}
+			selectCommand(command, strlen(command));
+			close(fd);
+			if(dup2(save, STDERR_FILENO) < 0){
+				perror("erreur de redirection");
+				exit(EXIT_FAILURE);
+			}
+			close(save);
 		}
-		int save = dup(1);
-		if((dup2(fd, STDOUT_FILENO) < 0)){
-			perror("Erreur de redirection");
-			exit(EXIT_FAILURE);
+		if((pos = strstr(line, ">"))){ //redirection de la sortie standard
+			int fd;
+			char command[strlen(line)];
+			if(pos[1] == '>'){ //>>
+				//write(STDOUT_FILENO, "yes", 3);
+				char file[strlen(line)];
+				strncpy(command, line, pos-line);
+				strcpy(file, pos+2);
+				if((fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
+					perror("Erreur d'ouverture");
+					exit(EXIT_FAILURE);
+				}
+			}else{ //>
+				char file[strlen(line)];
+				strncpy(command, line, pos-line);
+				strcpy(file, pos+2);
+				if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
+					perror("Erreur d'ouverture");
+					exit(EXIT_FAILURE);
+				}
+			}
+			int save = dup(1);
+			if((dup2(fd, STDOUT_FILENO) < 0)){
+				perror("Erreur de redirection");
+				exit(EXIT_FAILURE);
+			}
+			selectCommand(command, strlen(command));
+			close(fd);
+			if(dup2(save, STDOUT_FILENO) < 0){
+				perror("erreur de redirection");
+				exit(EXIT_FAILURE);
+			}
+			close(save);
 		}
-		selectCommand(command, strlen(command));
-		close(fd);
-		if(dup2(save, STDOUT_FILENO) < 0){
-			perror("erreur de redirection");
-			exit(EXIT_FAILURE);
-		}
-		close(save);
 	}
+	if((pos = strstr(line, "<")) != NULL){ //On doit faire une reditction de l'entrée
+		write(STDERR_FILENO, "WIP", 3);
+	}
+
 }
 
 void parse_tube(char *line, int readen){
