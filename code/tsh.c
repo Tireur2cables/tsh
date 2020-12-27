@@ -93,8 +93,8 @@ int main(int argc, char const *argv[]) { //main
 		}else { //EOF detected
 			char *newline = "\n";
 			int newline_len = strlen(newline);
-			if (write(STDOUT_FILENO, newline, newline_len) < newline_len) {
-				perror("Erreur d'écriture dans le shell!");
+			if (write(STDERR_FILENO, newline, newline_len) < newline_len) {
+				perror("Erreur d'écriture dans le shell");
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -237,8 +237,8 @@ void redirection_tar(char *command, char *file, int type){
 	}else{
 		char format[strlen(file) + 60];
 		sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
-		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
-			perror("Erreur d'écriture dans le shell!");
+		if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+			perror("Erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
 		}
 		return;
@@ -275,8 +275,8 @@ void redirection_classique(char *command, char *file, int type){
 		if((fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
 			char format[strlen(file) + 60];
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
-			if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
-				perror("Erreur d'écriture dans le shell!");
+			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell");
 				exit(EXIT_FAILURE);
 			}
 			return;
@@ -286,8 +286,8 @@ void redirection_classique(char *command, char *file, int type){
 		if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
 			char format[strlen(file) + 60];
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
-			if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
-				perror("Erreur d'écriture dans le shell!");
+			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell");
 				exit(EXIT_FAILURE);
 			}
 			return;
@@ -297,8 +297,8 @@ void redirection_classique(char *command, char *file, int type){
 		if((fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
 			char format[strlen(file) + 60];
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
-			if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
-				perror("Erreur d'écriture dans le shell!");
+			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell");
 				exit(EXIT_FAILURE);
 			}
 			return;
@@ -309,8 +309,8 @@ void redirection_classique(char *command, char *file, int type){
 		if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
 			char format[strlen(file) + 60];
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
-			if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
-				perror("Erreur d'écriture dans le shell!");
+			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell");
 				exit(EXIT_FAILURE);
 			}
 			return;
@@ -320,8 +320,8 @@ void redirection_classique(char *command, char *file, int type){
 		if((fd = open(file, O_RDONLY)) < 0){
 			char format[strlen(file) + 60];
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
-			if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
-				perror("Erreur d'écriture dans le shell!");
+			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell");
 				exit(EXIT_FAILURE);
 			}
 			return;
