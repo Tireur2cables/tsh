@@ -11,6 +11,9 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <readline/readline.h>
+#include <grp.h>
+#include <pwd.h>
+#include <time.h>
 #include "couple.h"
 #include "ls.h"
 #include "cd.h"
@@ -45,6 +48,8 @@ char *traiterHome(char *, int *);
 int exist_path_in_tar(int, char *);
 void redirection_tar(char *, char*, int);
 void redirection_classique(char *, char *, int);
+int create_header(char *, struct posix_header *);
+int write_block(int fd, struct posix_header *);
 
 //tableau (et sa taille) des commandes implémentées (non built-in) pour les tar
 int len_custom = 3; //8
@@ -188,6 +193,10 @@ void redirection_tar(char *command, char *file, int type){
 	  exit(EXIT_FAILURE);
 	}
 	if(exist_path_in_tar(fd, namefile)){ //vérifie que l'arborescence de fichier existe dans le tar
+		//Il faut voir si le fichier existe déja si oui j'y réfléchirais plus tar, si non [fleche vers le bas]
+		struct posix_header header;
+		int n = 0;
+		int read_size = 0;
 		while((n=read(fd, &header, BLOCKSIZE))>0){
 			//write(STDOUT_FILENO, "yes", 3);
 			if(strcmp(header.name, "\0") == 0){
@@ -197,30 +206,33 @@ void redirection_tar(char *command, char *file, int type){
 				lseek(fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
 				create_header(namefile, &header2);
 				write(fd, &header2, BLOCKSIZE);
+				int save = dup(STDOUT_FILENO);
+				if((dup2(fd, STDOUT_FILENO) < 0)){
+					perror("Erreur de redirection");
+					exit(EXIT_FAILURE);
+				}
+				selectCommand(command, strlen(command));
+				close(fd);
+				if(dup2(save, STDOUT_FILENO) < 0){
+					perror("erreur de redirection");
+					exit(EXIT_FAILURE);
+				}
+				close(save);
+				//write stdout dans tar
+				//get size written
+				//update header
 				write_block(fd, NULL);
 				write_block(fd, NULL);
-				break;
+				return;
 			}else{
 				get_header_size_tsh(&header, &read_size);
 				if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
 					perror("erreur de lecture de l'archive");
-					return -1;
+					return;
 				}
 			}
 
 		}
-		/*char block[BLOCKSIZE];
-		memset(block, '\0', 512);
-		if(write(fd, block, BLOCKSIZE) < BLOCKSIZE){
-			perror("Erreur d'écriture dans l'archive");
-			exit(EXIT_FAILURE);
-		}*/
-		//create header
-		//write header
-		//write stdout dans tar
-		//get size written (cat)
-		//update header
-		//close tar
 		write(STDOUT_FILENO, "WIP", 3);
 	}else{
 		char format[strlen(file) + 60];
@@ -632,4 +644,95 @@ void get_header_size_tsh(struct posix_header *header, int *read_size){
 	int taille = 0;
 	sscanf(header->size, "%o", &taille);
 	*read_size = ((taille + 512-1)/512);
+}
+
+int create_header(char *name, struct posix_header *header){ //Meilleur méthode pour le faire ?
+	for(int i = 0; i < 100; i++){
+		if(i < strlen(name)){
+			header->name[i] = name[i];
+		}else if (i == strlen(name)){
+			header->name[i] = '/';
+		}else{
+			header->name[i] = '\0';
+		}
+	}
+	sprintf(header->mode,"0000755");
+	char uid[8];
+	char gid[8];
+	struct passwd *p = getpwuid(getuid());
+	struct group *g = getgrgid(p->pw_gid);
+	if(p == NULL){
+		for (int i = 0; i < 8; i++) uid[i] = '\0';
+	}else{
+		sprintf(uid, "%07o", p->pw_uid);
+	}
+	if(p == NULL){
+		for (int i = 0; i < 8; i++) gid[i] = '\0';
+	}else{
+		sprintf(gid, "%07o", p->pw_gid);
+	}
+	sprintf(header->uid, "%s", uid);
+	sprintf(header->gid, "%s", gid);
+	char uname[32];
+	char gname[32];
+	if(p->pw_name == NULL){
+		for (int i = 0; i < 32; i++) uname[i] = '\0';
+	}else{
+		sprintf(uname, "%s", p->pw_name);
+	}
+	write(STDOUT_FILENO, g->gr_name, strlen(g->gr_name));
+	if(g->gr_name == NULL){
+		for (int i = 0; i < 32; i++) gname[i] = '\0';
+	}else{
+		sprintf(gname, "%s", g->gr_name);
+	}
+	sprintf(header->uname, "%s", uname);
+	sprintf(header->gname, "%s", gname);
+	unsigned int taille = 0;
+	sprintf(header->size, "%011o", taille);
+
+	time_t mtime = time(NULL);
+	sprintf(header->mtime, "%11lo", mtime);
+	for (int i = 0; i < 8; i++) header->chksum[i] = '\0';
+	header->typeflag = '5';
+	for (int i = 0; i < 100; i++) header->linkname[i] = '\0';
+	header->magic[0] = 'u';
+	header->magic[1] = 's';
+	header->magic[2] = 't';
+	header->magic[3] = 'a';
+	header->magic[4] = 'r';
+	header->magic[5] = '\0';
+
+	header->version[0] = '0';
+	header->version[1] = '0';
+	for (int i = 0; i < 8; i++) header->devmajor[i] = '\0';
+	for (int i = 0; i < 8; i++) header->devminor[i] = '\0';
+	for (int i = 0; i < 155; i++) header->prefix[i] = '\0';
+	for (int i = 0; i < 12; i++) header->junk[i] = '\0';
+
+	set_checksum(header);
+	if (!check_checksum(header)) {
+		char *format = "mkdir : Erreur le header n'est pas conforme!\n";
+		if (write(STDERR_FILENO, format, strlen(format)) < strlen(format))
+			perror("Erreur d'écriture dans le shell");
+		return -1;
+	}
+	return 0;
+}
+
+int write_block(int fd, struct posix_header* header){
+	if (header == NULL){
+		char block[BLOCKSIZE];
+		memset(block, '\0', 512);
+		if(write(fd, block, BLOCKSIZE) < BLOCKSIZE){
+			perror("Erreur d'écriture dans l'archive");
+			exit(EXIT_FAILURE);
+		}
+	}else{
+		if(write(fd, &header, BLOCKSIZE) < BLOCKSIZE){
+			perror("Erreur d'écriture dans l'aarchive");
+			exit(EXIT_FAILURE);
+		}
+	}
+	return 0;
 }
