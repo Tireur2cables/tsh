@@ -245,7 +245,7 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	long int mtime;
 	sscanf(header->size, "%o", &taille);
 	char taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1):6]; //Les tailles ne sont plus alignés au dessus de 6 chiffres
-	sprintf(taille_str, "%d", taille);
+	sprintf(taille_str, "%o", taille);
 	for(int i = nbdigit(taille); i < 6; i++){ //On complète la string avec des espaces afin d'avoir un alignement
 		taille_str[i] = ' ';
 	}
