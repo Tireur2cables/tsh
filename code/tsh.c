@@ -100,10 +100,18 @@ void parse_command(char *line, int readen){
 
 }
 /*
-* Forme des redirection prise en chare : command > fichier
+* Forme des redirection prise en charge :
+	command > fichier
+	command >> fichier
+	a faire
+	command 2> fichier
+	commad 2>> fichier
+	command < fichier
+	> fichier command
+
 */
 void parse_redirection(char *line, int readen){
-	char * pos;
+	char *pos;
 	if((pos = strstr(line, ">")) != NULL){ //On doit faire une redirection de la sortie standard ou de la sortie erreur
 		if((pos = strstr(line, "2>"))){ //redirection de la sortie erreur
 			int fd;
@@ -111,7 +119,7 @@ void parse_redirection(char *line, int readen){
 			if(pos[2] == '>'){ //2>>
 				char file[strlen(line)];
 				strncpy(command, line, pos-line);
-				strcpy(file, pos+2);
+				strcpy(file, (pos[2] == ' ')?pos+4:pos+3);
 				if((fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
 					perror("Erreur d'ouverture");
 					exit(EXIT_FAILURE);
@@ -119,7 +127,7 @@ void parse_redirection(char *line, int readen){
 			}else{ //2>
 				char file[strlen(line)];
 				strncpy(command, line, pos-line);
-				strcpy(file, pos+2);
+				strcpy(file, (pos[2] == ' ')?pos+3:pos+2);
 				if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
 					perror("Erreur d'ouverture");
 					exit(EXIT_FAILURE);
@@ -145,7 +153,7 @@ void parse_redirection(char *line, int readen){
 				//write(STDOUT_FILENO, "yes", 3);
 				char file[strlen(line)];
 				strncpy(command, line, pos-line);
-				strcpy(file, pos+2);
+				strcpy(file, (pos[2] == ' ')?pos+3:pos+2);
 				if((fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
 					perror("Erreur d'ouverture");
 					exit(EXIT_FAILURE);
@@ -153,7 +161,7 @@ void parse_redirection(char *line, int readen){
 			}else{ //>
 				char file[strlen(line)];
 				strncpy(command, line, pos-line);
-				strcpy(file, pos+2);
+				strcpy(file, (pos[1] == ' ')?pos+2:pos+1);
 				if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
 					perror("Erreur d'ouverture");
 					exit(EXIT_FAILURE);
