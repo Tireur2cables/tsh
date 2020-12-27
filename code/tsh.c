@@ -20,6 +20,7 @@
 #include "exit.h"
 #include "cdIn.h"
 #include "tar.h"
+#include "mkdir.h"
 #include "cp.h"
 
 //todo list
@@ -40,9 +41,10 @@ char *traiterArguements(char *, int *);
 char *traiterHome(char *, int *);
 
 //tableau (et sa taille) des commandes implémentées (non built-in) pour les tar
-int len_custom = 4; //8
-couple custom[4] = {{"ls", ls}, {"pwd", pwd}, {"cat", cat}, {"cp", cp}};
-//, {"rm", rm}, {"mv", mv}, {"rmdir", rmdir}, {"mkdir", mkdir};
+int len_custom = 5; //8
+couple custom[5] = {{"ls", ls}, {"pwd", pwd}, {"cat", cat}, {"mkdir", mkdir_tar}, {"cp", cp}};
+//, {"rm", rm}, {"mv", mv}, {"rmdir", rmdir};
+
 
 
 int main(int argc, char const *argv[]) { //main
