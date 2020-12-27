@@ -151,7 +151,7 @@ int cat_tar(char *file, char *options){
 */
 int get_header_size_cat(struct posix_header *header, int *read_size){
 	int taille = 0;
-	sscanf(header->size, "%d", &taille);
+	sscanf(header->size, "%o", &taille);
 	*read_size = ((taille + 512-1)/512);
 	return 0;
 }
