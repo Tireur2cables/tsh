@@ -103,9 +103,9 @@ void parse_command(char *line, int readen){
 * Forme des redirection prise en charge :
 	command > fichier
 	command >> fichier
-	a faire
 	command 2> fichier
 	commad 2>> fichier
+	non fait
 	command < fichier
 	> fichier command
 
@@ -149,9 +149,11 @@ void parse_redirection(char *line, int readen){
 		if((pos = strstr(line, ">"))){ //redirection de la sortie standard
 			int fd;
 			char command[strlen(line)];
+			char file[strlen(line)];
+			memset(command, '\0', strlen(line));
+			memset(file, '\0', strlen(line));
 			if(pos[1] == '>'){ //>>
 				//write(STDOUT_FILENO, "yes", 3);
-				char file[strlen(line)];
 				strncpy(command, line, pos-line);
 				strcpy(file, (pos[2] == ' ')?pos+3:pos+2);
 				if((fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
@@ -159,14 +161,15 @@ void parse_redirection(char *line, int readen){
 					exit(EXIT_FAILURE);
 				}
 			}else{ //>
-				char file[strlen(line)];
 				strncpy(command, line, pos-line);
 				strcpy(file, (pos[1] == ' ')?pos+2:pos+1);
+				//write(STDOUT_FILENO, command, strlen(command));
 				if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
-					perror("Erreur d'ouverture");
+					perror("Erreur d'ouvertureee");
 					exit(EXIT_FAILURE);
 				}
 			}
+
 			int save = dup(1);
 			if((dup2(fd, STDOUT_FILENO) < 0)){
 				perror("Erreur de redirection");
@@ -182,7 +185,27 @@ void parse_redirection(char *line, int readen){
 		}
 	}
 	if((pos = strstr(line, "<")) != NULL){ //On doit faire une reditction de l'entrée
-		write(STDERR_FILENO, "WIP", 3);
+		int fd;
+		char command[strlen(line)];
+		char file[strlen(line)];
+		strncpy(command, line, pos-line);
+		strcpy(file, (pos[1] == ' ')?pos+2:pos+1);
+		if((fd = open(file, O_RDONLY)) < 0){
+			perror("Erreur d'ouverture");
+			exit(EXIT_FAILURE);
+		}
+		int save = dup(0);
+		if((dup2(fd, STDIN_FILENO) < 0)){
+			perror("Erreur de redirection");
+			exit(EXIT_FAILURE);
+		}
+		selectCommand(command, strlen(command));
+		close(fd);
+		if(dup2(save, STDIN_FILENO) < 0){
+			perror("erreur de redirection");
+			exit(EXIT_FAILURE);
+		}
+		close(save);
 	}
 
 }
