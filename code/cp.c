@@ -14,6 +14,7 @@
 #include "cp.h"
 #include "cat.h"
 #include "tar.h"
+#include "mkdir.h"
 
 void detectError(int, char *[]);
 int optionDetection(int, char *[]);
@@ -313,20 +314,30 @@ void copyTar(char *source, char *dest, int option) {
 		}
 
 		if (isInTar(dest)) { // dest est dans un tar
-			// TODO
+			char source_copy[strlen(source)+1];
+			strcpy(source_copy, source);
+			char *sourcedoss;
+			char *tok;
+			char *saveptr;
+			char *tmp = source_copy;
+			while ((tok = strtok_r(tmp, "/", &saveptr)) != NULL) {
+				tmp = saveptr;
+				sourcedoss = tok;
+			}
+			int destlen = strlen(dest);
+			if (dest[destlen-1] != '/') destlen++;
+			char destbis[destlen + strlen(sourcedoss) + 1];
+
 			if (!exist(dest, 0)) {
-				if (isTar(dest)) {
-					// creer le tar dest
-					// mkdir_tar?
-				}
-				else {
-					// creer le dossier dest
-					// mkdir_tar
-				}
+				char *argv[3] = {"mkdir", dest, NULL};
+				mkdir_tar(2, argv);
 			}else if (isTarDir(dest)) { // dest un dossier dans le tar ou un tar
-				// creer le dossier dest/sourcedoss
-				// mkdir_tar
-				// dest = dest/sourcedoss
+				strcpy(destbis, dest);
+				if (destlen != strlen(dest)) strcat(destbis, "/");
+				strcat(destbis, sourcedoss);
+				char *argv[3] = {"mkdir", destbis, NULL};
+				mkdir_tar(2, argv);
+				dest = destbis;
 			}else { // dest est un fichier dans le tar
 				char *deb  = "cp : ";
 				char *end = " n'est pas un dossier!\n";
@@ -358,7 +369,7 @@ void copyTar(char *source, char *dest, int option) {
 			}
 			strcat(absolutesource, source);
 
-			char *tok = strstr(absolutesource, ".tar"); //not null
+			tok = strstr(absolutesource, ".tar"); //not null
 			int tarlen = strlen(absolutesource) - strlen(tok) + 4;
 			char tar[tarlen + 1];
 			strncpy(tar, absolutesource, tarlen);
@@ -390,16 +401,18 @@ void copyTar(char *source, char *dest, int option) {
 
 				if (strstr(nom, chemin) != NULL && strcmp(chemin, nom) <= 0) { // nom must start with chemin
 					char *newnom = strstr(nom, chemin) + strlen(chemin);
-					char *tmp = newnom;
+					tmp = newnom;
+					write(STDOUT_FILENO, newnom, strlen(newnom));
+					write(STDOUT_FILENO, "\n", 1);
 					char *pos;
 					while ((pos = strstr(tmp, "/")) != NULL) { // parcours (et créer si besoin) les dossiers nécéssaires pour copier le fichier
-						char dossier[strlen(dest) + 1 + strlen(newnom) - strlen(pos) + 1];
+						char dossier[destlen + strlen(newnom) - strlen(pos) + 1];
 						strcpy(dossier, dest);
-						strcat(dossier, "/");
+						if (destlen != strlen(dest)) strcat(dossier, "/");
 						strncat(dossier, newnom, strlen(newnom) - strlen(pos));
 						if (!exist(dossier, 0) && header.typeflag == '5') {
-							// TODO
-							// mkdir_tar(dossier)
+							char *argv[3] = {"mkdir", dossier, NULL};
+							mkdir_tar(2, argv);
 						}
 						tmp = pos+1;
 					}
