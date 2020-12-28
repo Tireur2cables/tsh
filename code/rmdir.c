@@ -365,7 +365,7 @@ int DeleteDirTar(char * absolutetar , char * chemin , char * res) {
 	}
 
 
-	int fd = open (absolutetar,O_RDONLY);
+	int fd = open (absolutetar,O_RDWR);
 	struct posix_header * header = malloc(sizeof(struct posix_header));
 
 
@@ -412,12 +412,13 @@ int DeleteDirTar(char * absolutetar , char * chemin , char * res) {
 			write(fd , cpy , size);
 
 			found=1;
+			break;
 
 		}
 
 		read(fd, header, BLOCKSIZE*filesize);
 
-		}
+	}
 
 	close(fd);
 
