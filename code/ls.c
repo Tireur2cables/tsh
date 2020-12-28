@@ -29,6 +29,7 @@ int nbdigit(int);
 void convert_mode(mode_t, char*);
 int get_profondeur(char *);
 int get_filename(char *, char*);
+int contains_filename(char *, char *);
 
 //FONCTION LS
 /*TODO :
@@ -41,38 +42,53 @@ int ls(int argc, char *argv[]){
 		perror("erreur du programme");
 		exit(EXIT_FAILURE);
 	}
-	else{
-		if(argc == 1){
-			print_dir(getenv("TWD"), "\0");
-		}else if(argc == 2){ // 2 cas - Options et repertoire =  . ou repertoire et pas d'options
-			if(is_options(argv[1])){
-				check_options(argv[1]);
-				print_dir(getenv("TWD"), argv[1]);
-			}else{
+	else if(argc == 1){ //ls du dossier courant sans option
+		print_dir(getenv("TWD"), "\0");
+	}
+	else if(argc == 2 && is_options(argv[1])){ //ls du dossier courant avec option
+		check_options(argv[1]);
+		print_dir(getenv("TWD"), argv[1]);
+	}
+	else{ //ls d'un dossier
+		char option[2];
+		int found = 0;
+		for(int i = 1; i < argc; i++){ //On cherche l'option
+			if(is_options(argv[i])){
+				strcpy(option, argv[1]);
+				found = 1;
+			}
+		}
+		if (found == 0){
+			strcpy(option, "\0");
+		}
+		for(int i = 1; i < argc; i++){
+			if(!is_options(argv[i])){
+				char format[strlen(argv[i]) + 4];
+				sprintf(format, "%s : \n", argv[i]);
+				write(STDOUT_FILENO, format, strlen(format));
 				if(getenv("TWD") != NULL){
 					if(is_tar(getenv("TWD"))){
-						if(argv[1][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
-							print_dir(argv[1], "\0");
+						if(argv[i][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
+							print_dir(argv[i], option);
 						}else{
-							char file[strlen(getenv("TWD")) + strlen(argv[1])];
-							sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
-							print_dir(file, "\0");
+							char file[strlen(getenv("TWD")) + strlen(argv[i])];
+							sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
+							print_dir(file, option);
 						}
 					}else{
-						char file[strlen(getenv("TWD")) + strlen(argv[1])];
-						sprintf(file, "%s/%s", getenv("TWD"), argv[1]);
-						print_dir(file, "\0");
+						char file[strlen(getenv("TWD")) + strlen(argv[i])];
+						sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
+						print_dir(file, option);
 					}
 				}
 				else{
-					print_dir(argv[1], "\0");
+					print_dir(argv[i], option);
+				}
+				if(i != argc-1){
+					write(STDOUT_FILENO, "\n", 1);
 				}
 			}
-		}else if(argc == 3){
-			check_options(argv[1]);
-			print_dir(argv[2], argv[1]);
 		}
-
 	}
 	return 0;
 }
@@ -127,7 +143,12 @@ int print_inside_tar(char *file, char *options){
 		if (strstr(header.name, namefile) != NULL){ //Inutile de faire plus de tests si le fichier ne contient pas le nom recherché
 			int namepos = strstr(header.name, namefile) - header.name;
 			//Si le nom du fichier est exactement celui qu'on recherche (c'est un fichier) ou si on trouve un dossier qui porte se nom, on affiche le contenu a profondeur + 1
-			if(strcmp(header.name, namefile) == 0 || (header.name[namepos + strlen(namefile)] == '/' && header.name[namepos + strlen(namefile)+1] != '\0' && get_profondeur(header.name) == profondeur + 1)){
+			if( (strcmp(header.name, namefile) == 0 && namefile[strlen(namefile)+1] != '/') ||
+				(contains_filename(header.name, namefile) &&
+				(header.name[namepos + strlen(namefile)] == '/' &&
+				header.name[namepos + strlen(namefile)+1] != '\0' &&
+				get_profondeur(header.name) == profondeur + 1))) {
+
 				if(strcmp(options, "\0") == 0){ //pas d'option
 					show_simple_header_infos(&header, &read_size);
 				}
@@ -224,7 +245,7 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	long int mtime;
 	sscanf(header->size, "%o", &taille);
 	char taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1):6]; //Les tailles ne sont plus alignés au dessus de 6 chiffres
-	sprintf(taille_str, "%d", taille);
+	sprintf(taille_str, "%o", taille);
 	for(int i = nbdigit(taille); i < 6; i++){ //On complète la string avec des espaces afin d'avoir un alignement
 		taille_str[i] = ' ';
 	}
@@ -235,8 +256,8 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	sscanf(header->uid, "%o", &uid);
 	sscanf(header->gid, "%o", &gid);
 	sscanf(header->mtime, "%lo", &mtime);
-	char *pw_name = getpwuid(uid)->pw_name;
-	char *gr_name = getgrgid(gid)->gr_name;
+	char *pw_name = header->uname;
+	char *gr_name = header->gname;
 	char *date= ctime(&mtime);
 	typeformat[0] = ((header->typeflag=='0')?'-':(header->typeflag=='5')?'d':'-');
 	typeformat[1] = '\0';
@@ -279,6 +300,21 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 		perror("Erreur d'écriture dans le shell!");
 		exit(EXIT_FAILURE);
 	}
+}
+
+int contains_filename(char *haystack, char *needle){
+	char cp[strlen(haystack) + 1];
+	strcpy(cp, haystack);
+	char *token = strtok(cp, "/");
+	if(strcmp(needle, token) == 0){
+		return 1;
+	}
+	while((token = strtok(NULL, "/")) != NULL){
+		if(strcmp(needle, token) == 0){
+			return 1;
+		}
+	}
+	return 0;
 }
 
 int get_filename(char *name, char* namecp){

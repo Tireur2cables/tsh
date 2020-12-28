@@ -1,3 +1,5 @@
+#ifndef TAR_H
+#define TAR_H
 
 /* tar Header Block, from POSIX 1003.1-1990.  */
 
@@ -44,3 +46,17 @@ struct posix_header
 #define OLDGNU_MAGIC "ustar  "  /* 7 chars and a null */
 
 /* ... */
+
+/* Compute and write the checksum of a header, by adding all
+   (unsigned) bytes in it (while hd->chksum is initially all ' ').
+   Then hd->chksum is set to contain the octal encoding of this
+   sum (on 6 bytes), followed by '\0' and ' '.
+*/
+
+extern void set_checksum(struct posix_header *);
+
+/* Check that the checksum of a header is correct */
+
+extern int check_checksum(struct posix_header *);
+
+#endif
