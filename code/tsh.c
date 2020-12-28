@@ -204,13 +204,8 @@ void redirection_tar(char *command, char *file, int type){
 				off_t new_end_of_tar;
 				struct posix_header header2;
 				lseek(fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
-				/*char format[20];
-				sprintf(format, "%ld\n", lseek(fd, 0, SEEK_CUR));
-				write(STDOUT_FILENO, format, strlen(format));*/
 				write_block(fd, NULL); //Place pour le header
 				end_of_tar = lseek(fd, 0, SEEK_CUR);
-				/*sprintf(format, "%ld\n", lseek(fd, 0, SEEK_CUR));
-				write(STDOUT_FILENO, format, strlen(format));*/
 				int save = dup(STDOUT_FILENO);
 				if((dup2(fd, STDOUT_FILENO) < 0)){
 					perror("Erreur de redirection");
@@ -220,11 +215,7 @@ void redirection_tar(char *command, char *file, int type){
 				new_end_of_tar = lseek(fd, 0, SEEK_CUR);
 
 				int size = new_end_of_tar-end_of_tar;
-				char format[20];
-				sprintf(format, "%d\n", size);
-				write(STDERR_FILENO, format, strlen(format));
 				int complement;
-				int nb_block = ((size + 512-1)/512);
 				if(size%BLOCKSIZE != 0){
 					complement = BLOCKSIZE-(size%BLOCKSIZE);
 					char block[complement];
@@ -233,10 +224,6 @@ void redirection_tar(char *command, char *file, int type){
 				}else{
 					complement = 0;
 				}
-				sprintf(format, "%d\n", complement);
-				write(STDERR_FILENO, format, strlen(format));
-				sprintf(format, "%d\n", nb_block);
-				write(STDERR_FILENO, format, strlen(format));
 				lseek(fd, -(size+complement+BLOCKSIZE), SEEK_CUR);
 				create_header(namefile, &header2, size);
 				write(fd, &header2, BLOCKSIZE);
