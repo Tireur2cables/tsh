@@ -27,7 +27,6 @@ int is_tar(char *);
 int contains_tar(char *);
 int check_options(char *);
 int is_options(char *);
-int is_same_dir(char *, char *);
 int is_curr_or_parent_rep(char *);
 int is_ext(char *, char *);
 int nbdigit(int);
@@ -74,7 +73,11 @@ int ls(int argc, char *argv[]){
 			if(!is_options(argv[i])){
 				char format[strlen(argv[i]) + 4];
 				sprintf(format, "%s : \n", argv[i]);
-				if(argc != 2) write(STDOUT_FILENO, format, strlen(format));
+				if(argc != 2){
+					if(write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
+						perror("Erreur d'écriture dans le shell");
+						return -1;
+					}
 				if(getenv("TWD") != NULL){
 					if(contains_tar(getenv("TWD"))){
 						if(argv[i][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
@@ -94,7 +97,10 @@ int ls(int argc, char *argv[]){
 					print_dir(argv[i], option);
 				}
 				if(i != argc-1){
-					write(STDOUT_FILENO, "\n", 1);
+					if(write(STDOUT_FILENO, "\n", 1) < 1){
+						perror("Erreur d'écriture dans le shell");
+						return -1;
+					}
 				}
 			}
 		}
@@ -208,7 +214,7 @@ int print_inside_tar(char *file, char *options){
 	if(found && strcmp(options, "\0") == 0){ //On affiche un retour a la ligne, seulement si on avait pas d'option, car ls -l met un retour a la ligne à la fin de chaque ligne
 		char *format = "\n";
 		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
-			perror("Erreur d'écriture dans le shell!");
+			perror("erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -218,7 +224,7 @@ int print_inside_tar(char *file, char *options){
 		strcat(format, namefile);
 		strcat(format, "': Aucun fichier ou dossier de ce type\n");
 		if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)) {
-			perror("Erreur d'écriture dans le shell!");
+			perror("erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -269,7 +275,7 @@ int print_tar(char *file, char *options){
 	if(strcmp(options, "\0") == 0){ //Si on a effectué un affichage simple, on doit rajouter un retour a la ligne, qui n'a pas lieu d'etre dans ls -l etant donné qu'on affiche ligne par ligne
 		char *format = "\n";
 		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
-			perror("Erreur d'écriture dans le shell!");
+			perror("erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -525,14 +531,6 @@ int nbdigit(int n){
 		n/=10;
 	}
 	return count;
-}
-int is_same_dir(char *dir1, char *dir2) { // verifie si dir1 à le même nom que dir2 avec dir2 dans un tar
-	return
-	(strcmp(dir1, dir2) == 0) ||
-	((strncmp(dir1, dir2, strlen(dir1)) == 0)
-		&& (strlen(dir2) == strlen(dir1)+1)
-		&& (dir1[strlen(dir1)-1] != '/')
-		&& (dir2[strlen(dir2)-1] == '/'));
 }
 /*
 *Convertis le mode (en octal) en une string rwxrwxrwx
