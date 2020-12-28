@@ -243,7 +243,9 @@ int print_tar(char *file, char *options){
 	int read_size = 0;
 	taille_tab = get_nb_dossier(fd);
 	tab_link = malloc(sizeof(int)*taille_tab);
+	assert(tab_link);
 	tab_nom = malloc(sizeof(char *)*taille_tab);
+	assert(tab_nom);
 	get_link(fd);
 	while((n=read(fd, &header, BLOCKSIZE))>0){
 		if(strcmp(header.name, "\0") == 0){
@@ -271,6 +273,11 @@ int print_tar(char *file, char *options){
 			exit(EXIT_FAILURE);
 		}
 	}
+	for(int i = 0; i < taille_tab; i++){
+		free(tab_nom[i]);
+	}
+	free(tab_link);
+	free(tab_nom);
 	close(fd);
 	return 0;
 }
@@ -304,11 +311,13 @@ void get_link(int fd){
 	int i = 1;
 	int j;
 	tab_nom[0] = malloc(5);
+	assert(tab_nom[0]);
 	strcpy(tab_nom[0], "null");
 	tab_link[0] = 0;
 	while((n=read(fd, &header, BLOCKSIZE))>0){
 		if((header.name[strlen(header.name)-1] == '/') && header.name[strlen(header.name)] == '\0'){
 			tab_nom[i] = malloc(strlen(header.name)+1);
+			assert(tab_nom[i]);
 			strcpy(tab_nom[i], header.name);
 			tab_link[i] = 2;
 			j = get_indice_pere(header.name);
