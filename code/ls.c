@@ -307,8 +307,10 @@ void get_link(int fd){
 	int i = 0;
 	int j;
 	while((n=read(fd, &header, BLOCKSIZE))>0){
-		if((header.name[strlen(header.name)-1] == '/') && header.name[strlen(header.name)-1] == '\0'){
+		if((header.name[strlen(header.name)-1] == '/') && header.name[strlen(header.name)] == '\0'){
+			tab_nom[i] = malloc(strlen(header.name)+1);
 			strcpy(tab_nom[i], header.name);
+			tab_link[i] = malloc(sizeof(int));
 			tab_link[i] = 2;
 			j = get_indice_pere(header.name);
 			if(j == -1){
