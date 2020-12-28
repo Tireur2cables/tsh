@@ -125,11 +125,20 @@ int create_dir(char *name){ //Créer un dossier dans un tar si possible
 		}
 		return -1;
 	}
-	//write(STDOUT_FILENO, tarfile, strlen(tarfile));
+
 	if(exist_dir(namefile, tarfile)){
 		char format[60 + strlen(name)];
 		sprintf(format, "mkdir: impossible de créer le répertoire « %s »: Le fichier existe\n", name);
 		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+			perror("Erreur d'écriture dans le shell");
+			exit(EXIT_FAILURE);
+		}
+	}else if (exist_pere_in_tar(namefile, tarfile)) {
+		char *deb = "mkdir: Erreur le dossier parent de ";
+		char *fin = " n'existe pas!\n";
+		char error[strlen(deb)+strlen(fin)+1+strlen(namefile)];
+		sprintf(error, "%s%s%s", deb, namefile, fin);
+		if(write(STDERR_FILENO, error, strlen(error)) < strlen(error)){
 			perror("Erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
 		}
@@ -283,8 +292,26 @@ int is_tar_mk(char *file){
 }
 
 int exist_pere(char *name) { //dossier parent exist outside tar
-	char name_copy[strlen(name)+1];
-	strcpy(name_copy, name);
+	char *pwd = getcwd(NULL, 0);
+	char absolutename[strlen(pwd) + 1 + strlen(name) + 1];
+	strcpy(absolutename, pwd);
+	strcat(absolutename, "/");
+	strcat(absolutename, name);
+	char *namedoss;
+	char *tok;
+	char *tmp = absolutename;
+	while ((tok = strstr(tmp, "/")) != NULL) {
+		tmp = tok + 1;
+		namedoss = tok;
+	}
+	// namedoss null seulement si name null
+
+	return exist_file(namedoss);
+}
+
+int exist_pere_in_tar(char *namefile, char *tarfile) { //dossier parent exist inside tar
+	char name_copy[strlen(namefile)+1];
+	strcpy(name_copy, namefile);
 	char *namedoss;
 	char *tok;
 	char *saveptr;
@@ -293,10 +320,11 @@ int exist_pere(char *name) { //dossier parent exist outside tar
 		tmp = saveptr;
 		namedoss = tok;
 	}
-	// namedoss null seulement si name null
-
-	return exist_file(namedoss);
+	// namedoss null seulement si namefile null
+	if (namedoss == NULL || strlen(namedoss) == 0) return exist_file(tarfile);
+	else return exist_dir(namedoss, tarfile);
 }
+
 
 int write_block(int fd, struct posix_header *header){
 	if (header == NULL){
