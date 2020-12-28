@@ -66,7 +66,7 @@ int ls(int argc, char *argv[]){
 			if(!is_options(argv[i])){
 				char format[strlen(argv[i]) + 4];
 				sprintf(format, "%s : \n", argv[i]);
-				write(STDOUT_FILENO, format, strlen(format));
+				if(argc != 2) write(STDOUT_FILENO, format, strlen(format));
 				if(getenv("TWD") != NULL){
 					if(contains_tar(getenv("TWD"))){
 						if(argv[i][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
@@ -136,6 +136,7 @@ int print_inside_tar(char *file, char *options){
 	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
 	tarfile[tarpos+4] = '\0';
 	namefile[strlen(file)-tarpos-4] = '\0';
+	if(namefile[strlen(namefile)-1] == '/') namefile[strlen(namefile)-1] = '\0';
 	if (file[tarpos+4] != '/'){ //Si après le .tar il n'y a pas de / => Il y a une erreur dans le nom du fichier
 		char format[72 + strlen(file)];
 		sprintf(format, "ls : impossible d'accéder à '%s' : Aucun fichier ou dossier de ce type\n", file);
@@ -161,6 +162,9 @@ int print_inside_tar(char *file, char *options){
 		}
 		if (strstr(header.name, namefile) != NULL){ //Inutile de faire plus de tests si le fichier ne contient pas le nom recherché
 			int namepos = strstr(header.name, namefile) - header.name;
+			if (strncmp(header.name, namefile, strlen(namefile)) == 0){
+				found = 1;
+			}
 			//Si le nom du fichier est exactement celui qu'on recherche (c'est un fichier) ou si on trouve un dossier qui porte se nom, on affiche le contenu a profondeur + 1
 			if( (strcmp(header.name, namefile) == 0 && namefile[strlen(namefile)+1] != '/') ||
 				(contains_filename(header.name, namefile) &&
