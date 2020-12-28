@@ -293,9 +293,6 @@ int get_nb_dossier(int fd){
 			return -1;
 		}
 	}
-	/*char format[20];
-	sprintf(format, "%d", nb_dossier);
-	write(STDERR_FILENO, format, strlen(format));*/
 	return nb_dossier;
 }
 
@@ -336,10 +333,7 @@ void get_link(int fd){
 int get_indice(char *nom){
 	for(int i = 0; i <= taille_tab; i++){
 		if(tab_nom[i] != NULL){
-			if(strncmp(nom, tab_nom[i], strlen(nom)) == 0){
-				printf("%d", i);
-				return i;
-			}
+			if(strncmp(nom, tab_nom[i], strlen(nom)) == 0) return i;
 		}
 	}
 	return 0;
@@ -352,13 +346,8 @@ int get_indice_pere(char *nom){
 	char pere[strlen(nom)+1];
 	strcpy(pere, nom);
 	pere[spos] = '\0';
-	/*write(STDERR_FILENO, nom, strlen(nom));
-	write(STDERR_FILENO, pere, strlen(pere));
-	write(STDERR_FILENO, "\n", 1);*/
 	for(int i = 1; i <= taille_tab; i++){
 		if(tab_nom[i] != NULL){
-		/*	write(STDERR_FILENO, "\n", 1);
-			write(STDERR_FILENO, tab_nom[i], strlen(tab_nom[i]));*/
 			if(strncmp(pere, tab_nom[i], strlen(pere)) == 0) return i;
 		}
 	}
