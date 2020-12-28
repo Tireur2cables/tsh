@@ -204,23 +204,24 @@ int create_header(char *name, struct posix_header *header){ //Meilleur méthode 
 	sprintf(header->mode,"0000755");
 	char uid[8];
 	char gid[8];
-	char uname[32];
-	char gname[32];
+	int namelen = 32;
+	char uname[namelen];
+	char gname[namelen];
 	struct passwd *p = getpwuid(getuid());
 	if(p == NULL){
 		for (int i = 0; i < 8; i++) {
 			uid[i] = '\0';
 			gid[i] = '\0';
 		}
-		for (int i = 0; i < 32; i++) uname[i] = '\0';
-		for (int i = 0; i < 32; i++) gname[i] = '\0';
+		for (int i = 0; i < namelen; i++) uname[i] = '\0';
+		for (int i = 0; i < namelen; i++) gname[i] = '\0';
 	}else{
 		sprintf(uid, "%07o", p->pw_uid);
 		sprintf(gid, "%07o", p->pw_gid);
 		sprintf(uname, "%s", p->pw_name);
 		struct group *g = getgrgid(p->pw_gid);
 		if (g == NULL) {
-			for (int i = 0; i < 32; i++) gname[i] = '\0';
+			for (int i = 0; i < namelen; i++) gname[i] = '\0';
 		}else {
 			sprintf(gname, "%s", g->gr_name);
 		}
@@ -229,6 +230,8 @@ int create_header(char *name, struct posix_header *header){ //Meilleur méthode 
 	sprintf(header->gid, "%s", gid);
 	sprintf(header->uname, "%s", uname);
 	sprintf(header->gname, "%s", gname);
+	for (int i = strlen(uname); i < namelen; i++) header->uname[i] = '\0';
+	for (int i = strlen(gname); i < namelen; i++) header->gname[i] = '\0';
 	unsigned int taille = 0;
 	sprintf(header->size, "%011o", taille);
 
@@ -268,7 +271,7 @@ int is_tar_mk(char *file){
 	return is_ext_mk(file, ".tar") || is_ext_mk(file, ".tar/");
 }
 
-int write_block(int fd, struct posix_header* header){
+int write_block(int fd, struct posix_header *header){
 	if (header == NULL){
 		char block[BLOCKSIZE];
 		memset(block, '\0', 512);
@@ -277,7 +280,7 @@ int write_block(int fd, struct posix_header* header){
 			exit(EXIT_FAILURE);
 		}
 	}else{
-		if(write(fd, &header, BLOCKSIZE) < BLOCKSIZE){
+		if(write(fd, header, BLOCKSIZE) < BLOCKSIZE){
 			perror("Erreur d'écriture dans l'aarchive");
 			exit(EXIT_FAILURE);
 		}
