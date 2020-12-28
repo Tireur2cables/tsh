@@ -203,44 +203,44 @@ void redirection_tar(char *command, char *file, int type){
 				off_t end_of_tar;
 				off_t new_end_of_tar;
 				struct posix_header header2;
-				end_of_tar = lseek(fd, 0, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
+				lseek(fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
+				/*char format[20];
+				sprintf(format, "%ld\n", lseek(fd, 0, SEEK_CUR));
+				write(STDOUT_FILENO, format, strlen(format));*/
 				write_block(fd, NULL); //Place pour le header
+				end_of_tar = lseek(fd, 0, SEEK_CUR);
+				/*sprintf(format, "%ld\n", lseek(fd, 0, SEEK_CUR));
+				write(STDOUT_FILENO, format, strlen(format));*/
 				int save = dup(STDOUT_FILENO);
 				if((dup2(fd, STDOUT_FILENO) < 0)){
 					perror("Erreur de redirection");
 					exit(EXIT_FAILURE);
 				}
 				selectCommand(command, strlen(command));
-				write_block(fd, NULL);
-				write_block(fd, NULL);
-				lseek(fd, 0, SEEK_SET);
-				while((n=read(fd, &header, BLOCKSIZE))>0){ //Pour calculer la taille de ce qu'on a écrit, on remonte au début, et on arrive au bloque vide a la place du header
-					//write(STDOUT_FILENO, "yes", 3);
-					if(strcmp(header.name, "\0") == 0){
-						char block[512];
-						while(read(fd, block, 512) != '\0'){ //On cherche le premier bloque de \0 après le header vide
-							lseek(fd, BLOCKSIZE, SEEK_CUR);
-						}
-						break;
-					}else{
-						get_header_size_tsh(&header, &read_size);
-						if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
-							perror("erreur de lecture de l'archive");
-							return;
-						}
-					}
-				}
-				new_end_of_tar = lseek(fd, -BLOCKSIZE, SEEK_CUR);
+				new_end_of_tar = lseek(fd, 0, SEEK_CUR);
+
 				int size = new_end_of_tar-end_of_tar;
-				//int nb_block = (size + 512-1)/512
+				char format[20];
+				sprintf(format, "%d\n", size);
+				write(STDERR_FILENO, format, strlen(format));
+				int complement;
+				int nb_block = ((size + 512-1)/512);
 				if(size%BLOCKSIZE != 0){
-					char block[BLOCKSIZE-(size%BLOCKSIZE)];
-					memset(block, '\0', BLOCKSIZE-(size%BLOCKSIZE));
-					write(fd, block, BLOCKSIZE-(size%BLOCKSIZE));
+					complement = BLOCKSIZE-(size%BLOCKSIZE);
+					char block[complement];
+					memset(block, '\0', complement);
+					write(fd, block, complement);
+				}else{
+					complement = 0;
 				}
+				sprintf(format, "%d\n", complement);
+				write(STDERR_FILENO, format, strlen(format));
+				sprintf(format, "%d\n", nb_block);
+				write(STDERR_FILENO, format, strlen(format));
+				lseek(fd, -(size+complement+BLOCKSIZE), SEEK_CUR);
 				create_header(namefile, &header2, size);
-				lseek(fd, -(size+BLOCKSIZE-(size%BLOCKSIZE)),SEEK_CUR);
 				write(fd, &header2, BLOCKSIZE);
+
 				close(fd);
 				if(dup2(save, STDOUT_FILENO) < 0){
 					perror("erreur de redirection");
