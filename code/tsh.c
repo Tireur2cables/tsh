@@ -48,7 +48,7 @@ char *traiterHome(char *, int *);
 int exist_path_in_tar(int, char *);
 void redirection_tar(char *, char*, int);
 void redirection_classique(char *, char *, int);
-int create_header(char *, struct posix_header *);
+int create_header(char *, struct posix_header *, int);
 int write_block(int fd, struct posix_header *);
 
 //tableau (et sa taille) des commandes implémentées (non built-in) pour les tar
@@ -202,16 +202,32 @@ void redirection_tar(char *command, char *file, int type){
 			if(strcmp(header.name, "\0") == 0){
 				write(STDOUT_FILENO, "yes", 3);
 				//On est a la fin du tar, on écrit un nouveau header de dossier, puis un nouveau block de 512 vide
+				off_t end_of_tar;
+				off_t new_end_of_tar;
 				struct posix_header header2;
-				lseek(fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
-				create_header(namefile, &header2);
-				write(fd, &header2, BLOCKSIZE);
+				end_of_tar = lseek(fd, 0, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
+				write_block(fd, NULL);
 				int save = dup(STDOUT_FILENO);
 				if((dup2(fd, STDOUT_FILENO) < 0)){
 					perror("Erreur de redirection");
 					exit(EXIT_FAILURE);
 				}
 				selectCommand(command, strlen(command));
+				new_end_of_tar = lseek(fd, -2*BLOCKSIZE, SEEK_END);
+				int size = new_end_of_tar-end_of_tar;
+				if(size%BLOCKSIZE != 0){
+					char block[BLOCKSIZE-(size%BLOCKSIZE)];
+					memset(block, '\0', BLOCKSIZE-(size%BLOCKSIZE));
+					write(fd, block, BLOCKSIZE-(size%BLOCKSIZE));
+				}
+				create_header(namefile, &header2, size);
+				lseek(fd, size+BLOCKSIZE-(size%BLOCKSIZE),SEEK_CUR);
+				write(fd, &header2, BLOCKSIZE);
+				//char format[20];
+				//sprintf(format, "%d", size);
+				//write(STDOUT_FILENO, format, strlen(format));
+				write_block(fd, NULL);
+				write_block(fd, NULL);
 				close(fd);
 				if(dup2(save, STDOUT_FILENO) < 0){
 					perror("erreur de redirection");
@@ -221,8 +237,6 @@ void redirection_tar(char *command, char *file, int type){
 				//write stdout dans tar
 				//get size written
 				//update header
-				write_block(fd, NULL);
-				write_block(fd, NULL);
 				return;
 			}else{
 				get_header_size_tsh(&header, &read_size);
@@ -646,7 +660,8 @@ void get_header_size_tsh(struct posix_header *header, int *read_size){
 	*read_size = ((taille + 512-1)/512);
 }
 
-int create_header(char *name, struct posix_header *header){ //Meilleur méthode pour le faire ?
+int create_header(char *name, struct posix_header *header, int size){ //Meilleur méthode pour le faire ?
+	memset(header, '\0', 512);
 	for(int i = 0; i < 100; i++){
 		if(i < strlen(name)){
 			header->name[i] = name[i];
@@ -680,7 +695,7 @@ int create_header(char *name, struct posix_header *header){ //Meilleur méthode 
 	}else{
 		sprintf(uname, "%s", p->pw_name);
 	}
-	write(STDOUT_FILENO, g->gr_name, strlen(g->gr_name));
+	//write(STDOUT_FILENO, g->gr_name, strlen(g->gr_name));
 	if(g->gr_name == NULL){
 		for (int i = 0; i < 32; i++) gname[i] = '\0';
 	}else{
@@ -688,8 +703,7 @@ int create_header(char *name, struct posix_header *header){ //Meilleur méthode 
 	}
 	sprintf(header->uname, "%s", uname);
 	sprintf(header->gname, "%s", gname);
-	unsigned int taille = 0;
-	sprintf(header->size, "%011o", taille);
+	sprintf(header->size, "%011o", size);
 
 	time_t mtime = time(NULL);
 	sprintf(header->mtime, "%11lo", mtime);
