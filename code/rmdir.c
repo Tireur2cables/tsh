@@ -259,8 +259,7 @@ int parcoursCheminTar_rmdir(char * pwd , char * twd , char *rest) {
 			int errorlen = strlen(error);
 			if (write(STDERR_FILENO, error, errorlen) < errorlen) {
 				perror("Erreur d'écriture dans le shell!");
-				return -1;
-			}
+			} return -1;
 		}
 
 		isDirTarEmpty(absolutetar,chemin,res); /// suppression
