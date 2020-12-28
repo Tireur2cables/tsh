@@ -22,6 +22,7 @@
 #include "tar.h"
 #include "mkdir.h"
 #include "cp.h"
+#include "rmdir.h"
 
 //todo list
 // redirection < > >> 2>>
@@ -41,9 +42,9 @@ char *traiterArguements(char *, int *);
 char *traiterHome(char *, int *);
 
 //tableau (et sa taille) des commandes implémentées (non built-in) pour les tar
-int len_custom = 5; //8
-couple custom[5] = {{"ls", ls}, {"pwd", pwd}, {"cat", cat}, {"mkdir", mkdir_tar}, {"cp", cp}};
-//, {"rm", rm}, {"mv", mv}, {"rmdir", rmdir};
+int len_custom = 6; //8
+couple custom[6] = {{"ls", ls}, {"pwd", pwd}, {"cat", cat}, {"mkdir", mkdir_tar}, {"cp", cp}, {"rmdir", rmdir_func}};
+//, {"rm", rm}, {"mv", mv};
 
 
 
