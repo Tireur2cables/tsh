@@ -14,6 +14,7 @@
 #include "cp.h"
 #include "cat.h"
 #include "tar.h"
+#include "mkdir.h"
 
 void detectError(int, char *[]);
 int optionDetection(int, char *[]);
@@ -39,8 +40,7 @@ void copyfiletartofiletar(char *, char *);
 void read_size(int, char (*)[], unsigned int);
 mode_t getmodeintar(char *);
 
-// TODO générale régler tous les TODO dans le code :)
-// Tester les limites en copiant de gros fichiers
+// TODO Tester les limites en copiant de gros fichiers
 
 int cp(int argc, char *argv[]) {
 // detect error in number of args
@@ -313,20 +313,30 @@ void copyTar(char *source, char *dest, int option) {
 		}
 
 		if (isInTar(dest)) { // dest est dans un tar
-			// TODO
+			char source_copy[strlen(source)+1];
+			strcpy(source_copy, source);
+			char *sourcedoss;
+			char *tok;
+			char *saveptr;
+			char *tmp = source_copy;
+			while ((tok = strtok_r(tmp, "/", &saveptr)) != NULL) {
+				tmp = saveptr;
+				sourcedoss = tok;
+			}
+			int destlen = strlen(dest);
+			if (dest[destlen-1] != '/') destlen++;
+			char destbis[destlen + strlen(sourcedoss) + 1];
+
 			if (!exist(dest, 0)) {
-				if (isTar(dest)) {
-					// creer le tar dest
-					// mkdir_tar?
-				}
-				else {
-					// creer le dossier dest
-					// mkdir_tar
-				}
+				char *argv[3] = {"mkdir", dest, NULL};
+				mkdir_tar(2, argv);
 			}else if (isTarDir(dest)) { // dest un dossier dans le tar ou un tar
-				// creer le dossier dest/sourcedoss
-				// mkdir_tar
-				// dest = dest/sourcedoss
+				strcpy(destbis, dest);
+				if (destlen != strlen(dest)) strcat(destbis, "/");
+				strcat(destbis, sourcedoss);
+				char *argv[3] = {"mkdir", destbis, NULL};
+				mkdir_tar(2, argv);
+				dest = destbis;
 			}else { // dest est un fichier dans le tar
 				char *deb  = "cp : ";
 				char *end = " n'est pas un dossier!\n";
@@ -358,7 +368,7 @@ void copyTar(char *source, char *dest, int option) {
 			}
 			strcat(absolutesource, source);
 
-			char *tok = strstr(absolutesource, ".tar"); //not null
+			tok = strstr(absolutesource, ".tar"); //not null
 			int tarlen = strlen(absolutesource) - strlen(tok) + 4;
 			char tar[tarlen + 1];
 			strncpy(tar, absolutesource, tarlen);
@@ -366,7 +376,7 @@ void copyTar(char *source, char *dest, int option) {
 
 			char chemin[strlen(absolutesource) - strlen(tar) + 1];
 			strcpy(chemin, "");
-			if (strlen(absolutesource) == strlen(tar)) strcat(chemin, &absolutesource[strlen(tar)+1]); // source n'est pas juste un tar
+			if (strlen(absolutesource) != strlen(tar)) strcat(chemin, &absolutesource[strlen(tar)+1]); // source n'est pas juste un tar
 
 			int fdsource = open(tar, O_RDONLY);
 			if (fdsource == -1) {
@@ -389,19 +399,23 @@ void copyTar(char *source, char *dest, int option) {
 				if (strcmp(nom, "") == 0) break;
 
 				if (strstr(nom, chemin) != NULL && strcmp(chemin, nom) <= 0) { // nom must start with chemin
-					char *newnom = strstr(nom, chemin) + strlen(chemin);
-					char *tmp = newnom;
+					char *newnom = strstr(nom, chemin) + strlen(chemin) + 1;
+					char newnom_cpy[strlen(newnom)+1];
+					strcpy(newnom_cpy, newnom);
+					tmp = newnom_cpy;
 					char *pos;
-					while ((pos = strstr(tmp, "/")) != NULL) { // parcours (et créer si besoin) les dossiers nécéssaires pour copier le fichier
-						char dossier[strlen(dest) + 1 + strlen(newnom) - strlen(pos) + 1];
+					char *save;
+					while ((pos = strtok_r(tmp, "/", &save)) != NULL) { // parcours (et créer si besoin) les dossiers nécéssaires pour copier le fichier
+						int len = strlen(strstr(newnom, pos)) - strlen(pos);
+						char dossier[destlen + len + 1];
 						strcpy(dossier, dest);
-						strcat(dossier, "/");
-						strncat(dossier, newnom, strlen(newnom) - strlen(pos));
+						if (destlen != strlen(dest)) strcat(dossier, "/");
+						strncat(dossier, newnom, strlen(newnom)-len);
 						if (!exist(dossier, 0) && header.typeflag == '5') {
-							// TODO
-							// mkdir_tar(dossier)
+							char *argv[3] = {"mkdir", dossier, NULL};
+							mkdir_tar(2, argv);
 						}
-						tmp = pos+1;
+						tmp = save;
 					}
 					if (header.typeflag != '5') { // n'est pas un dossier
 						char newDest[strlen(dest) + 1 + strlen(newnom) + 1];
@@ -413,6 +427,7 @@ void copyTar(char *source, char *dest, int option) {
 						strcpy(newSource, source);
 						strcat(newSource, "/");
 						strcat(newSource, newnom);
+
 						copyfiletartofiletar(newSource, newDest);
 					}
 				}
@@ -711,20 +726,31 @@ void copyDoss(char *source, char *dest, int option) {
 	}
 
 	if (isInTar(dest)) { // dest est dans un tar
-		// TODO
+		char source_copy[strlen(source)+1];
+		strcpy(source_copy, source);
+		char *sourcedoss;
+		char *tok;
+		char *saveptr;
+		char *tmp = source_copy;
+		while ((tok = strtok_r(tmp, "/", &saveptr)) != NULL) {
+			tmp = saveptr;
+			sourcedoss = tok;
+		}
+		int destlen = strlen(dest);
+		if (dest[destlen-1] != '/') destlen++;
+		char destbis[destlen + strlen(sourcedoss) + 1];
+
 		if (!exist(dest, 0)) {
-			if (isTar(dest)) {
-				// creer le tar dest
-				// mkdir_tar ?
-			}
-			else {
-				// creer le dossier dest dans le tar
-				// mkdir_tar
-			}
+			char *argv[3] = {"mkdir", dest, NULL};
+			mkdir_tar(2, argv);
 		}else if (isTarDir(dest)) { // dest un dossier dans le tar ou un tar
 			// creer le dossier dest/sourcedoss
-			// mkdir_tar ?
-			// dest = dest/sourcedoss
+			strcpy(destbis, dest);
+			if (destlen != strlen(dest)) strcat(destbis, "/");
+			strcat(destbis, sourcedoss);
+			char *argv[3] = {"mkdir", destbis, NULL};
+			mkdir_tar(2, argv);
+			dest = destbis;
 		}else { // dest est un fichier dans le tar
 			char *deb  = "cp : ";
 			char *end = " n'est pas un dossier!\n";
@@ -901,10 +927,16 @@ void copyfiletofiletar(char *source, char *dest) { // ecrase contenu de dest ave
 	char gname[namelen];
 	struct passwd *pw = getpwuid(stsource.st_uid);
 	if (pw == NULL) for (int i = 0; i < namelen; i++) uname[i] = '\0';
-	else sprintf(uname, "%s", pw->pw_name);
+	else {
+		sprintf(uname, "%s", pw->pw_name);
+		for (int i = strlen(uname); i < namelen; i++) uname[i] = '\0';
+	}
 	struct group *grp = getgrgid(stsource.st_gid);
 	if (grp == NULL) for (int i = 0; i < namelen; i++) gname[i] = '\0';
-	else sprintf(gname, "%s", grp->gr_name);
+	else {
+		sprintf(gname, "%s", grp->gr_name);
+		for (int i = strlen(gname); i < namelen; i++) gname[i] = '\0';
+	}
 
 
 	int pwdlen = 0;
@@ -1278,7 +1310,9 @@ void copyfiletartofiletar(char *source, char *dest) {
 			sscanf(header.uid, "%o", &uid);
 			sscanf(header.gid, "%o", &gid);
 			sscanf(header.uname, "%s", uname);
+			for (int i = strlen(uname); i < namelen; i++) uname[i] = '\0';
 			sscanf(header.gname, "%s", gname);
+			for (int i = strlen(gname); i < namelen; i++) gname[i] = '\0';
 			break;
 		}
 
