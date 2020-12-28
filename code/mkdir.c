@@ -1,3 +1,5 @@
+#define _DEFAULT_SOURCE // utile pour strtok_r
+
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -14,6 +16,8 @@
 
 int exist_dir(char *, char *);
 int exist_file(char *);
+int exist_pere(char *);
+int exist_pere_in_tar(char *, char *);
 int create_dir(char *);
 int create_tar(char *);
 int try_create_dir(char *);
@@ -62,8 +66,7 @@ int mkdir_tar(int argc, char *argv[]) {
 	return 0;
 }
 
-int try_create_dir(char *name){
-	//write(STDOUT_FILENO, name, strlen(name));
+int try_create_dir(char *name) {
 	if(is_tar_mk(name)){ //On veut fabriquer un tar
 		create_tar(name);
 	}else if(contains_tar_mk(name)){ //On veut ajouter un dossier dans un tar
@@ -82,6 +85,18 @@ int create_tar(char *name){ //Créer un tar
 			perror("Erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
 		}
+		return -1;
+	}
+	if (!exist_pere(name)) {
+		char *deb = "mkdir: Erreur le dossier parent de ";
+		char *fin = " n'existe pas!\n";
+		char error[strlen(deb)+strlen(fin)+1+strlen(name)];
+		sprintf(error, "%s%s%s", deb, name, fin);
+		if(write(STDERR_FILENO, error, strlen(error)) < strlen(error)){
+			perror("Erreur d'écriture dans le shell");
+			exit(EXIT_FAILURE);
+		}
+		return -1;
 	}
 	int fd = open(name, O_WRONLY + O_CREAT, S_IRUSR + S_IWUSR + S_IRGRP + S_IROTH);
 	//ecriture d'un block de BLOCKSIZE \0 pour indiquer la fin de l'archive
@@ -111,11 +126,20 @@ int create_dir(char *name){ //Créer un dossier dans un tar si possible
 		}
 		return -1;
 	}
-	//write(STDOUT_FILENO, tarfile, strlen(tarfile));
+
 	if(exist_dir(namefile, tarfile)){
 		char format[60 + strlen(name)];
 		sprintf(format, "mkdir: impossible de créer le répertoire « %s »: Le fichier existe\n", name);
 		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+			perror("Erreur d'écriture dans le shell");
+			exit(EXIT_FAILURE);
+		}
+	}else if (!exist_pere_in_tar(namefile, tarfile)) {
+		char *deb = "mkdir: Erreur le dossier parent de ";
+		char *fin = " n'existe pas!\n";
+		char error[strlen(deb)+strlen(fin)+1+strlen(namefile)];
+		sprintf(error, "%s%s%s", deb, namefile, fin);
+		if(write(STDERR_FILENO, error, strlen(error)) < strlen(error)){
 			perror("Erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
 		}
@@ -129,7 +153,6 @@ int create_dir(char *name){ //Créer un dossier dans un tar si possible
 		int n = 0;
 		int read_size = 0;
 		while((n=read(fd, &header, BLOCKSIZE))>0){
-			//write(STDOUT_FILENO, "yes", 3);
 			if(strcmp(header.name, "\0") == 0){
 				//On est a la fin du tar, on écrit un nouveau header de dossier, puis un nouveau block de 512 vide
 				struct posix_header header2;
@@ -153,19 +176,17 @@ int create_dir(char *name){ //Créer un dossier dans un tar si possible
 	return 0;
 }
 
-int exist_file(char *name){
+int exist_file(char *name){ //file exist ouside tar
 	struct stat buffer;
 	return (stat (name, &buffer) == 0);
 }
 
-int exist_dir(char *namefile, char *tarfile){
-	//write(STDOUT_FILENO, "\n",1);
-	//write(STDOUT_FILENO, tarfile, strlen(tarfile));
+int exist_dir(char *namefile, char *tarfile){ // exist namefile in tarfile
 	struct posix_header header;
 	int fd = open(tarfile, O_RDONLY);
 	if(fd == -1){
 	  perror("erreur d'ouverture de l'archive");
-	  return -1;
+	  return 0;
 	}
 	int n = 0;
 	int read_size = 0;
@@ -179,7 +200,7 @@ int exist_dir(char *namefile, char *tarfile){
 		get_header_size_mk(&header, &read_size);
 		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
 			perror("erreur de lecture de l'archive");
-			return -1;
+			return 0;
 		}
 	}
 	close(fd);
@@ -270,6 +291,45 @@ int is_ext_mk(char *file, char *ext){
 int is_tar_mk(char *file){
 	return is_ext_mk(file, ".tar") || is_ext_mk(file, ".tar/");
 }
+
+int exist_pere(char *name) { //dossier parent exist outside tar
+	char *pwd = getcwd(NULL, 0);
+	int pwdlen = 0;
+	if (name[0] != '/') pwdlen = strlen(pwd) + 1;
+	char absolutename[pwdlen + strlen(name) + 1];
+	strcpy(absolutename, "");
+	if (pwdlen != 0) {
+		strcat(absolutename, pwd);
+		strcat(absolutename, "/");
+	}
+	strcat(absolutename, name);
+	if (absolutename[strlen(absolutename)-1] == '/') absolutename[strlen(absolutename)-1] = '\0';
+	char *pos = strrchr(absolutename, '/');
+	if (pos == NULL) return 1; // seulement possible à la racine /
+	int spos = pos - absolutename;
+	char pere[strlen(absolutename)+1];
+	strcpy(pere, absolutename);
+
+	pere[spos] = '\0';
+	// namedoss null seulement si name null
+
+	return exist_file(pere);
+}
+
+int exist_pere_in_tar(char *namefile, char *tarfile) { //dossier parent exist inside tar
+	char absolutename[strlen(namefile)+1];
+	strcpy(absolutename, namefile);
+	if (absolutename[strlen(absolutename)-1] == '/') absolutename[strlen(absolutename)-1] = '\0';
+	char *pos = strrchr(absolutename, '/');
+	if (pos == NULL) return exist_file(tarfile); // le pere est le tar
+	int spos = pos - absolutename;
+	char pere[strlen(absolutename)+1];
+	strcpy(pere, absolutename);
+	pere[spos+1] = '\0';
+
+	return exist_dir(pere, tarfile);
+}
+
 
 int write_block(int fd, struct posix_header *header){
 	if (header == NULL){

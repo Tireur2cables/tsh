@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dirent.h>
+#include <assert.h>
 #include "tar.h"
 #include "rmdir.h"
 
@@ -42,8 +43,11 @@ int rmdir_func(int argc,char **argv) {
 		char chemin[strlen(argv[i])+1];
 		strcpy(chemin,argv[i]);
 		char * pwd = getcwd(NULL,0);
-		if(chemin[0]!='/') parcoursChemin_rmdir(chemin,pwd);
-		else parcoursChemin_rmdir(chemin,"/");
+		char * twd = getenv("TWD");
+
+		if(chemin[0]=='/') parcoursChemin_rmdir(chemin,"/");
+		else if (twd == NULL || strlen(twd) == 0) parcoursChemin_rmdir(chemin,pwd);
+		else parcoursCheminTar_rmdir(pwd, twd, chemin);
 
 
 
@@ -59,6 +63,7 @@ int parcoursChemin_rmdir(char * chemin, char * pwd) {
 	char *saveptr;
 	char *doss;
 	char *currentpwd = malloc(strlen(pwd) + 1);
+	assert(currentpwd);
 	strcpy(currentpwd, pwd);
 
 	while((doss=strtok_r(chemin,"/",&saveptr))!=NULL) {
@@ -69,19 +74,18 @@ int parcoursChemin_rmdir(char * chemin, char * pwd) {
 				char newcurr[strlen(currentpwd) + 1];
 				strcpy(newcurr, currentpwd);
 				free(currentpwd);
-
 				return parcoursCheminTar_rmdir(newcurr,doss,saveptr);
 			}
 
-			//maj pwd wow
 			int currentlen = strlen(currentpwd);
-			if (currentlen != 1) currentlen++;
+			if (currentlen != 1) currentlen++; // pas la racine
 			char newcurr[currentlen + strlen(doss) + 1];
 			strcpy(newcurr, currentpwd);
 			if (currentlen != 1) strcat(newcurr, "/");
 			strcat(newcurr, doss);
 
 			currentpwd = realloc(currentpwd, strlen(newcurr)+1);
+			assert(currentpwd);
 			strcpy(currentpwd, newcurr);
 
 			chemin=saveptr;
@@ -92,10 +96,10 @@ int parcoursChemin_rmdir(char * chemin, char * pwd) {
 		}
 
 	}
-
-	char res[strlen(currentpwd+1)];
+	write(STDOUT_FILENO, "yes\n", 4);
+	char res[strlen(currentpwd)+1];
 	strcpy(res,currentpwd);
-
+	free(currentpwd);
 	deleteDir(res);
 
 	return 0;
@@ -162,8 +166,6 @@ int isAccessibleFrom_rmdir(char * doss , char * dir) {
 		char *end = " n'existe pas!\n";
 		char error[strlen(deb) + strlen(doss) + strlen(end) + 1];
 		strcpy(error, deb);
-		//strcat(error, dir);
-		//strcat(error, "/");
 		strcat(error, doss);
 		strcat(error, end);
 		int errorlen = strlen(error);
