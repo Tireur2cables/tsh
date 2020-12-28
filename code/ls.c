@@ -425,18 +425,10 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 }
 
 int contains_filename(char *haystack, char *needle){
-	char cp[strlen(haystack) + 1];
-	strcpy(cp, haystack);
-	char *token = strtok(cp, "/");
-	if(strcmp(needle, token) == 0){
+	if (strstr(haystack, needle) != NULL && strcmp(needle, haystack) <= 0) // haystack contains needle and start with it
 		return 1;
-	}
-	while((token = strtok(NULL, "/")) != NULL){
-		if(strcmp(needle, token) == 0){
-			return 1;
-		}
-	}
-	return 0;
+	else
+		return 0;
 }
 
 int get_filename(char *name, char* namecp){
