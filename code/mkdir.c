@@ -294,9 +294,14 @@ int is_tar_mk(char *file){
 
 int exist_pere(char *name) { //dossier parent exist outside tar
 	char *pwd = getcwd(NULL, 0);
-	char absolutename[strlen(pwd) + 1 + strlen(name) + 1];
-	strcpy(absolutename, pwd);
-	strcat(absolutename, "/");
+	int pwdlen = 0;
+	if (name[0] != '/') pwdlen = strlen(pwd) + 1;
+	char absolutename[pwdlen + strlen(name) + 1];
+	strcpy(absolutename, "");
+	if (pwdlen != 0) {
+		strcat(absolutename, pwd);
+		strcat(absolutename, "/");
+	}
 	strcat(absolutename, name);
 	if (absolutename[strlen(absolutename)-1] == '/') absolutename[strlen(absolutename)-1] = '\0';
 	char *pos = strrchr(absolutename, '/');
@@ -304,6 +309,7 @@ int exist_pere(char *name) { //dossier parent exist outside tar
 	int spos = pos - absolutename;
 	char pere[strlen(absolutename)+1];
 	strcpy(pere, absolutename);
+
 	pere[spos] = '\0';
 	// namedoss null seulement si name null
 
@@ -320,8 +326,7 @@ int exist_pere_in_tar(char *namefile, char *tarfile) { //dossier parent exist in
 	char pere[strlen(absolutename)+1];
 	strcpy(pere, absolutename);
 	pere[spos+1] = '\0';
-	write(STDOUT_FILENO, pere, strlen(pere));
-	write(STDOUT_FILENO, "\n", 1);
+
 	return exist_dir(pere, tarfile);
 }
 
