@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
@@ -67,7 +68,7 @@ int ls(int argc, char *argv[]){
 				sprintf(format, "%s : \n", argv[i]);
 				write(STDOUT_FILENO, format, strlen(format));
 				if(getenv("TWD") != NULL){
-					if(is_tar(getenv("TWD"))){
+					if(contains_tar(getenv("TWD"))){
 						if(argv[i][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
 							print_dir(argv[i], option);
 						}else{
@@ -101,7 +102,25 @@ int print_dir(char *file, char *options){ //Fonction générale qui gère dans q
 	}else if(contains_tar(cp)){
 		print_inside_tar(file, options);
 	}else{//On se trouve dans un tar, mais on fait ls sur un chemin qui ne contient pas de tar
-		execlp("ls", "ls", file, (options[0] == '\0')?NULL:options, NULL);
+		char *format;
+		switch(fork()){
+			case -1 :
+			format = "erreur de fork";
+			if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell");
+				exit(EXIT_FAILURE);
+			}
+			case 0 :
+				execlp("ls", "ls", file, (options[0] == '\0')?NULL:options, NULL);
+				format = "erreur de exec";
+				if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+					perror("Erreur d'écriture dans le shell");
+					exit(EXIT_FAILURE);
+				}
+			default:
+				wait(NULL);
+				break;
+		}
 	}
 	return 0;
 }
