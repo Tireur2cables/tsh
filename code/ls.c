@@ -20,6 +20,9 @@ void show_complete_header_infos(struct posix_header *, int *);
 int print_dir(char *, char *);
 int print_tar(char *, char *);
 int print_inside_tar(char *, char *);
+int get_indice(char *);
+int get_indice_pere(char *);
+int get_nb_dossier(int);
 int is_tar(char *);
 int contains_tar(char *);
 int check_options(char *);
@@ -31,6 +34,10 @@ void convert_mode(mode_t, char*);
 int get_profondeur(char *);
 int get_filename(char *, char*);
 int contains_filename(char *, char *);
+void get_link(int );
+
+int *tab_link;
+char **tab_nom;
 
 //FONCTION LS
 /*TODO :
@@ -155,6 +162,9 @@ int print_inside_tar(char *file, char *options){
 	int n = 0;
 	int found = 0;
 	int read_size = 0;
+	tab_link = malloc(sizeof(int)*get_nb_dossier(fd));
+	tab_nom = malloc(sizeof(char *)*get_nb_dossier(fd));
+	get_link(fd);
 	int profondeur = get_profondeur(namefile);
 	while((n=read(fd, &header, BLOCKSIZE))>0){
 		if(strcmp(header.name, "\0") == 0){
@@ -229,6 +239,12 @@ int print_tar(char *file, char *options){
 	}
 	int n = 0;
 	int read_size = 0;
+	tab_link = malloc(sizeof(int)*get_nb_dossier(fd));
+	tab_nom = malloc(sizeof(char *)*get_nb_dossier(fd));
+	get_link(fd);
+	for(int i = 0; i < 2; i++){
+		write(STDERR_FILENO, tab_nom[i], strlen(tab_nom[i]));
+	}
 	while((n=read(fd, &header, BLOCKSIZE))>0){
 		if(strcmp(header.name, "\0") == 0){
 			break;
@@ -259,8 +275,79 @@ int print_tar(char *file, char *options){
 	return 0;
 }
 
+int get_nb_dossier(int fd){
+	lseek(fd, 0, SEEK_SET);
+	struct posix_header header;
+	int n = 0;
+	int read_size = 0;
+	int nb_dossier = 0;
+	while((n=read(fd, &header, BLOCKSIZE))>0){
+		if((header.name[strlen(header.name)-1] == '/') && header.name[strlen(header.name)] == '\0'){
+			nb_dossier++;
+		}
+		else { //ls -l
+			get_header_size(&header, &read_size);
+		}
+		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+			perror("erreur de lecture de l'archive");
+			return -1;
+		}
+	}
+	char format[20];
+	sprintf(format, "%d", nb_dossier);
+	write(STDERR_FILENO, format, strlen(format));
+	return nb_dossier;
+}
+
+void get_link(int fd){
+	struct posix_header header;
+	lseek(fd, 0, SEEK_SET);
+	int n = 0;
+	int read_size = 0;
+	int i = 0;
+	int j;
+	while((n=read(fd, &header, BLOCKSIZE))>0){
+		if((header.name[strlen(header.name)-1] == '/') && header.name[strlen(header.name)-1] == '\0'){
+			strcpy(tab_nom[i], header.name);
+			tab_link[i] = 2;
+			j = get_indice_pere(header.name);
+			if(j == -1){
+				perror("erreur dans le comptage du nombre de lien");
+				return;
+			}
+			tab_link[j] = tab_link[j]+1;
+			i++;
+		}
+		else { //ls -l
+			get_header_size(&header, &read_size);
+		}
+		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+			perror("erreur de lecture de l'archive");
+			return;
+		}
+	}
+	lseek(fd, 0, SEEK_SET);
+}
+
+int get_indice(char *nom){
+	for(int i = 0; i < sizeof(tab_nom); i++){
+		if(strcmp(nom, tab_nom[i]) == 0) return i;
+	}
+	return -1;
+}
+int get_indice_pere(char *nom){
+	char *pos = strrchr(nom, '/');
+	int spos = pos - nom;
+	char pere[strlen(nom)];
+	pere[spos] = '\0';
+	for(int i = 0; i < sizeof(tab_nom); i++){
+		if(strcmp(pere, tab_nom[i]) == 0) return i;
+	}
+	return -1;
+}
+
 void show_complete_header_infos(struct posix_header *header, int *read_size){
-	int taille, mode, uid, gid;
+	int taille, mode, uid, gid, link;
 	char name[strlen(header->name)+1];
 	get_filename(header->name, name);
 	char mode_str[10];
@@ -273,7 +360,10 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 		taille_str[i] = ' ';
 	}
 	taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1)-1:5] = '\0';
-
+	//int j = get_indice(header->name);
+	//link = tab_link[j];
+	//char link_str[nbdigit(link)+1];
+	//sprintf(link_str, "%d", link);
 	sscanf(header->mode, "%o", &mode);
 	convert_mode(mode, mode_str);
 	sscanf(header->uid, "%o", &uid);
@@ -287,9 +377,11 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	date[strlen(date) - 1] = '\0'; // ctime renvoit une string se terminant par \n ...
 
 	*read_size = ((taille + 512-1)/512);
-	char format[2*sizeof(int) + 1 + strlen(name) + strlen(date) + strlen(pw_name) + strlen(gr_name)+ 1]; //calcul de taille faux
+	char format[strlen(typeformat) + strlen(mode_str) + strlen(taille_str) + /*strlen(link_str) +*/ strlen(name) + strlen(date) + strlen(pw_name) + strlen(gr_name)+ 1]; //calcul de taille faux
 	strcpy(format, typeformat);
 	strcat(format, mode_str);
+	strcat(format, " ");
+	//strcat(format, link_str);
 	strcat(format, " ");
 	strcat(format, pw_name);
 	strcat(format, " ");
