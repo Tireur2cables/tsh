@@ -27,6 +27,7 @@ int is_tar(char *);
 int contains_tar(char *);
 int check_options(char *);
 int is_options(char *);
+int is_same_dir(char *, char *);
 int is_curr_or_parent_rep(char *);
 int is_ext(char *, char *);
 int nbdigit(int);
@@ -303,15 +304,17 @@ void get_link(int fd){
 	lseek(fd, 0, SEEK_SET);
 	int n = 0;
 	int read_size = 0;
-	int i = 0;
+	int i = 1;
 	int j;
+	tab_nom[0] = malloc(5);
+	strcpy(tab_nom[0], "null");
+	tab_link[0] = 0;
 	while((n=read(fd, &header, BLOCKSIZE))>0){
 		if((header.name[strlen(header.name)-1] == '/') && header.name[strlen(header.name)] == '\0'){
 			tab_nom[i] = malloc(strlen(header.name)+1);
 			strcpy(tab_nom[i], header.name);
-			//tab_link[i] = malloc(sizeof(int));
 			tab_link[i] = 2;
-			j = get_indice(header.name);
+			j = get_indice_pere(header.name);
 			if(j == -1){
 				perror("erreur dans le comptage du nombre de lien");
 				return;
@@ -331,21 +334,35 @@ void get_link(int fd){
 }
 
 int get_indice(char *nom){
-	for(int i = 0; i < sizeof(tab_nom); i++){
-		if(strcmp(nom, tab_nom[i]) == 0) return i;
+	for(int i = 0; i <= taille_tab; i++){
+		if(tab_nom[i] != NULL){
+			if(strncmp(nom, tab_nom[i], strlen(nom)) == 0){
+				printf("%d", i);
+				return i;
+			}
+		}
 	}
-	return -1;
+	return 0;
 }
 int get_indice_pere(char *nom){
+	nom[strlen(nom)-1] = '\0';
 	char *pos = strrchr(nom, '/');
+	if (pos == NULL) return 0;
 	int spos = pos - nom;
 	char pere[strlen(nom)+1];
 	strcpy(pere, nom);
 	pere[spos] = '\0';
-	for(int i = 0; i < sizeof(tab_nom); i++){
-		if(strcmp(pere, tab_nom[i]) == 0) return i;
+	/*write(STDERR_FILENO, nom, strlen(nom));
+	write(STDERR_FILENO, pere, strlen(pere));
+	write(STDERR_FILENO, "\n", 1);*/
+	for(int i = 1; i <= taille_tab; i++){
+		if(tab_nom[i] != NULL){
+		/*	write(STDERR_FILENO, "\n", 1);
+			write(STDERR_FILENO, tab_nom[i], strlen(tab_nom[i]));*/
+			if(strncmp(pere, tab_nom[i], strlen(pere)) == 0) return i;
+		}
 	}
-	return -1;
+	return 0;
 }
 
 void show_complete_header_infos(struct posix_header *header, int *read_size){
@@ -363,7 +380,7 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	}
 	taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1)-1:5] = '\0';
 	char link_str[100];
-	if(header->name[strlen(header->name-1)] == '/'){
+	if(header->name[strlen(header->name)-1] == '/'){
 		int j = get_indice(header->name);
 		link = tab_link[j];
 		sprintf(link_str, "%d", link);
@@ -510,6 +527,14 @@ int nbdigit(int n){
 		n/=10;
 	}
 	return count;
+}
+int is_same_dir(char *dir1, char *dir2) { // verifie si dir1 à le même nom que dir2 avec dir2 dans un tar
+	return
+	(strcmp(dir1, dir2) == 0) ||
+	((strncmp(dir1, dir2, strlen(dir1)) == 0)
+		&& (strlen(dir2) == strlen(dir1)+1)
+		&& (dir1[strlen(dir1)-1] != '/')
+		&& (dir2[strlen(dir2)-1] == '/'));
 }
 /*
 *Convertis le mode (en octal) en une string rwxrwxrwx
