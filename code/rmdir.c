@@ -15,14 +15,14 @@
 int parcoursChemin(char *, char *);
 int isAccessibleFrom(char *, char *);
 int deleteDir(char *);
-int deleteDirTar(char * , char * , char *);
+int isDirTarEmpty(char * , char * , char *);
+int DeleteDirTar(char * , char * , char * );
 int isDirEmpty(char *);
 int parcoursCheminTar(char *, char *, char *);
 int is_ext(char *, char *);
 int is_tar(char *);
 int isSameDir(char *, char *);
 
-//TODO : gérer suppression dossier dans tar (vérification si dossier dans tar déjà faite)
 
 int rmdir_func(int argc,char **argv) {
 	
@@ -252,7 +252,19 @@ int parcoursCheminTar(char * pwd , char * twd , char *rest) {
 		}
 		if (res[strlen(res)-1] == '/') res[strlen(res)-1] = '\0';
 		
-		deleteDirTar(absolutetar,chemin,res); /// suppression
+		if(strcmp(absolutetar,res)==0) {
+			char *deb  = "rmdir : ";
+			char *end = " n'est pas un répertoire!\n";
+			char error[strlen(deb) + strlen(absolutetar) + 1 + strlen(end) + 1];
+			strcpy(error, deb);
+			strcat(error, absolutetar);
+			strcat(error, end);
+			int errorlen = strlen(error);
+			if (write(STDERR_FILENO, error, errorlen) < errorlen)
+				perror("Erreur d'écriture dans le shell!");
+				return -1;
+			}
+		isDirTarEmpty(absolutetar,chemin,res); /// suppression
 		
 		
 	}else {
@@ -275,17 +287,22 @@ int parcoursCheminTar(char * pwd , char * twd , char *rest) {
 	
 }
 	
-int deleteDirTar(char * absolutetar , char * chemin , char * res) {
+int isDirTarEmpty(char * absolutetar , char * chemin , char * res) {
 	
-	//printf("%s\n",absolutetar);
-	//printf("%s\n",chemin);
+	char neochemin[strlen(chemin)+1+1];
+	
+	if(chemin[strlen(chemin)-1]!='/') {
+		strcpy(neochemin,chemin);
+		strcat(neochemin,"/");
+	} else {
+		strcpy(neochemin,chemin);
+	}
 	
 	int fd = open (absolutetar,O_RDONLY);
-	struct posix_header * header;
-	
+	struct posix_header * header = malloc(sizeof(struct posix_header));
 	
 	if (fd == -1) {
-		char *error_debut = "cd : Erreur! Impossible d'ouvrir l'archive ";
+		char *error_debut = "rmdir : Erreur! Impossible d'ouvrir l'archive ";
 		char error[strlen(error_debut) + strlen(absolutetar) + 1 + 1];
 		strcpy(error, error_debut);
 		strcat(error, absolutetar);
@@ -293,18 +310,128 @@ int deleteDirTar(char * absolutetar , char * chemin , char * res) {
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
 			perror("Erreur d'écriture dans le shell!");
-		return -1;
 	}
 	
-	int n=0;
+	int found=0;
+	int nbfound=-1;
 	
-	
+	while(!found) {
+		
+		if(nbfound>0) {
+			char * deb = "rmdir : le répertoire ";
+			char * end = " n'est pas vide";
+			char error[strlen(deb)+strlen(res)+strlen(end)+1];
+			strcpy(error,deb);
+			strcat(error,res);
+			strcat(error,end);
+			strcat(error,"\n");
+			if(write(STDERR_FILENO,error,strlen(error))<strlen(error)) 
+				perror("Erreur d'écriture dans le shell!");
+			return -1;
+		}
+		
+		if(read(fd,header,BLOCKSIZE)<BLOCKSIZE) break;
+		//if(strcmp(header->name, "\0") == 0) printf("backslash\n");
+		
+		char nom[strlen(header->name)+1];
+		strcpy(nom,header->name);
+		if(strstr(nom,neochemin)!=NULL) nbfound++;
+		
+		int taille = 0;
+		int *ptaille = &taille;
+		sscanf(header->size, "%o", ptaille);
+		int filesize = ((*ptaille + 512-1)/512);
+
+		read(fd, header, BLOCKSIZE*filesize);
+		
+		} 
 	
 	close(fd);
+	
+	DeleteDirTar(absolutetar , chemin , res);
+
 	
 	return 0;
 	
 }
+
+int DeleteDirTar(char * absolutetar , char * chemin , char * res) {
+
+	char neochemin[strlen(chemin)+1+1];
+	
+	if(chemin[strlen(chemin)-1]!='/') {
+		strcpy(neochemin,chemin);
+		strcat(neochemin,"/");
+	} else {
+		strcpy(neochemin,chemin);
+	}
+
+
+	int fd = open (absolutetar,O_RDONLY);
+	struct posix_header * header = malloc(sizeof(struct posix_header));
+	
+	
+	if (fd == -1) {
+		char *error_debut = "rmdir : Erreur! Impossible d'ouvrir l'archive ";
+		char error[strlen(error_debut) + strlen(absolutetar) + 1 + 1];
+		strcpy(error, error_debut);
+		strcat(error, absolutetar);
+		strcat(error, "\n");
+		int errorlen = strlen(error);
+		if (write(STDERR_FILENO, error, errorlen) < errorlen)
+			perror("Erreur d'écriture dans le shell!");
+	}
+	
+	int found=0;
+	
+	while(!found) {
+
+		if(read(fd,header,BLOCKSIZE)<BLOCKSIZE) break;
+		
+		char nom[strlen(header->name)+1];
+		strcpy(nom,header->name);
+			
+		int taille = 0;
+		int *ptaille = &taille;
+		sscanf(header->size, "%o", ptaille);
+		int filesize = ((*ptaille + 512-1)/512);
+		printf("nom : %s | %d octets | %d (x512) \n",header->name,*ptaille,filesize);
+		
+		
+		if(strcmp(nom,neochemin)==0) {
+			
+			printf("%s\n",nom);
+			
+			off_t position;
+			off_t endposition;
+			
+			if((position=lseek(fd, -BLOCKSIZE , SEEK_CUR))==-1) break;
+			if((endposition=lseek(fd, 0 , SEEK_END))==-1) break;
+			
+			unsigned int size= endposition - (position+BLOCKSIZE);
+			char cpy[size];
+			
+			if(lseek(fd, position+BLOCKSIZE , SEEK_SET)==-1) break;
+			read(fd , cpy , size);
+			
+			if(lseek(fd, position , SEEK_SET)==-1) break;
+			write(fd , cpy , size);
+			
+			found=1;
+		
+		} 
+		
+		read(fd, header, BLOCKSIZE*filesize);
+		
+		} 
+	
+	close(fd);
+
+
+	return 0;
+
+
+}	
 
 int deleteDir(char * pwd) {
 	
