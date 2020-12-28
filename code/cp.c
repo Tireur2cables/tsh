@@ -304,6 +304,13 @@ void copyTar(char *source, char *dest, int option) {
 	stat(dest, &stdest); // verifications déjà faites
 
 	if (isTarDir(source)) { // source est un dossier dans un tar ou un tar
+		if (isTar(source) && isTar(dest)) {
+			char *error = "cp : Attention les tars imbriqués ne sont gérés!\n";
+			int errorlen = strlen(error);
+			if (write(STDERR_FILENO, error, errorlen) < errorlen)
+				perror("Erreur d'écriture dans le shell!");
+			return;
+		}
 		if (!option) { // -r pas spécifié
 			char *error = "cp : l'option -r doit être spécifiée pour les dossiers!\n";
 			int errorlen = strlen(error);
