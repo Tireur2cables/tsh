@@ -85,6 +85,7 @@ int parcoursChemin_rmdir(char * chemin, char * pwd) {
 			strcat(newcurr, doss);
 
 			currentpwd = realloc(currentpwd, strlen(newcurr)+1);
+			assert(currentpwd);
 			strcpy(currentpwd, newcurr);
 
 			chemin=saveptr;
