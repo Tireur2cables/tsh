@@ -319,7 +319,9 @@ int exist_pere_in_tar(char *namefile, char *tarfile) { //dossier parent exist in
 	int spos = pos - absolutename;
 	char pere[strlen(absolutename)+1];
 	strcpy(pere, absolutename);
-	pere[spos] = '\0';
+	pere[spos+1] = '\0';
+	write(STDOUT_FILENO, pere, strlen(pere));
+	write(STDOUT_FILENO, "\n", 1);
 	return exist_dir(pere, tarfile);
 }
 
