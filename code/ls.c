@@ -78,6 +78,7 @@ int ls(int argc, char *argv[]){
 						perror("Erreur d'écriture dans le shell");
 						return -1;
 					}
+				}
 				if(getenv("TWD") != NULL){
 					if(contains_tar(getenv("TWD"))){
 						if(argv[i][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
@@ -106,6 +107,7 @@ int ls(int argc, char *argv[]){
 		}
 	}
 	return 0;
+
 }
 
 int print_dir(char *file, char *options){ //Fonction générale qui gère dans quel cas on se trouve
