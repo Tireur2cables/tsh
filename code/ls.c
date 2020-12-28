@@ -336,13 +336,7 @@ int get_filename(char *name, char* namecp){
 		}
 		namecp[strlen(name)-index-1] = '\0';
 	}
-	return profondeur;
-}
-
-void get_header_size(struct posix_header *header, int *read_size){
-	int taille = 0;
-	sscanf(header->size, "%o", &taille);
-	*read_size = ((taille + 512-1)/512);
+	return 0;
 }
 
 int get_profondeur(char *name){
