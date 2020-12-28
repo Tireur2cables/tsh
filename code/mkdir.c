@@ -17,6 +17,7 @@
 int exist_dir(char *, char *);
 int exist_file(char *);
 int exist_pere(char *);
+int exist_pere_in_tar(char *, char *);
 int create_dir(char *);
 int create_tar(char *);
 int try_create_dir(char *);
@@ -133,7 +134,7 @@ int create_dir(char *name){ //Créer un dossier dans un tar si possible
 			perror("Erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
 		}
-	}else if (exist_pere_in_tar(namefile, tarfile)) {
+	}else if (!exist_pere_in_tar(namefile, tarfile)) {
 		char *deb = "mkdir: Erreur le dossier parent de ";
 		char *fin = " n'existe pas!\n";
 		char error[strlen(deb)+strlen(fin)+1+strlen(namefile)];
@@ -297,32 +298,29 @@ int exist_pere(char *name) { //dossier parent exist outside tar
 	strcpy(absolutename, pwd);
 	strcat(absolutename, "/");
 	strcat(absolutename, name);
-	char *namedoss;
-	char *tok;
-	char *tmp = absolutename;
-	while ((tok = strstr(tmp, "/")) != NULL) {
-		tmp = tok + 1;
-		namedoss = tok;
-	}
+	if (absolutename[strlen(absolutename)-1] == '/') absolutename[strlen(absolutename)-1] = '\0';
+	char *pos = strrchr(absolutename, '/');
+	if (pos == NULL) return 1; // seulement possible à la racine /
+	int spos = pos - absolutename;
+	char pere[strlen(absolutename)+1];
+	strcpy(pere, absolutename);
+	pere[spos] = '\0';
 	// namedoss null seulement si name null
 
-	return exist_file(namedoss);
+	return exist_file(pere);
 }
 
 int exist_pere_in_tar(char *namefile, char *tarfile) { //dossier parent exist inside tar
-	char name_copy[strlen(namefile)+1];
-	strcpy(name_copy, namefile);
-	char *namedoss;
-	char *tok;
-	char *saveptr;
-	char *tmp = name_copy;
-	while ((tok = strtok_r(tmp, "/", &saveptr)) != NULL) {
-		tmp = saveptr;
-		namedoss = tok;
-	}
-	// namedoss null seulement si namefile null
-	if (namedoss == NULL || strlen(namedoss) == 0) return exist_file(tarfile);
-	else return exist_dir(namedoss, tarfile);
+	char absolutename[strlen(namefile)+1];
+	strcpy(absolutename, namefile);
+	if (absolutename[strlen(absolutename)-1] == '/') absolutename[strlen(absolutename)-1] = '\0';
+	char *pos = strrchr(absolutename, '/');
+	if (pos == NULL) return exist_file(tarfile); // le pere est le tar
+	int spos = pos - absolutename;
+	char pere[strlen(absolutename)+1];
+	strcpy(pere, absolutename);
+	pere[spos] = '\0';
+	return exist_dir(pere, tarfile);
 }
 
 
