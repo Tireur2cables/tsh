@@ -377,7 +377,7 @@ void copyTar(char *source, char *dest, int option) {
 
 			char chemin[strlen(absolutesource) - strlen(tar) + 1];
 			strcpy(chemin, "");
-			if (strlen(absolutesource) == strlen(tar)) strcat(chemin, &absolutesource[strlen(tar)+1]); // source n'est pas juste un tar
+			if (strlen(absolutesource) != strlen(tar)) strcat(chemin, &absolutesource[strlen(tar)+1]); // source n'est pas juste un tar
 
 			int fdsource = open(tar, O_RDONLY);
 			if (fdsource == -1) {
@@ -400,21 +400,23 @@ void copyTar(char *source, char *dest, int option) {
 				if (strcmp(nom, "") == 0) break;
 
 				if (strstr(nom, chemin) != NULL && strcmp(chemin, nom) <= 0) { // nom must start with chemin
-					char *newnom = strstr(nom, chemin) + strlen(chemin);
-					tmp = newnom;
+					char *newnom = strstr(nom, chemin) + strlen(chemin) + 1;
+					char newnom_cpy[strlen(newnom)+1];
+					strcpy(newnom_cpy, newnom);
+					tmp = newnom_cpy;
 					char *pos;
-					while ((pos = strstr(tmp, "/")) != NULL) { // parcours (et créer si besoin) les dossiers nécéssaires pour copier le fichier
-						char dossier[destlen + strlen(pos+1) + 1];
+					char *save;
+					while ((pos = strtok_r(tmp, "/", &save)) != NULL) { // parcours (et créer si besoin) les dossiers nécéssaires pour copier le fichier
+						int len = strlen(strstr(newnom, pos)) - strlen(pos);
+						char dossier[destlen + len + 1];
 						strcpy(dossier, dest);
 						if (destlen != strlen(dest)) strcat(dossier, "/");
-						strncat(dossier, pos+1, strlen(pos+1));
+						strncat(dossier, newnom, strlen(newnom)-len);
 						if (!exist(dossier, 0) && header.typeflag == '5') {
-							write(STDOUT_FILENO, dossier, strlen(dossier));
-							write(STDOUT_FILENO, "\n", 1);
 							char *argv[3] = {"mkdir", dossier, NULL};
 							mkdir_tar(2, argv);
 						}
-						tmp = pos+1;
+						tmp = save;
 					}
 					if (header.typeflag != '5') { // n'est pas un dossier
 						char newDest[strlen(dest) + 1 + strlen(newnom) + 1];
@@ -426,6 +428,7 @@ void copyTar(char *source, char *dest, int option) {
 						strcpy(newSource, source);
 						strcat(newSource, "/");
 						strcat(newSource, newnom);
+
 						copyfiletartofiletar(newSource, newDest);
 					}
 				}
