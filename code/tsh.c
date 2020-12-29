@@ -14,6 +14,7 @@
 #include <grp.h>
 #include <pwd.h>
 #include <time.h>
+#include <assert.h>
 #include "couple.h"
 #include "ls.h"
 #include "cd.h"
@@ -40,15 +41,16 @@ int exec(int, char *[]);
 int cdIn(int, char *[]);
 int hasTarIn(char const *, int);
 char *traiterArguements(char *, int *);
-void parse_command(char *, int);
+void parse_command(char *, int *);
 void parse_tube(char *, int);
-void parse_redirection(char *, int);
-void traite_redirection(char *, char *, int);
+void parse_redirection(char *, int *);
+void traite_redirection(char *, int, int *, int *);
+void close_redirections(int, int, int, int, int, int, char *);
 char *traiterHome(char *, int *);
 int exist_path_in_tar(int, char *);
 int exist_file_in_tar(int, char *);
-void redirection_tar(char *, char*, int);
-void redirection_classique(char *, char *, int);
+void redirection_tar(char *, int, int *, int *);
+void redirection_classique(char *, int, int *, int *);
 int create_header(char *, struct posix_header *, int);
 int write_block(int fd, struct posix_header *);
 
@@ -89,7 +91,7 @@ int main(int argc, char const *argv[]) { //main
 		if ((line = readline(new_prompt)) != NULL) {
 			int readen = strlen(line);
 			if (readen > 0 && !isOnlySpace(line, readen)) //if not empty line
-				parse_command(line, readen);
+				parse_command(line, &readen);
 				//selectCommand(line, readen);
 		}else { //EOF detected
 			char *newline = "\n";
@@ -105,61 +107,191 @@ int main(int argc, char const *argv[]) { //main
 	return 0;
 }
 
-void parse_command(char *line, int readen){
+void parse_command(char *line, int *readen){
 	parse_redirection(line, readen);
 	//parse_tube(line, readen);
 
 }
 /*
-* POUR LE MOMENT ON NE GERE PAS COMMAND < INPUT > OUTPUT
+ TODO redirections :
+ 	choix : les redirections ne doivent pas etre dans les memes fichiers ou dans le meme tar et doivent etre de la forme ' > ' etc...
+
+ 	changer redirecttion et redirection_tar
+	changer close_redirections
 */
-void parse_redirection(char *line, int readen){
+void parse_redirection(char *line, int *readen){
 	int fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur = -1;
 	char *pos;
 	if((pos = strstr(line, ">")) != NULL){ //On doit faire une redirection de la sortie standard ou de la sortie erreur
-		if((pos = strstr(line, "2>"))){ //redirection de la sortie erreur
-			char command[strlen(line)];
-			char file[strlen(line)];
-			memset(file, '\0', strlen(line));
-			memset(command, '\0', strlen(line));
+		if((pos = strstr(line, " 2>"))){ //redirection de la sortie erreur
+			char command[pos-line + 1];
 			strncpy(command, line, pos-line);
-			if(pos[2] == '>'){ //2>>
-				strcpy(file, (pos[2] == ' ')?pos+4:pos+3);
-				traite_redirection(file, 5, &fd_erreur, &save_erreur);
+			command[pos-line] = '\0';
+
+			int type;
+			char *rest;
+			if(pos[3] == '>'){ //2>>
+				if (pos[4] != ' ') { // pas d'espace apres redirection = erreur
+					char *error = "Erreur! Il faut un espace apres le '>' de la redirection!\n";
+					int errrorlen = strlen(error);
+					if (write(STDERR_FILENO, error, errrorlen) < errrorlen)
+						perror("Erreur d'écriture dans le shell!");
+					return;
+				}
+				rest = pos+5; // après le ' '
+				type = 5;
 			}else{ //2>
-				strcpy(file, (pos[2] == ' ')?pos+3:pos+2);
-				traite_redirection(file, 4, &fd_erreur, &save_erreur);
+				if (pos[3] != ' ') { // pas d'espace apres redirection = erreur
+					char *error = "Erreur! Il faut un espace apres le '>' de la redirection!\n";
+					int errrorlen = strlen(error);
+					if (write(STDERR_FILENO, error, errrorlen) < errrorlen)
+						perror("Erreur d'écriture dans le shell!");
+					return;
+				}
+				rest = pos+4; // après le ' '
+				type = 4;
+			}
+			int restelen = strlen(rest);
+			char *tok;
+			int toklen = 0;
+			if ((tok = strstr(rest, " ")) != NULL) {// retire les potentielles autres redirections ou suite de commandes
+				restelen -= strlen(tok);
+				toklen = strlen(tok);
+			}
+			char file[restelen + 1];
+			strncpy(file, rest, restelen);
+			file[restelen] = '\0';
+			traite_redirection(file, type, &fd_erreur, &save_erreur);
+
+			if (toklen != 0) toklen++;
+			int newlen = strlen(command) + toklen;
+			line = realloc(line, newlen+1);
+			assert(line);
+			strcpy(line, command);
+			if (toklen != 0) {
+				strcat(line, " ");
+				strcat(line, tok);
+			}
+			*readen = strlen(line);
+			if (strstr(line, " 2>") != NULL) { // il y a une autre redirection erreur = erreur
+				char *error = "Erreur! Une seule redirection de sortie erreur est autorisée!\n";
+				int errrorlen = strlen(error);
+				if (write(STDERR_FILENO, error, errrorlen) < errrorlen)
+					perror("Erreur d'écriture dans le shell!");
+				return;
 			}
 		}
-		if(strstr(line, "2>") == NULL && (pos = strstr(line, ">"))){ //redirection de la sortie standard
-			char command[strlen(line)];
-			char file[strlen(line)];
-			memset(command, '\0', strlen(line));
-			memset(file, '\0', strlen(line));
+		if((pos = strstr(line, " >"))){ //redirection de la sortie standard
+			char command[pos-line + 1];
 			strncpy(command, line, pos-line);
-			if(pos[1] == '>'){ //>>
-				strcpy(file, (pos[2] == ' ')?pos+3:pos+2);
-				traite_redirection(file, 3, &fd_sortie, &save_sortie);
-			}else{ //>
-				strcpy(file, (pos[1] == ' ')?pos+2:pos+1);
-				traite_redirection(file, 2, &fd_sortie, &save_sortie);
+			command[pos-line] = '\0';
+
+			int type;
+			char *rest;
+			if(pos[2] == '>'){ //2>>
+				if (pos[3] != ' ') { // pas d'espace apres redirection = erreur
+					char *error = "Erreur! Il faut un espace apres le '>' de la redirection!\n";
+					int errrorlen = strlen(error);
+					if (write(STDERR_FILENO, error, errrorlen) < errrorlen)
+						perror("Erreur d'écriture dans le shell!");
+					return;
+				}
+				rest = pos+4; // après le ' '
+				type = 3;
+			}else{ //2>
+				if (pos[2] != ' ') { // pas d'espace apres redirection = erreur
+					char *error = "Erreur! Il faut un espace apres le '>' de la redirection!\n";
+					int errrorlen = strlen(error);
+					if (write(STDERR_FILENO, error, errrorlen) < errrorlen)
+						perror("Erreur d'écriture dans le shell!");
+					return;
+				}
+				rest = pos+3; // après le ' '
+				type = 2;
+			}
+			int restelen = strlen(rest);
+			char *tok;
+			int toklen = 0;
+			if ((tok = strstr(rest, " ")) != NULL) {// retire les potentielles autres redirections ou suite de commandes
+				restelen -= strlen(tok);
+				toklen = strlen(tok);
+			}
+			char file[restelen + 1];
+			strncpy(file, rest, restelen);
+			file[restelen] = '\0';
+			traite_redirection(file, type, &fd_sortie, &save_sortie);
+
+			if (toklen != 0) toklen++;
+			int newlen = strlen(command) + toklen;
+			line = realloc(line, newlen+1);
+			assert(line);
+			strcpy(line, command);
+			if (toklen != 0) {
+				strcat(line, " ");
+				strcat(line, tok);
+			}
+			*readen = strlen(line);
+			if (strstr(line, " >") != NULL) { // il y a une autre redirection standard = erreur
+				char *error = "Erreur! Une seule redirection de sortie standard est autorisée!\n";
+				int errrorlen = strlen(error);
+				if (write(STDERR_FILENO, error, errrorlen) < errrorlen)
+					perror("Erreur d'écriture dans le shell!");
+				return;
 			}
 		}
 	}
-	if((pos = strstr(line, "<")) != NULL){ //On doit faire une reditction de l'entrée
-		char command[strlen(line)];
-		char file[strlen(line)];
-		memset(command, '\0', strlen(line));
-		memset(file, '\0', strlen(line));
+	if((pos = strstr(line, " <")) != NULL){ //On doit faire une reditction de l'entrée
+		char command[pos-line + 1];
 		strncpy(command, line, pos-line);
-		strcpy(file, (pos[1] == ' ')?pos+2:pos+1);
-		traite_redirection(file, 1, &fd_entree, &save_entree);
+		command[pos-line] = '\0';
+
+		int type;
+		char *rest;
+		if (pos[2] != ' ') { // pas d'espace apres redirection = erreur
+			char *error = "Erreur! Il faut un espace apres le '<' de la redirection!\n";
+			int errrorlen = strlen(error);
+			if (write(STDERR_FILENO, error, errrorlen) < errrorlen)
+				perror("Erreur d'écriture dans le shell!");
+			return;
+		}
+		rest = pos+3; // après le ' '
+		type = 1;
+
+		int restelen = strlen(rest);
+		char *tok;
+		int toklen = 0;
+		if ((tok = strstr(rest, " ")) != NULL) {// retire les potentielles autres redirections ou suite de commandes
+			restelen -= strlen(tok);
+			toklen = strlen(tok);
+		}
+		char file[restelen + 1];
+		strncpy(file, rest, restelen);
+		file[restelen] = '\0';
+		traite_redirection(file, type, &fd_entree, &save_entree);
+
+		if (toklen != 0) toklen++;
+		int newlen = strlen(command) + toklen;
+		line = realloc(line, newlen+1);
+		assert(line);
+		strcpy(line, command);
+		if (toklen != 0) {
+			strcat(line, " ");
+			strcat(line, tok);
+		}
+		*readen = strlen(line);
+		if (strstr(line, " >") != NULL) { // il y a une autre redirection standard = erreur
+			char *error = "Erreur! Une seule redirection de sortie standard est autorisée!\n";
+			int errrorlen = strlen(error);
+			if (write(STDERR_FILENO, error, errrorlen) < errrorlen)
+				perror("Erreur d'écriture dans le shell!");
+			return;
+		}
 	}
-	selectCommand(line, readen);
-	close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur, file);
+	selectCommand(line, *readen);
+	close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur, file_sortie, file_erreur);
 }
 
-void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_entree, int save_sortie, int save_erreur, char *file){
+void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_entree, int save_sortie, int save_erreur, char *file_sortie, char *file_sortie){
 	if(save_entree != -1){
 		close(fd_entree);
 		if(dup2(save_entree, STDIN_FILENO) < 0){
@@ -168,8 +300,8 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		}
 		close(save_entree);
 	}
-	if(save_sortie != -1){
-		if(strstr(file, ".tar") != NULL){
+	if(save_sortie != -1 && fd_sortie != fd_entree){
+		if(file_sortie != NULL && strstr(file_sortie, ".tar") != NULL){
 		 //On doit en plus faire le traitement pour le tar
 		}
 		close(fd_sortie);
@@ -179,8 +311,8 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		}
 		close(save_sortie);
 	}
-	if(save_erreur != -1){
-		if(strstr(file, ".tar") != NULL){
+	if(save_erreur != -1 && fd_erreur != fd_entree && fd_erreur != fd_sortie){
+		if(file_erreur != NULL && strstr(file_erreur, ".tar") != NULL){
 		//On doit en plus faire le traitement pour le tar
 		}
 		close(fd_erreur);
@@ -201,15 +333,15 @@ void traite_redirection(char *file, int type, int *fd, int *save){
 	}
 }
 void redirection_tar(char *file, int type, int *fd, int *save){
-	char tarfile[strlen(file)]; //Contient le chemin jusqu'au tar pour l'ouvrir
-	char namefile[strlen(file)]; //Contient la suite du chemin pour l'affichage
 	int tarpos = strstr(file, ".tar") - file; //Existe car on sait qu'il y a un tar dans le chemin, arithmétique des pointers pour retrouver la position du .tar dans le nom de fichier
+	char tarfile[tarpos+4+1]; //Contient le chemin jusqu'au tar pour l'ouvrir
 	strncpy(tarfile, file, tarpos+4);
-	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
 	tarfile[tarpos+4] = '\0';
+	char namefile[strlen(file)-tarpos-4+1]; //Contient la suite du chemin pour l'affichage
+	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
 	namefile[strlen(file)-tarpos-4] = '\0';
+
 	struct posix_header header;
-	//write(STDERR_FILENO, namefile, strlen(namefile));
 	*fd = open(tarfile, O_RDWR);
 	if(*fd == -1){
 	  perror("erreur d'ouverture de l'archive");
