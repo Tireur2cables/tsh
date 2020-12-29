@@ -205,52 +205,52 @@ void redirection_tar(char *file, int type, int *fd, int *save){
 	struct posix_header header;
 	//write(STDERR_FILENO, namefile, strlen(namefile));
 	*fd = open(tarfile, O_RDWR);
-	if(fd == -1){
+	if(*fd == -1){
 	  perror("erreur d'ouverture de l'archive");
 	  exit(EXIT_FAILURE);
 	}
 	if(type >= 2){//redirection stout ou stderr
-		if(exist_file_in_tar(fd, namefile)){
+		if(exist_file_in_tar(*fd, namefile)){
 			write(STDERR_FILENO, "WIP", 3);
 		}else{
-			if(exist_path_in_tar(fd, namefile)){ //vérifie que l'arborescence de fichier existe dans le tar
+			if(exist_path_in_tar(*fd, namefile)){ //vérifie que l'arborescence de fichier existe dans le tar
 				//write(STDERR_FILENO, namefile, strlen(namefile));
 				int n = 0;
 				int read_size = 0;
 				//write(STDERR_FILENO, "yes", 3);
-				while((n=read(fd, &header, BLOCKSIZE)) > 0){
+				while((n=read(*fd, &header, BLOCKSIZE)) > 0){
 					//write(STDERR_FILENO, "yes", 3);
 					if(strcmp(header.name, "\0") == 0){
 						off_t end_of_tar;
 						off_t new_end_of_tar;
 						struct posix_header header2;
-						lseek(fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
-						write_block(fd, NULL); //Place pour le header
-						end_of_tar = lseek(fd, 0, SEEK_CUR);
+						lseek(*fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
+						write_block(*fd, NULL); //Place pour le header
+						end_of_tar = lseek(*fd, 0, SEEK_CUR);
 						*save = dup((type < 4)?STDOUT_FILENO:STDERR_FILENO);
-						if((dup2(fd, (type < 4)?STDOUT_FILENO:STDERR_FILENO) < 0)){
+						if((dup2(*fd, (type < 4)?STDOUT_FILENO:STDERR_FILENO) < 0)){
 							perror("Erreur de redirection");
 							exit(EXIT_FAILURE);
 						}
 						//Ceci doit etre dans close();
-						new_end_of_tar = lseek(fd, 0, SEEK_CUR);
+						new_end_of_tar = lseek(*fd, 0, SEEK_CUR);
 						int size = new_end_of_tar-end_of_tar;
 						int complement;
 						if(size%BLOCKSIZE != 0){
 							complement = BLOCKSIZE-(size%BLOCKSIZE);
 							char block[complement];
 							memset(block, '\0', complement);
-							write(fd, block, complement);
+							write(*fd, block, complement);
 						}else{
 							complement = 0;
 						}
-						lseek(fd, -(size+complement+BLOCKSIZE), SEEK_CUR);
+						lseek(*fd, -(size+complement+BLOCKSIZE), SEEK_CUR);
 						create_header(namefile, &header2, size);
-						write(fd, &header2, BLOCKSIZE);
+						write(*fd, &header2, BLOCKSIZE);
 						return;
 					}else{
 						get_header_size_tsh(&header, &read_size);
-						if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+						if(lseek(*fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
 							perror("erreur de lecture de l'archive");
 							return;
 						}
