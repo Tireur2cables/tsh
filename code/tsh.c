@@ -278,7 +278,12 @@ void redirection_tar(char *file, int type, int *fd, int *save){
 			int read_size = 0;
 			while((n=read(*fd, &header, BLOCKSIZE)) > 0){
 				if(strcmp(header.name, "\0") == 0){
-					//Faire le traitement de l'input ici'
+					*save = dup(STDIN_FILENO);
+					if((dup2(*fd, STDIN_FILENO) < 0)){
+						perror("Erreur de redirection");
+						exit(EXIT_FAILURE);
+					}
+					//JE SAIS PAS QUOI FAIRE
 				}
 				else{
 					get_header_size_tsh(&header, &read_size);
