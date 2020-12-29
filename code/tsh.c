@@ -50,7 +50,7 @@ void close_redirections(int, int, int, int, int, int, char *, int *, char *, int
 char *traiterHome(char *, int *);
 int exist_path_in_tar(int, char *);
 int exist_file_in_tar(int, char *);
-void redirection_tar(char *, int, int *, int *);
+void redirection_tar(char *, int, int *, int *, int *);
 void redirection_classique(char *, int, int *, int *);
 int create_header(char *, struct posix_header *, int);
 int write_block(int fd, struct posix_header *);
@@ -315,7 +315,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		if(file_sortie != NULL && strstr(file_sortie, ".tar") != NULL){
 			//On doit en plus faire le traitement pour le tar
 			off_t new_end_of_tar = lseek(fd_sortie, 0, SEEK_CUR);
-			int size = new_end_of_tar-endsortie;
+			int size = new_end_of_tar-(*endsortie);
 			int complement;
 			if(size%BLOCKSIZE != 0){
 				complement = BLOCKSIZE-(size%BLOCKSIZE);
@@ -330,9 +330,9 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 			}
 			lseek(fd_sortie, -(size+complement+BLOCKSIZE), SEEK_CUR); // retour à l'emplacement du header
 			struct posix_header header;
-			int namepos = strstr(file_sortie, ".tar") + 5; // existe car file_sortie n'est pas juste un tar
-			char namefile[strlen(&file_sortie[namepos])+1];
-			strcpy(namefile, &file_sortie[namepos]);
+			char *namepos = strstr(file_sortie, ".tar") + 5; // existe car file_sortie n'est pas juste un tar
+			char namefile[strlen(namepos)+1];
+			strcpy(namefile, namepos);
 			create_header(namefile, &header, size);
 			if (write(fd_sortie, &header, BLOCKSIZE) < BLOCKSIZE) {
 				perror("Impossible d'écirre le header du la sortie standard!");
@@ -350,7 +350,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		if(file_erreur != NULL && strstr(file_erreur, ".tar") != NULL){
 			//On doit en plus faire le traitement pour le tar
 			off_t new_end_of_tar = lseek(fd_erreur, 0, SEEK_CUR);
-			int size = new_end_of_tar-enderreur;
+			int size = new_end_of_tar-(*enderreur);
 			int complement;
 			if(size%BLOCKSIZE != 0){
 				complement = BLOCKSIZE-(size%BLOCKSIZE);
@@ -365,9 +365,9 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 			}
 			lseek(fd_erreur, -(size+complement+BLOCKSIZE), SEEK_CUR); // retour à l'emplacement du header
 			struct posix_header header;
-			int namepos = strstr(file_erreur, ".tar") + 5; // existe car file_sortie n'est pas juste un tar
-			char namefile[strlen(&file_erreur[namepos])+1];
-			strcpy(namefile, &file_erreur[namepos]);
+			char *namepos = strstr(file_erreur, ".tar") + 5; // existe car file_sortie n'est pas juste un tar
+			char namefile[strlen(namepos)+1];
+			strcpy(namefile, namepos);
 			create_header(namefile, &header, size);
 			if (write(fd_erreur, &header, BLOCKSIZE) < BLOCKSIZE) {
 				perror("Impossible d'écirre le header du la sortie standard!");
@@ -388,10 +388,10 @@ void traite_redirection(char *file, int type, int *fd, int *save, int *end){
 		redirection_tar(file, type, fd, save, end);
 	}
 	else{
-		redirection_classique(file, type, fd, save, end);
+		redirection_classique(file, type, fd, save);
 	}
 }
-void redirection_tar(char *file, int type, int *fd, int *save){
+void redirection_tar(char *file, int type, int *fd, int *save, int *end){
 	if(is_tar(file)){
 		char format[strlen(file) + 25];
 		sprintf(format, "tsh: %s: est une archive\n", file);
@@ -437,31 +437,15 @@ void redirection_tar(char *file, int type, int *fd, int *save){
 							return;
 						}
 						off_t end_of_tar;
-						off_t new_end_of_tar;
-						struct posix_header header2;
 						lseek(*fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
 						write_block(*fd, NULL); //Place pour le header
 						end_of_tar = lseek(*fd, 0, SEEK_CUR);
+						*end = end_of_tar; // end not null because not stdin
 						*save = dup((type < 4)?STDOUT_FILENO:STDERR_FILENO);
 						if((dup2(*fd, (type < 4)?STDOUT_FILENO:STDERR_FILENO) < 0)){
 							perror("Erreur de redirection");
 							exit(EXIT_FAILURE);
 						}
-						//Ceci doit etre dans close();
-						new_end_of_tar = lseek(*fd, 0, SEEK_CUR);
-						int size = new_end_of_tar-end_of_tar;
-						int complement;
-						if(size%BLOCKSIZE != 0){
-							complement = BLOCKSIZE-(size%BLOCKSIZE);
-							char block[complement];
-							memset(block, '\0', complement);
-							write(*fd, block, complement);
-						}else{
-							complement = 0;
-						}
-						lseek(*fd, -(size+complement+BLOCKSIZE), SEEK_CUR);
-						create_header(namefile, &header2, size);
-						write(*fd, &header2, BLOCKSIZE);
 						return;
 					}else{
 						get_header_size_tsh(&header, &read_size);
