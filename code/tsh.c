@@ -461,12 +461,11 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end){
 						off_t position = lseek(*fd, -BLOCKSIZE, SEEK_CUR); // avant le header
 
 						char container[size];
-						if (read(*fd, container, sizefile) < sizefile) {
+						if (read(*fd, container, size) < size) {
 							perror("Impossible de lire le contenu du fichier de redirection!");
 							return -1;
 						}
-						for (int i = sizefile; i < size; i++) container[i] = '\0';
-						off_t endfile = lseek(*fd, (off_t) size - sizefile, SEEK_CUR); // a la fin du block
+						off_t endfile = lseek(*fd, 0, SEEK_CUR); // a la fin du block
 
 						unsigned int endsize = lseek(*fd, 0, SEEK_END) - endfile;
 						char endcontainer[endsize];
