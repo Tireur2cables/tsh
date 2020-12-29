@@ -129,8 +129,8 @@ void parse_redirection(char *line, int *readen){
 	int save_erreur = -1;
 	int enderreur = -1;
 	int endsortie = -1;
-	char *file_erreur;
-	char *file_sortie;
+	char *file_erreur = NULL;
+	char *file_sortie = NULL;
 	char *pos;
 	if((pos = strstr(line, ">")) != NULL){ //On doit faire une redirection de la sortie standard ou de la sortie erreur
 		if((pos = strstr(line, " 2>"))){ //redirection de la sortie erreur
@@ -171,6 +171,7 @@ void parse_redirection(char *line, int *readen){
 			char file[restelen + 1];
 			strncpy(file, rest, restelen);
 			file[restelen] = '\0';
+
 			file_erreur = malloc(strlen(file)+1);
 			assert(file_erreur);
 			strcpy(file_erreur, file);
@@ -178,6 +179,7 @@ void parse_redirection(char *line, int *readen){
 
 			if (toklen != 0) toklen++;
 			int newlen = strlen(command) + toklen;
+
 			line = realloc(line, newlen+1);
 			assert(line);
 			strcpy(line, command);
@@ -307,6 +309,7 @@ void parse_redirection(char *line, int *readen){
 	close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur, file_sortie, &endsortie, file_erreur, &enderreur);
 	if (file_erreur != NULL) free(file_erreur);
 	if (file_sortie != NULL) free(file_sortie);
+	write(STDOUT_FILENO, "yes\n", 4);
 }
 
 void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_entree, int save_sortie, int save_erreur, char *file_sortie, int *endsortie, char *file_erreur, int *enderreur){
@@ -318,6 +321,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		}
 		close(save_entree);
 	}
+
 	if(save_sortie != -1 && fd_sortie != fd_entree){
 		if(file_sortie != NULL && strstr(file_sortie, ".tar") != NULL){
 			//On doit en plus faire le traitement pour le tar
@@ -353,6 +357,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		}
 		close(save_sortie);
 	}
+
 	if(save_erreur != -1 && fd_erreur != fd_entree && fd_erreur != fd_sortie){
 		if(file_erreur != NULL && strstr(file_erreur, ".tar") != NULL){
 			//On doit en plus faire le traitement pour le tar
