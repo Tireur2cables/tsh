@@ -348,10 +348,8 @@ int isDirTarEmpty(char * absolutetar , char * chemin , char * res) {
 
 	close(fd);
 
-	DeleteDirTar(absolutetar , chemin , res);
+	return DeleteDirTar(absolutetar , chemin , res);
 
-
-	return 0;
 
 }
 
