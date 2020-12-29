@@ -45,8 +45,8 @@ char *traiterArguements(char *, int *);
 void parse_command(char *, int *);
 void parse_tube(char *, int);
 void parse_redirection(char *, int *);
-void traite_redirection(char *, int, int *, int *);
-void close_redirections(int, int, int, int, int, int, char *);
+void traite_redirection(char *, int, int *, int *, int *);
+void close_redirections(int, int, int, int, int, int, char *, int *, char *, int *);
 char *traiterHome(char *, int *);
 int exist_path_in_tar(int, char *);
 int exist_file_in_tar(int, char *);
@@ -121,7 +121,9 @@ void parse_command(char *line, int *readen){
 	changer close_redirections
 */
 void parse_redirection(char *line, int *readen){
-	int fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur = -1;
+	int fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur, enderreur, endsortie = -1;
+	char *file_erreur;
+	char *file_sortie;
 	char *pos;
 	if((pos = strstr(line, ">")) != NULL){ //On doit faire une redirection de la sortie standard ou de la sortie erreur
 		if((pos = strstr(line, " 2>"))){ //redirection de la sortie erreur
@@ -162,7 +164,10 @@ void parse_redirection(char *line, int *readen){
 			char file[restelen + 1];
 			strncpy(file, rest, restelen);
 			file[restelen] = '\0';
-			traite_redirection(file, type, &fd_erreur, &save_erreur);
+			file_erreur = malloc(strlen(file)+1);
+			assert(file_erreur);
+			strcpy(file_erreur, file);
+			traite_redirection(file, type, &fd_erreur, &save_erreur, &enderreur);
 
 			if (toklen != 0) toklen++;
 			int newlen = strlen(command) + toklen;
@@ -220,7 +225,10 @@ void parse_redirection(char *line, int *readen){
 			char file[restelen + 1];
 			strncpy(file, rest, restelen);
 			file[restelen] = '\0';
-			traite_redirection(file, type, &fd_sortie, &save_sortie);
+			file_sortie = malloc(strlen(file)+1);
+			assert(file_sortie);
+			strcpy(file_sortie, file);
+			traite_redirection(file, type, &fd_sortie, &save_sortie, &endsortie);
 
 			if (toklen != 0) toklen++;
 			int newlen = strlen(command) + toklen;
@@ -268,7 +276,7 @@ void parse_redirection(char *line, int *readen){
 		char file[restelen + 1];
 		strncpy(file, rest, restelen);
 		file[restelen] = '\0';
-		traite_redirection(file, type, &fd_entree, &save_entree);
+		traite_redirection(file, type, &fd_entree, &save_entree, NULL);
 
 		if (toklen != 0) toklen++;
 		int newlen = strlen(command) + toklen;
@@ -289,10 +297,12 @@ void parse_redirection(char *line, int *readen){
 		}
 	}
 	selectCommand(line, *readen);
-	close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur, file_sortie, file_erreur);
+	close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur, file_sortie, &endsortie, file_erreur, &enderreur);
+	if (file_erreur != NULL) free(file_erreur);
+	if (file_sortie != NULL) free(file_sortie);
 }
 
-void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_entree, int save_sortie, int save_erreur, char *file_sortie, char *file_sortie){
+void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_entree, int save_sortie, int save_erreur, char *file_sortie, int *endsortie, char *file_erreur, int *enderreur){
 	if(save_entree != -1){
 		close(fd_entree);
 		if(dup2(save_entree, STDIN_FILENO) < 0){
@@ -303,7 +313,31 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 	}
 	if(save_sortie != -1 && fd_sortie != fd_entree){
 		if(file_sortie != NULL && strstr(file_sortie, ".tar") != NULL){
-		 //On doit en plus faire le traitement pour le tar
+			//On doit en plus faire le traitement pour le tar
+			off_t new_end_of_tar = lseek(fd_sortie, 0, SEEK_CUR);
+			int size = new_end_of_tar-endsortie;
+			int complement;
+			if(size%BLOCKSIZE != 0){
+				complement = BLOCKSIZE-(size%BLOCKSIZE);
+				char block[complement];
+				memset(block, '\0', complement);
+				if (write(fd_sortie, block, complement) < complement) {
+					perror("Impossible de completer le block à la fin du tar!");
+					return;
+				}
+			}else{
+				complement = 0;
+			}
+			lseek(fd_sortie, -(size+complement+BLOCKSIZE), SEEK_CUR); // retour à l'emplacement du header
+			struct posix_header header;
+			int namepos = strstr(file_sortie, ".tar") + 5; // existe car file_sortie n'est pas juste un tar
+			char namefile[strlen(&file_sortie[namepos])+1];
+			strcpy(namefile, &file_sortie[namepos]);
+			create_header(namefile, &header, size);
+			if (write(fd_sortie, &header, BLOCKSIZE) < BLOCKSIZE) {
+				perror("Impossible d'écirre le header du la sortie standard!");
+				return;
+			}
 		}
 		close(fd_sortie);
 		if(dup2(save_sortie, STDOUT_FILENO) < 0){
@@ -314,7 +348,31 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 	}
 	if(save_erreur != -1 && fd_erreur != fd_entree && fd_erreur != fd_sortie){
 		if(file_erreur != NULL && strstr(file_erreur, ".tar") != NULL){
-		//On doit en plus faire le traitement pour le tar
+			//On doit en plus faire le traitement pour le tar
+			off_t new_end_of_tar = lseek(fd_erreur, 0, SEEK_CUR);
+			int size = new_end_of_tar-enderreur;
+			int complement;
+			if(size%BLOCKSIZE != 0){
+				complement = BLOCKSIZE-(size%BLOCKSIZE);
+				char block[complement];
+				memset(block, '\0', complement);
+				if (write(fd_erreur, block, complement) < complement) {
+					perror("Impossible de completer le block à la fin du tar!");
+					return;
+				}
+			}else{
+				complement = 0;
+			}
+			lseek(fd_erreur, -(size+complement+BLOCKSIZE), SEEK_CUR); // retour à l'emplacement du header
+			struct posix_header header;
+			int namepos = strstr(file_erreur, ".tar") + 5; // existe car file_sortie n'est pas juste un tar
+			char namefile[strlen(&file_erreur[namepos])+1];
+			strcpy(namefile, &file_erreur[namepos]);
+			create_header(namefile, &header, size);
+			if (write(fd_erreur, &header, BLOCKSIZE) < BLOCKSIZE) {
+				perror("Impossible d'écirre le header du la sortie standard!");
+				return;
+			}
 		}
 		close(fd_erreur);
 		if(dup2(save_erreur, STDERR_FILENO) < 0){
@@ -325,12 +383,12 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 	}
 }
 
-void traite_redirection(char *file, int type, int *fd, int *save){
+void traite_redirection(char *file, int type, int *fd, int *save, int *end){
 	if(strstr(file, ".tar") != NULL){
-		redirection_tar(file, type, fd, save);
+		redirection_tar(file, type, fd, save, end);
 	}
 	else{
-		redirection_classique(file, type, fd, save);
+		redirection_classique(file, type, fd, save, end);
 	}
 }
 void redirection_tar(char *file, int type, int *fd, int *save){
