@@ -91,9 +91,13 @@ int main(int argc, char const *argv[]) { //main
 		char *line;
 		if ((line = readline(new_prompt)) != NULL) {
 			int readen = strlen(line);
-			if (readen > 0 && !isOnlySpace(line, readen)) //if not empty line
+			if (readen > 0 && !isOnlySpace(line, readen)) {//if not empty line
+				//traite le ~ au début des arguments
+				line = traiterHome(line, &readen);
+				//traite les arguments si presence de . ..
+				line = traiterArguements(line, &readen);
 				parse_command(line, &readen);
-				//selectCommand(line, readen);
+			}
 		}else { //EOF detected
 			char *newline = "\n";
 			int newline_len = strlen(newline);
@@ -656,9 +660,6 @@ void parse_tube(char *line, int readen){
 }
 
 void selectCommand(char *line, int readen) { //lance la bonne commande ou lance avec exec
-//traite le ~ au début des arguments
-	line = traiterHome(line, &readen);
-
 //les commandes spéciales à ce shell
 	if (iscmd(line, "help")) //cmd = help
 		launchFunc(help, line, readen);
@@ -680,8 +681,6 @@ void selectCommand(char *line, int readen) { //lance la bonne commande ou lance 
 }
 
 void selectCustomCommand(char *line, int readen) { //lance la bonne custom commande ou lance avec exec
-//traite les arguments si presence de . .. ou ~
-	line = traiterArguements(line, &readen);
 //les commandes built-in
 	if (iscmd(line, "cd")) //cmd = cd must be built-in func
 		launchBuiltInFunc(cd, line, readen);
