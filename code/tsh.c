@@ -309,7 +309,6 @@ void parse_redirection(char *line, int *readen){
 	close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur, file_sortie, &endsortie, file_erreur, &enderreur);
 	if (file_erreur != NULL) free(file_erreur);
 	if (file_sortie != NULL) free(file_sortie);
-	write(STDOUT_FILENO, "yes\n", 4);
 }
 
 void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_entree, int save_sortie, int save_erreur, char *file_sortie, int *endsortie, char *file_erreur, int *enderreur){
