@@ -329,15 +329,15 @@ void traite_redirection(char *file, int type, int *fd, int *save){
 	}
 }
 void redirection_tar(char *file, int type, int *fd, int *save){
-	char tarfile[strlen(file)]; //Contient le chemin jusqu'au tar pour l'ouvrir
-	char namefile[strlen(file)]; //Contient la suite du chemin pour l'affichage
 	int tarpos = strstr(file, ".tar") - file; //Existe car on sait qu'il y a un tar dans le chemin, arithmétique des pointers pour retrouver la position du .tar dans le nom de fichier
+	char tarfile[tarpos+4+1]; //Contient le chemin jusqu'au tar pour l'ouvrir
 	strncpy(tarfile, file, tarpos+4);
-	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
 	tarfile[tarpos+4] = '\0';
+	char namefile[strlen(file)-tarpos-4+1]; //Contient la suite du chemin pour l'affichage
+	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
 	namefile[strlen(file)-tarpos-4] = '\0';
+	
 	struct posix_header header;
-	//write(STDERR_FILENO, namefile, strlen(namefile));
 	*fd = open(tarfile, O_RDWR);
 	if(*fd == -1){
 	  perror("erreur d'ouverture de l'archive");
