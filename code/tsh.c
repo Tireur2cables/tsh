@@ -40,7 +40,7 @@ int launchBuiltInFunc(int (*)(int, char *[]), char *, int);
 int exec(int, char *[]);
 int cdIn(int, char *[]);
 int hasTarIn(char const *, int);
-int is_tar(char *);
+int is_tar_tsh(char *);
 char *traiterArguements(char *, int *);
 void parse_command(char *, int *);
 void parse_tube(char *, int);
@@ -334,7 +334,7 @@ void traite_redirection(char *file, int type, int *fd, int *save){
 	}
 }
 void redirection_tar(char *file, int type, int *fd, int *save){
-	if(is_tar(file)){
+	if(is_tar_tsh(file)){
 		char format[strlen(file) + 25];
 		sprintf(format, "tsh: %s: est une archive\n", file);
 		if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
@@ -973,7 +973,7 @@ int write_block(int fd, struct posix_header* header){
 	return 0;
 }
 
-int is_tar(char *file){
+int is_tar_tsh(char *file){
 	char *pos = strstr(file, ".tar");
 	if(pos == NULL) return 0;
 	return (strlen(pos) == 4 || strlen(pos) == 5);
