@@ -343,10 +343,16 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 			}
 			lseek(fd_sortie, -(size+complement+BLOCKSIZE), SEEK_CUR); // retour à l'emplacement du header
 			struct posix_header header;
+			unsigned int oldsize = 0;
+			if (read(fd_sortie, &header, BLOCKSIZE) < BLOCKSIZE) {
+				perror("Impossible de lire le header du la sortie standard!");
+				return;
+			}
+			if (strcmp(header.name, "") != 0) sscanf(header.size, "%o", &oldsize);
 			char *namepos = strstr(file_sortie, ".tar") + 5; // existe car file_sortie n'est pas juste un tar
 			char namefile[strlen(namepos)+1];
 			strcpy(namefile, namepos);
-			create_header(namefile, &header, size);
+			create_header(namefile, &header, size+oldsize);
 			if (write(fd_sortie, &header, BLOCKSIZE) < BLOCKSIZE) {
 				perror("Impossible d'écirre le header de la sortie standard!");
 				return;
@@ -379,12 +385,18 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 			}
 			lseek(fd_erreur, -(size+complement+BLOCKSIZE), SEEK_CUR); // retour à l'emplacement du header
 			struct posix_header header;
+			unsigned int oldsize = 0;
+			if (read(fd_erreur, &header, BLOCKSIZE) < BLOCKSIZE) {
+				perror("Impossible de lire le header du la sortie erreur!");
+				return;
+			}
+			if (strcmp(header.name, "") != 0) sscanf(header.size, "%o", &oldsize);
 			char *namepos = strstr(file_erreur, ".tar") + 5; // existe car file_sortie n'est pas juste un tar
 			char namefile[strlen(namepos)+1];
 			strcpy(namefile, namepos);
-			create_header(namefile, &header, size);
+			create_header(namefile, &header, size+oldsize);
 			if (write(fd_erreur, &header, BLOCKSIZE) < BLOCKSIZE) {
-				perror("Impossible d'écirre le header du la sortie standard!");
+				perror("Impossible d'écirre le header du la sortie erreur!");
 				return;
 			}
 		}
@@ -438,14 +450,16 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end){
 						unsigned int size;
 						sscanf(header.size, "%o", &size);
 						size += BLOCKSIZE;
+						unsigned int complement = BLOCKSIZE-(size%BLOCKSIZE);
 						off_t position = lseek(*fd, -BLOCKSIZE, SEEK_CUR); // avant le header
-						char container[size];
+						char container[size+complement];
 						if (read(*fd, container, size) < size) {
 							perror("Impossible de lire le contenu du fichier de redirection!");
 							return -1;
 						}
-						unsigned int complement = BLOCKSIZE-(size%BLOCKSIZE);
+						for (int i = size; i < size+complement; i++) container[i] = '\0';
 						off_t endfile = lseek(*fd, (off_t) complement, SEEK_CUR); // a la fin du block
+
 						unsigned int endsize = lseek(*fd, 0, SEEK_END) - endfile;
 						char endcontainer[endsize];
 						lseek(*fd, endfile, SEEK_SET); // retour à la fin du block contenu
