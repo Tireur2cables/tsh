@@ -40,6 +40,7 @@ int launchBuiltInFunc(int (*)(int, char *[]), char *, int);
 int exec(int, char *[]);
 int cdIn(int, char *[]);
 int hasTarIn(char const *, int);
+int is_tar(char *);
 char *traiterArguements(char *, int *);
 void parse_command(char *, int *);
 void parse_tube(char *, int);
@@ -391,6 +392,15 @@ void traite_redirection(char *file, int type, int *fd, int *save, int *end){
 	}
 }
 void redirection_tar(char *file, int type, int *fd, int *save){
+	if(is_tar(file)){
+		char format[strlen(file) + 25];
+		sprintf(format, "tsh: %s: est une archive\n", file);
+		if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+			perror("Erreur d'écriture dans le shell");
+			exit(EXIT_FAILURE);
+		}
+		return;
+	}
 	int tarpos = strstr(file, ".tar") - file; //Existe car on sait qu'il y a un tar dans le chemin, arithmétique des pointers pour retrouver la position du .tar dans le nom de fichier
 	char tarfile[tarpos+4+1]; //Contient le chemin jusqu'au tar pour l'ouvrir
 	strncpy(tarfile, file, tarpos+4);
@@ -417,6 +427,15 @@ void redirection_tar(char *file, int type, int *fd, int *save){
 				while((n=read(*fd, &header, BLOCKSIZE)) > 0){
 					//write(STDERR_FILENO, "yes", 3);
 					if(strcmp(header.name, "\0") == 0){
+						if(header.typeflag == '5'){
+							char format[strlen(file) + 25];
+							sprintf(format, "tsh: %s: est un dossier\n", file);
+							if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+								perror("Erreur d'écriture dans le shell");
+								exit(EXIT_FAILURE);
+							}
+							return;
+						}
 						off_t end_of_tar;
 						off_t new_end_of_tar;
 						struct posix_header header2;
@@ -466,14 +485,27 @@ void redirection_tar(char *file, int type, int *fd, int *save){
 		if(exist_file_in_tar(*fd, namefile)){
 			int n = 0;
 			int read_size = 0;
+			int readen = 0;
+			char read_block[BLOCKSIZE];
 			while((n=read(*fd, &header, BLOCKSIZE)) > 0){
 				if(strcmp(header.name, "\0") == 0){
-					*save = dup(STDIN_FILENO);
-					if((dup2(*fd, STDIN_FILENO) < 0)){
-						perror("Erreur de redirection");
-						exit(EXIT_FAILURE);
+					int tube[2];
+					pipe(tube);
+					get_header_size_tsh(&header, &read_size);
+					switch(fork()){
+						case -1:
+							perror("fork");
+							exit(EXIT_FAILURE);
+						case 0:
+							close(tube[0]);
+							while((readen = read(*fd, read_block, BLOCKSIZE)) > 0){
+								write(tube[1], read_block, readen);
+							}
+						default:
+							close(tube[1]);
+							dup2(tube[0], STDIN_FILENO);
 					}
-					//JE SAIS PAS QUOI FAIRE
+
 				}
 				else{
 					get_header_size_tsh(&header, &read_size);
@@ -997,4 +1029,10 @@ int write_block(int fd, struct posix_header* header){
 		}
 	}
 	return 0;
+}
+
+int is_tar(char *file){
+	char *pos = strstr(file, ".tar");
+	if(pos == NULL) return 0;
+	return (strlen(pos) == 4 || strlen(pos) == 5);
 }
