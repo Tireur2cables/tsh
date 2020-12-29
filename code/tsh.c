@@ -349,6 +349,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 				return;
 			}
 			if (strcmp(header.name, "") != 0) sscanf(header.size, "%o", &oldsize);
+			lseek(fd_sortie, -BLOCKSIZE, SEEK_CUR); // retour à l'emplacement du header
 			char *namepos = strstr(file_sortie, ".tar") + 5; // existe car file_sortie n'est pas juste un tar
 			char namefile[strlen(namepos)+1];
 			strcpy(namefile, namepos);
@@ -391,6 +392,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 				return;
 			}
 			if (strcmp(header.name, "") != 0) sscanf(header.size, "%o", &oldsize);
+			lseek(fd_erreur, -BLOCKSIZE, SEEK_CUR); // retour à l'emplacement du header
 			char *namepos = strstr(file_erreur, ".tar") + 5; // existe car file_sortie n'est pas juste un tar
 			char namefile[strlen(namepos)+1];
 			strcpy(namefile, namepos);
