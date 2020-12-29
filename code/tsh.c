@@ -156,10 +156,10 @@ void parse_redirection(char *line, int readen){
 		traite_redirection(file, 1, &fd_entree, &save_entree);
 	}
 	selectCommand(line, readen);
-	close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur);
+	close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur, file);
 }
 
-void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_entree, int save_sortie, int save_erreur){
+void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_entree, int save_sortie, int save_erreur, char *file){
 	if(save_entree != -1){
 		close(fd_entree);
 		if(dup2(save_entree, STDIN_FILENO) < 0){
@@ -169,6 +169,9 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		close(save_entree);
 	}
 	if(save_sortie != -1){
+		if(strstr(file, ".tar") != NULL){
+		 //On doit en plus faire le traitement pour le tar
+		}
 		close(fd_sortie);
 		if(dup2(save_sortie, STDOUT_FILENO) < 0){
 			perror("erreur de redirection");
@@ -177,6 +180,9 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		close(save_sortie);
 	}
 	if(save_erreur != -1){
+		if(strstr(file, ".tar") != NULL){
+		//On doit en plus faire le traitement pour le tar
+		}
 		close(fd_erreur);
 		if(dup2(save_erreur, STDERR_FILENO) < 0){
 			perror("erreur de redirection");
@@ -267,7 +273,30 @@ void redirection_tar(char *file, int type, int *fd, int *save){
 			}
 		}
 	}else{ //redirection de stdin
-		write(STDERR_FILENO, "WIP", 3);
+		if(exist_file_in_tar(*fd, namefile)){
+			int n = 0;
+			int read_size = 0;
+			while((n=read(*fd, &header, BLOCKSIZE)) > 0){
+				if(strcmp(header.name, "\0") == 0){
+					//Faire le traitement de l'input ici'
+				}
+				else{
+					get_header_size_tsh(&header, &read_size);
+					if(lseek(*fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+						perror("erreur de lecture de l'archive");
+						return;
+					}
+				}
+			}
+		}
+		else{
+			char format[strlen(file) + 60];
+			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
+			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell");
+				exit(EXIT_FAILURE);
+			}
+		}
 	}
 
 }
