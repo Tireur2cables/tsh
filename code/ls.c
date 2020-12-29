@@ -173,7 +173,9 @@ int print_inside_tar(char *file, char *options){
 	int read_size = 0;
 	taille_tab = get_nb_dossier(fd);
 	tab_link = malloc(sizeof(int)*taille_tab);
+	assert(tab_link);
 	tab_nom = malloc(sizeof(char *)*taille_tab);
+	assert(tab_nom);
 	get_link(fd);
 	int profondeur = get_profondeur(namefile);
 	while((n=read(fd, &header, BLOCKSIZE))>0){
@@ -297,12 +299,10 @@ int get_nb_dossier(int fd){
 	int read_size = 0;
 	int nb_dossier = 0;
 	while((n=read(fd, &header, BLOCKSIZE))>0){
-		if((header.name[strlen(header.name)-1] == '/') && header.name[strlen(header.name)] == '\0'){
+		if(header.name[strlen(header.name)-1] == '/'){
 			nb_dossier++;
 		}
-		else { //ls -l
-			get_header_size(&header, &read_size);
-		}
+		get_header_size(&header, &read_size);
 		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
 			perror("erreur de lecture de l'archive");
 			return -1;
@@ -316,29 +316,23 @@ void get_link(int fd){
 	lseek(fd, 0, SEEK_SET);
 	int n = 0;
 	int read_size = 0;
-	int i = 1;
+	int i = 0;
 	int j;
-	tab_nom[0] = malloc(5);
-	assert(tab_nom[0]);
-	strcpy(tab_nom[0], "null");
-	tab_link[0] = 0;
+
 	while((n=read(fd, &header, BLOCKSIZE))>0){
-		if((header.name[strlen(header.name)-1] == '/') && header.name[strlen(header.name)] == '\0'){
+		if(header.name[strlen(header.name)-1] == '/'){
 			tab_nom[i] = malloc(strlen(header.name)+1);
 			assert(tab_nom[i]);
 			strcpy(tab_nom[i], header.name);
 			tab_link[i] = 2;
 			j = get_indice_pere(header.name);
-			if(j == -1){
-				perror("erreur dans le comptage du nombre de lien");
-				return;
+			if(j != -1){ // different de racine
+				tab_link[j] = tab_link[j]+1;
 			}
-			tab_link[j] = tab_link[j]+1;
 			i++;
 		}
-		else { //ls -l
-			get_header_size(&header, &read_size);
-		}
+		get_header_size(&header, &read_size);
+
 		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
 			perror("erreur de lecture de l'archive");
 			return;
@@ -348,27 +342,27 @@ void get_link(int fd){
 }
 
 int get_indice(char *nom){
-	for(int i = 0; i <= taille_tab; i++){
+	for(int i = 0; i < taille_tab; i++){
 		if(tab_nom[i] != NULL){
-			if(strncmp(nom, tab_nom[i], strlen(nom)) == 0) return i;
+			if(strlen(tab_nom[i])-1 <= strlen(nom) && strncmp(nom, tab_nom[i], strlen(nom)) == 0) return i;
 		}
 	}
-	return 0;
+	return -1;
 }
 int get_indice_pere(char *nom){
 	nom[strlen(nom)-1] = '\0';
 	char *pos = strrchr(nom, '/');
-	if (pos == NULL) return 0;
+	if (pos == NULL) return -1;
 	int spos = pos - nom;
 	char pere[strlen(nom)+1];
 	strcpy(pere, nom);
 	pere[spos] = '\0';
-	for(int i = 1; i <= taille_tab; i++){
+	for(int i = 0; i < taille_tab; i++){
 		if(tab_nom[i] != NULL){
 			if(strncmp(pere, tab_nom[i], strlen(pere)) == 0) return i;
 		}
 	}
-	return 0;
+	return -1;
 }
 
 void show_complete_header_infos(struct posix_header *header, int *read_size){
@@ -423,7 +417,7 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	strcat(format, " ");
 	strcat(format, name);
 	strcat(format, "\n");
-	//fixme nombre de references
+	//fixme nombre de references des fichiers
 	if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
 		perror("Erreur d'écriture dans le shell!");
 		exit(EXIT_FAILURE);
