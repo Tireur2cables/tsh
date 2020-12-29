@@ -196,7 +196,7 @@ int parcoursCheminTar_rmdir(char * pwd , char * twd , char *rest) {
 	int fd = open(absolutetar, O_RDONLY);
 
 	if (fd == -1) {
-		char *error_debut = "cd : Erreur! Impossible d'ouvrir l'archive ";
+		char *error_debut = "rmdir : Erreur! Impossible d'ouvrir l'archive ";
 		char error[strlen(error_debut) + strlen(absolutetar) + 1 + 1];
 		strcpy(error, error_debut);
 		strcat(error, absolutetar);
