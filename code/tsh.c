@@ -359,6 +359,15 @@ void redirection_tar(char *file, int type, int *fd, int *save){
 				while((n=read(*fd, &header, BLOCKSIZE)) > 0){
 					//write(STDERR_FILENO, "yes", 3);
 					if(strcmp(header.name, "\0") == 0){
+						if(header.typeflag == '5'){
+							char format[strlen(file) + 25];
+							sprintf(format, "tsh: %s: est un dossier\n", file);
+							if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+								perror("Erreur d'écriture dans le shell");
+								exit(EXIT_FAILURE);
+							}
+							return;
+						}
 						off_t end_of_tar;
 						off_t new_end_of_tar;
 						struct posix_header header2;
