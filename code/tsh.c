@@ -358,6 +358,8 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 				perror("Impossible d'écirre le header de la sortie standard!");
 				return;
 			}
+			lseek(fd_sortie, 0, SEEK_END); // on se met à la fin
+			write_block(fd_sortie, NULL); // on ecrit un block vide à la fin au cas ou
 		}
 		close(fd_sortie);
 		if(dup2(save_sortie, STDOUT_FILENO) < 0){
@@ -401,6 +403,8 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 				perror("Impossible d'écirre le header du la sortie erreur!");
 				return;
 			}
+			lseek(fd_erreur, 0, SEEK_END); // on se met à la fin
+			write_block(fd_erreur, NULL); // on ecrit un block vide à la fin au cas ou
 		}
 		close(fd_erreur);
 		if(dup2(save_erreur, STDERR_FILENO) < 0){
@@ -449,18 +453,20 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end){
 				int read_size;
 				while(read(*fd, &header, BLOCKSIZE) > 0){
 					if(strcmp(header.name, namefile) == 0){
-						unsigned int size;
-						sscanf(header.size, "%o", &size);
-						size += BLOCKSIZE;
-						unsigned int complement = BLOCKSIZE-(size%BLOCKSIZE);
+						unsigned int sizefile;
+						sscanf(header.size, "%o", &sizefile);
+						unsigned int size = (sizefile + BLOCKSIZE - 1) >> BLOCKBITS;
+						size *= BLOCKSIZE;
+						size += BLOCKSIZE; // on ajoute le header
 						off_t position = lseek(*fd, -BLOCKSIZE, SEEK_CUR); // avant le header
-						char container[size+complement];
-						if (read(*fd, container, size) < size) {
+
+						char container[size];
+						if (read(*fd, container, sizefile) < sizefile) {
 							perror("Impossible de lire le contenu du fichier de redirection!");
 							return -1;
 						}
-						for (int i = size; i < size+complement; i++) container[i] = '\0';
-						off_t endfile = lseek(*fd, (off_t) complement, SEEK_CUR); // a la fin du block
+						for (int i = sizefile; i < size; i++) container[i] = '\0';
+						off_t endfile = lseek(*fd, (off_t) size - sizefile, SEEK_CUR); // a la fin du block
 
 						unsigned int endsize = lseek(*fd, 0, SEEK_END) - endfile;
 						char endcontainer[endsize];
@@ -469,6 +475,7 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end){
 							perror("Impossible de lire la fin de l'archive de redirection!");
 							return -1;
 						}
+
 						lseek(*fd, position, SEEK_SET); // retour au debut du header du fichier;
 						if (write(*fd, endcontainer, endsize) < endsize) {
 							perror("Impossible d'écirre la fin de l'archive de redicrection!");
@@ -482,7 +489,13 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end){
 									perror("Impossible d'écirre la fin de l'archive de redicrection!");
 									return -1;
 								}
-								break;
+								*end = lseek(*fd, 0, SEEK_CUR); // end not null because not stdin
+								*save = dup((type < 4)?STDOUT_FILENO:STDERR_FILENO);
+								if((dup2(*fd, (type < 4)?STDOUT_FILENO:STDERR_FILENO) < 0)){
+									perror("Erreur de redirection");
+									exit(EXIT_FAILURE);
+								}
+								return 0;
 							}
 							get_header_size_tsh(&header, &read_size);
 							if(lseek(*fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
@@ -490,13 +503,7 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end){
 								return -1;
 							}
 						}
-						*end = lseek(*fd, 0, SEEK_CUR); // end not null because not stdin
-						*save = dup((type < 4)?STDOUT_FILENO:STDERR_FILENO);
-						if((dup2(*fd, (type < 4)?STDOUT_FILENO:STDERR_FILENO) < 0)){
-							perror("Erreur de redirection");
-							exit(EXIT_FAILURE);
-						}
-						return 0;
+						return -1; // erreur si on arrive ici
 					}else{
 						get_header_size_tsh(&header, &read_size);
 						if(lseek(*fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
