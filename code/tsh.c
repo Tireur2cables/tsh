@@ -114,19 +114,21 @@ void parse_command(char *line, int readen){
 * POUR LE MOMENT ON NE GERE PAS COMMAND < INPUT > OUTPUT
 */
 void parse_redirection(char *line, int readen){
+	int fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur = -1;
 	char *pos;
 	if((pos = strstr(line, ">")) != NULL){ //On doit faire une redirection de la sortie standard ou de la sortie erreur
 		if((pos = strstr(line, "2>"))){ //redirection de la sortie erreur
-			
+			char command[strlen(line)];
 			char file[strlen(line)];
 			memset(file, '\0', strlen(line));
+			memset(command, '\0', strlen(line));
 			strncpy(command, line, pos-line);
 			if(pos[2] == '>'){ //2>>
 				strcpy(file, (pos[2] == ' ')?pos+4:pos+3);
-				traite_redirection(file, 5);
+				traite_redirection(file, 5, &fd_erreur, &save_erreur);
 			}else{ //2>
 				strcpy(file, (pos[2] == ' ')?pos+3:pos+2);
-				traite_redirection(file, 4);
+				traite_redirection(file, 4, &fd_erreur, &save_erreur);
 			}
 		}
 		if(strstr(line, "2>") == NULL && (pos = strstr(line, ">"))){ //redirection de la sortie standard
@@ -154,11 +156,11 @@ void parse_redirection(char *line, int readen){
 		traite_redirection(file, 1);
 	}
 	selectCommand(line, readen);
-	close_redirections();
+	close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur);
 }
 
 void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_entree, int save_sortie, int save_erreur){
-	if(save_entree){
+	if(save_entree != -1){
 		close(fd_entree);
 		if(dup2(save_entree, STDIN_FILENO) < 0){
 			perror("erreur de redirection");
@@ -166,7 +168,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		}
 		close(save_entree);
 	}
-	if(save_sortie){
+	if(save_sortie != -1){
 		close(fd_sortie);
 		if(dup2(save_sortie, STDOUT_FILENO) < 0){
 			perror("erreur de redirection");
@@ -174,7 +176,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		}
 		close(save_sortie);
 	}
-	if(save_erreur){
+	if(save_erreur != -1){
 		close(fd_erreur);
 		if(dup2(save_erreur, STDERR_FILENO) < 0){
 			perror("erreur de redirection");
@@ -184,16 +186,15 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 	}
 }
 
-void traite_redirection(char *file, int type){
-	char *tarpos;
-	if((tarpos = strstr(file, ".tar")) != NULL){
-		redirection_tar(file, type);
+void traite_redirection(char *file, int type, int *fd, int *save){
+	if(strstr(file, ".tar") != NULL){
+		redirection_tar(file, type, fd, save);
 	}
 	else{
-		redirection_classique(file, type);
+		redirection_classique(file, type, fd, save);
 	}
 }
-void redirection_tar(char *file, int type){
+void redirection_tar(char *file, int type, int *fd, int *save){
 	char tarfile[strlen(file)]; //Contient le chemin jusqu'au tar pour l'ouvrir
 	char namefile[strlen(file)]; //Contient la suite du chemin pour l'affichage
 	int tarpos = strstr(file, ".tar") - file; //Existe car on sait qu'il y a un tar dans le chemin, arithmétique des pointers pour retrouver la position du .tar dans le nom de fichier
@@ -203,7 +204,7 @@ void redirection_tar(char *file, int type){
 	namefile[strlen(file)-tarpos-4] = '\0';
 	struct posix_header header;
 	//write(STDERR_FILENO, namefile, strlen(namefile));
-	int fd = open(tarfile, O_RDWR);
+	*fd = open(tarfile, O_RDWR);
 	if(fd == -1){
 	  perror("erreur d'ouverture de l'archive");
 	  exit(EXIT_FAILURE);
@@ -226,7 +227,7 @@ void redirection_tar(char *file, int type){
 						lseek(fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
 						write_block(fd, NULL); //Place pour le header
 						end_of_tar = lseek(fd, 0, SEEK_CUR);
-						int save = dup((type < 4)?STDOUT_FILENO:STDERR_FILENO);
+						*save = dup((type < 4)?STDOUT_FILENO:STDERR_FILENO);
 						if((dup2(fd, (type < 4)?STDOUT_FILENO:STDERR_FILENO) < 0)){
 							perror("Erreur de redirection");
 							exit(EXIT_FAILURE);
