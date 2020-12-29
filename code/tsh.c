@@ -408,14 +408,27 @@ void redirection_tar(char *file, int type, int *fd, int *save){
 		if(exist_file_in_tar(*fd, namefile)){
 			int n = 0;
 			int read_size = 0;
+			int readen = 0;
+			char read_block[BLOCKSIZE];
 			while((n=read(*fd, &header, BLOCKSIZE)) > 0){
 				if(strcmp(header.name, "\0") == 0){
-					*save = dup(STDIN_FILENO);
-					if((dup2(*fd, STDIN_FILENO) < 0)){
-						perror("Erreur de redirection");
-						exit(EXIT_FAILURE);
+					int tube[2];
+					pipe(tube);
+					get_header_size_tsh(&header, &read_size);
+					switch(fork()){
+						case -1:
+							perror("fork");
+							exit(EXIT_FAILURE);
+						case 0:
+							close(tube[0]);
+							while((readen = read(*fd, read_block, BLOCKSIZE)) > 0){
+								write(tube[1], read_block, readen);
+							}
+						default:
+							close(tube[1]);
+							dup2(tube[0], STDIN_FILENO);
 					}
-					//JE SAIS PAS QUOI FAIRE
+
 				}
 				else{
 					get_header_size_tsh(&header, &read_size);
