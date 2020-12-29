@@ -273,10 +273,9 @@ void redirection_tar(char *file, int type, int *fd, int *save){
 }
 
 
-void redirection_classique(char *file, int type){
-	int fd;
+void redirection_classique(char *file, int type, int *fd, int *save){
 	if(type == 5){
-		if((fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
+		if((*fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
 			char format[strlen(file) + 60];
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
 			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
@@ -287,7 +286,7 @@ void redirection_classique(char *file, int type){
 		}
 	}
 	else if(type == 4){
-		if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
+		if((*fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
 			char format[strlen(file) + 60];
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
 			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
@@ -298,7 +297,7 @@ void redirection_classique(char *file, int type){
 		}
 	}
 	else if(type == 3){
-		if((fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
+		if((*fd = open(file, O_WRONLY + O_CREAT + O_APPEND, S_IRWXU)) < 0){
 			char format[strlen(file) + 60];
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
 			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
@@ -310,7 +309,7 @@ void redirection_classique(char *file, int type){
 	}
 	else if(type == 2){
 		//write(STDOUT_FILENO, command, strlen(command));
-		if((fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
+		if((*fd = open(file, O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU)) < 0){
 			char format[strlen(file) + 60];
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
 			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
