@@ -392,7 +392,7 @@ void traite_redirection(char *file, int type, int *fd, int *save, int *end){
 	}
 }
 void redirection_tar(char *file, int type, int *fd, int *save, int *end){
-	if(is_tar(file)){
+	if(is_tar_tsh(file)){
 		char format[strlen(file) + 25];
 		sprintf(format, "tsh: %s: est une archive\n", file);
 		if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
