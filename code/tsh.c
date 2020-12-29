@@ -320,7 +320,7 @@ void redirection_classique(char *file, int type, int *fd, int *save){
 		}
 	}
 	else if(type == 1){
-		if((fd = open(file, O_RDONLY)) < 0){
+		if((*fd = open(file, O_RDONLY)) < 0){
 			char format[strlen(file) + 60];
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
 			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
@@ -330,8 +330,8 @@ void redirection_classique(char *file, int type, int *fd, int *save){
 			return;
 		}
 	}
-	int save = dup(type/2);
-	if((dup2(fd, (type < 4)?((type < 2)?STDIN_FILENO:STDOUT_FILENO):STDERR_FILENO) < 0)){
+	*save = dup(type/2);
+	if((dup2(*fd, (type < 4)?((type < 2)?STDIN_FILENO:STDOUT_FILENO):STDERR_FILENO) < 0)){
 		perror("Erreur de redirection");
 		exit(EXIT_FAILURE);
 	}
