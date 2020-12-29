@@ -113,7 +113,11 @@ void parse_command(char *line, int *readen){
 
 }
 /*
-* POUR LE MOMENT ON NE GERE PAS COMMAND < INPUT > OUTPUT
+ TODO redirections :
+ 	choix : les redirections ne doivent pas etre dans les memes fichiers ou dans le meme tar et doivent etre de la forme ' > ' etc...
+
+ 	changer redirecttion et redirection_tar
+	changer close_redirections
 */
 void parse_redirection(char *line, int *readen){
 	int fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur = -1;
@@ -284,10 +288,10 @@ void parse_redirection(char *line, int *readen){
 		}
 	}
 	selectCommand(line, *readen);
-	close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur, "");
+	close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur, file_sortie, file_erreur);
 }
 
-void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_entree, int save_sortie, int save_erreur, char *file){
+void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_entree, int save_sortie, int save_erreur, char *file_sortie, char *file_sortie){
 	if(save_entree != -1){
 		close(fd_entree);
 		if(dup2(save_entree, STDIN_FILENO) < 0){
@@ -297,7 +301,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		close(save_entree);
 	}
 	if(save_sortie != -1 && fd_sortie != fd_entree){
-		if(strstr(file, ".tar") != NULL){
+		if(file_sortie != NULL && strstr(file_sortie, ".tar") != NULL){
 		 //On doit en plus faire le traitement pour le tar
 		}
 		close(fd_sortie);
@@ -308,7 +312,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		close(save_sortie);
 	}
 	if(save_erreur != -1 && fd_erreur != fd_entree && fd_erreur != fd_sortie){
-		if(strstr(file, ".tar") != NULL){
+		if(file_erreur != NULL && strstr(file_erreur, ".tar") != NULL){
 		//On doit en plus faire le traitement pour le tar
 		}
 		close(fd_erreur);
@@ -336,7 +340,7 @@ void redirection_tar(char *file, int type, int *fd, int *save){
 	char namefile[strlen(file)-tarpos-4+1]; //Contient la suite du chemin pour l'affichage
 	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
 	namefile[strlen(file)-tarpos-4] = '\0';
-	
+
 	struct posix_header header;
 	*fd = open(tarfile, O_RDWR);
 	if(*fd == -1){
