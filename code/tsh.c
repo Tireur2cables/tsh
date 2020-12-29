@@ -139,10 +139,10 @@ void parse_redirection(char *line, int readen){
 			strncpy(command, line, pos-line);
 			if(pos[1] == '>'){ //>>
 				strcpy(file, (pos[2] == ' ')?pos+3:pos+2);
-				traite_redirection(file, 3);
+				traite_redirection(file, 3, &fd_sortie, &save_sortie);
 			}else{ //>
 				strcpy(file, (pos[1] == ' ')?pos+2:pos+1);
-				traite_redirection(file, 2);
+				traite_redirection(file, 2, &fd_sortie, &save_sortie);
 			}
 		}
 	}
@@ -153,7 +153,7 @@ void parse_redirection(char *line, int readen){
 		memset(file, '\0', strlen(line));
 		strncpy(command, line, pos-line);
 		strcpy(file, (pos[1] == ' ')?pos+2:pos+1);
-		traite_redirection(file, 1);
+		traite_redirection(file, 1, &fd_entree, &save_entree);
 	}
 	selectCommand(line, readen);
 	close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur);
