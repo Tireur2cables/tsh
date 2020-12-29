@@ -121,7 +121,14 @@ void parse_command(char *line, int *readen){
 	changer close_redirections
 */
 void parse_redirection(char *line, int *readen){
-	int fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur, enderreur, endsortie = -1;
+	int fd_entree = -1;
+	int fd_sortie = -1;
+	int fd_erreur = -1;
+	int save_entree = -1;
+	int save_sortie = -1;
+	int save_erreur = -1;
+	int enderreur = -1;
+	int endsortie = -1;
 	char *file_erreur;
 	char *file_sortie;
 	char *pos;
