@@ -21,6 +21,7 @@
 #include "cdIn.h"
 #include "tar.h"
 #include "mkdir.h"
+#include "rm.h"
 #include "cp.h"
 #include "rmdir.h"
 
@@ -42,9 +43,9 @@ char *traiterArguements(char *, int *);
 char *traiterHome(char *, int *);
 
 //tableau (et sa taille) des commandes implémentées (non built-in) pour les tar
-int len_custom = 6; //8
-couple custom[6] = {{"ls", ls}, {"pwd", pwd}, {"cat", cat}, {"mkdir", mkdir_tar}, {"cp", cp}, {"rmdir", rmdir_func}};
-//, {"rm", rm}, {"mv", mv};
+int len_custom = 7; //8
+couple custom[7] = {{"ls", ls}, {"pwd", pwd}, {"cat", cat}, {"mkdir", mkdir_tar}, {"cp", cp}, {"rmdir", rmdir_func}, {"rm", rm_func}};
+// {"mv", mv};
 
 
 

@@ -4,13 +4,14 @@ LDLIBS = -lreadline
 ALL = test tsh
 all : $(ALL)
 test : test.o ls.o cd.o pwd.o
-tsh : tsh.o ls.o cd.o pwd.o cat.o help.o exit.o cdIn.o tar.o mkdir.o cp.o rmdir.o
+tsh : tsh.o ls.o cd.o pwd.o cat.o help.o exit.o cdIn.o tar.o mkdir.o cp.o rmdir.o rm.o
 help.o : help.c help.h
 cd.o : cd.c tar.h cd.h
 cdIn.o : cdIn.c cdIn.h
 cat.o : cat.c cat.h tar.h
 mkdir.o : mkdir.c mkdir.h tar.h
 rmdir.o : rmdir.c tar.h rmdir.h
+rm.o : rm.c tar.h rm.h
 test.o : test.c ls.h cd.h pwd.h
 exit.o : exit.c exit.h
 ls.o : ls.c tar.h ls.h
@@ -23,4 +24,3 @@ clean :
 	rm -rf *~
 cleanall : clean
 	rm -rf test tsh *.o
-
