@@ -3,7 +3,7 @@ CFLAGS = -Wall -g -std=c11
 LDLIBS = -lreadline
 ALL = test tsh
 all : $(ALL)
-test : test.o ls.o cd.o cat.o pwd.o
+test : test.o tar.o ls.o cd.o cat.o pwd.o mkdir.o rmdir.o
 tsh : tsh.o ls.o cd.o pwd.o cat.o help.o exit.o cdIn.o tar.o mkdir.o rm.o cp.o rmdir.o mv.o
 help.o : help.c help.h
 cd.o : cd.c tar.h cd.h
@@ -11,7 +11,7 @@ cdIn.o : cdIn.c cdIn.h
 cat.o : cat.c cat.h tar.h
 mkdir.o : mkdir.c mkdir.h tar.h
 rmdir.o : rmdir.c tar.h rmdir.h
-test.o : test.c couple.h ls.h cd.h cat.h pwd.h
+test.o : test.c couple.h tar.h ls.h cd.h cat.h pwd.h mkdir.h rmdir.h
 mv.o : mv.c cp.h rm.h
 exit.o : exit.c exit.h
 ls.o : ls.c tar.h ls.h
