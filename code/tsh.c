@@ -585,7 +585,7 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 				return 0;
 			}else { // > ou 2>
 				char *argvbis[3] = {"rm", file, NULL};
-				rm(2, argvbis);
+				rm_func(2, argvbis);
 			} // pas de return pour rentrer le if suivant
 		}
 		if(exist_path_in_tar(*fd, namefile)){ //vérifie que l'arborescence de fichier existe dans le tar
