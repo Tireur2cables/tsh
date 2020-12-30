@@ -1,3 +1,4 @@
 #! /bin/bash
 
-rm -r ../test/tests/
+rm -r tests/tests/
+rm tests/arch.tar

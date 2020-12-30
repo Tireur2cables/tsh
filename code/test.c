@@ -18,33 +18,50 @@
 int generate_files();
 int remove_files();
 
-int nb_test = 4;
-char *test_file[4] = {"../test/tests_in/ls1", "../test/tests_in/ls2", "../test/tests_in/ls3", "..test/tests_in/cat1"};
-int (*fun[4])(int, char *[]) = {ls, ls, ls, cat};
+int nb_test = 7;
+
+int (*fun[7])(int, char *[]) = {ls, ls, ls, ls, cd, ls, cd};
 
 int main(int argc, char const *argv[]) {
-	remove_files();
+	//remove_files();
 	generate_files();
 	char *arg1[2];
 	char *arg2[3];
 	char *arg3[2];
 	char *arg4[2];
+	char *arg5[2];
+	char *arg6[2];
+	char *arg7[2];
 	arg1[0] = "ls";
-	arg1[1] = "../test/tests";
+	arg1[1] = "tests/tests";
 	arg2[0] = "ls";
 	arg2[1] = "-l";
 	arg2[2] = "../test/static";
 	arg3[0] = "ls";
-	arg3[1] = "../test/testss";
-	arg4[0] = "cat";
-	arg4[1] = "../test/static/file";
+	arg3[1] = "tests/testss";
+	arg4[0] = "ls";
+	arg4[1] = "tests/arch.tar";
+	arg5[0] = "cd";
+	arg5[1] = "tests";
+	arg6[0] = "ls";
+	arg6[1] = ".";
+	arg7[0] = "cd";
+	arg7[1] = "..";
 
-	char **test_arg[4] = {arg1, arg2, arg3, arg4};
-	int nb_arg[4] = {2,3, 2, 2};
+	char **test_arg[7] = {arg1, arg2, arg3, arg4, arg5, arg6, arg7};
+	int nb_arg[7] = {2,3, 2, 2, 2, 2, 2};
+	char *home = getcwd(NULL, 0);
+	char home_open[strlen(home) + 60];
+	sprintf(home_open, "%s/../test/test_out", home);
 
+	char home_cd1[strlen(home) + 60];
+	sprintf(home_open, "%s/../test/test_in/ls4", home);
+	char home_ls5[strlen(home) + 60];
+	sprintf(home_open, "%s/../test/test_in/ls5", home);
+	char *test_file[7] = {"../test/tests_in/ls1", "../test/tests_in/ls2", "../test/tests_in/ls3", "../test/tests_in/ls4", home_cd1, home_ls5, home_cd1};
 	int w;
 	for(int i = 0; i < nb_test; i++){
-		int output = open("../test/test_out",  O_RDWR + O_CREAT + O_TRUNC, S_IRWXU);
+		int output = open(home_open,  O_RDWR + O_CREAT + O_TRUNC, S_IRWXU);
 		int save = dup(1);
 		int save_err = dup(2);
 		dup2(output, STDOUT_FILENO);
@@ -55,22 +72,19 @@ int main(int argc, char const *argv[]) {
 		dup2(save_err, STDERR_FILENO);
 		close(save);
 		close(save_err);
-		write(STDOUT_FILENO, "yes", 3);
-		/*switch(fork()){
+		switch(fork()){
 			case -1:
 				exit(1);
 			case 0:
-				execlp("diff", "diff", "../test/test_out", test_file[i], NULL);
+				execlp("diff", "diff", home_open, test_file[i], NULL);
 			default:
 				wait(&w);
 				if(w == 0){
 					char format[60];
 					sprintf(format, "test %d passé avec succès\n", i);
 					write(STDOUT_FILENO, format, strlen(format));
-				}else{
-					printf("echec%d", i);
 				}
-		}*/
+		}
 	}
 
 	remove_files();
