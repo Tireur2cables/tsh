@@ -126,7 +126,7 @@ int delete_in_tar(char *chemin, int option) {
 
 	int fd = open(tarfile, O_RDONLY);
 	if (fd == -1) {
-		char *error_debut = "rm : Erreur! Impossible d'ouvrir l'archive ";
+		char *error_debut = "rm : erreur, impossible d'ouvrir l'archive ";
 		char error[strlen(error_debut) + strlen(tarfile) + 1 + 1];
 		strcpy(error, error_debut);
 		strcat(error, tarfile);
@@ -192,7 +192,7 @@ int delete_dir_tar(char *absolutetar, char *chemin) {
 	struct posix_header * header = malloc(sizeof(struct posix_header));
 
 	if (fd == -1) {
-		char *error_debut = "rmdir : Erreur! Impossible d'ouvrir l'archive ";
+		char *error_debut = "rm : erreur, Impossible d'ouvrir l'archive ";
 		char error[strlen(error_debut) + strlen(absolutetar) + 1 + 1];
 		strcpy(error, error_debut);
 		strcat(error, absolutetar);
@@ -256,7 +256,7 @@ int delete_file_tar(char * absolutetar , char * chemin) {
 	struct posix_header * header = malloc(sizeof(struct posix_header));
 
 	if (fd == -1) {
-		char *error_debut = "rmdir : Erreur! Impossible d'ouvrir l'archive ";
+		char *error_debut = "rm : Erreur! Impossible d'ouvrir l'archive ";
 		char error[strlen(error_debut) + strlen(absolutetar) + 1 + 1];
 		strcpy(error, error_debut);
 		strcat(error, absolutetar);
