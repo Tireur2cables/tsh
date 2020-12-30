@@ -17,13 +17,19 @@ Nous avons implémenté le shell `tsh`, qui gère chaque fichier tarball comme u
 `mkdir [repertoire]` -> crée un nouveau répertoire vide  
 Ainsi que toutes les commandes habituelles lorsqu'un tarball n'est pas en jeu.
 
+## Report and issue  
+
 Il existe encore certains problèmes connus, notamment avec la commande `ls` (`ls .` par exemple, affiche actuellement tout le temps le contenu du répertoire a partir duquel
 on a lancé le tsh, ou `ls ..` dans un tar ne fonctionne pas).  
 Les commandes `pwd`, `cd` et `exit` fonctionnent sans problème. Nous avons aussi débuté la rédaction de tests, afin de vérifier le bon fonctionnement de toutes les commandes.
 Le fichier test.c utilise pour le moment la fonction system() pour appeler un script construisant une architecture de fichier, mais sera rapidement remplacé par
 un autre système de test.  
 
-Dans le dossier tests, le script `test.sh` permet de construire une arborescence de fichier pour tester les commandes, et le script `testrm.sh` de la supprimer.
+De façon générale , quelques difficultés ont été rencontrées dont les plus grandes implique le déplacement et le traitement d'informations au sein d'une   
+archive qui aura nécessité beaucoup de temps et de réflexions !
+
+Dans le dossier tests, le script `test.sh` permet de construire une arborescence de fichier pour tester les commandes, et le script `testrm.sh` de la supprimer.  
+
 
 ## Tests unitaires
 
