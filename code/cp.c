@@ -319,7 +319,7 @@ void copyTar(char *source, char *dest, int option) {
 			return;
 		}
 
-		if (isInTar(dest)) { // dest est dans un tar
+		if (isInTar(dest)) { // dest est dans un tar ou est un tar
 			char source_copy[strlen(source)+1];
 			strcpy(source_copy, source);
 			char *sourcedoss;
@@ -385,6 +385,9 @@ void copyTar(char *source, char *dest, int option) {
 			strcpy(chemin, "");
 			if (strlen(absolutesource) != strlen(tar)) strcat(chemin, &absolutesource[strlen(tar)+1]); // source n'est pas juste un tar
 
+			int sourcelen = strlen(source);
+			if (source[sourcelen-1] != '/') sourcelen++;
+
 			int fdsource = open(tar, O_RDONLY);
 			if (fdsource == -1) {
 				char *error_debut = "cp : Erreur! Impossible d'ouvrir l'archive ";
@@ -427,14 +430,14 @@ void copyTar(char *source, char *dest, int option) {
 						tmp = save;
 					}
 					if (header.typeflag != '5') { // n'est pas un dossier
-						char newDest[strlen(dest) + 1 + strlen(newnom) + 1];
+						char newDest[destlen + strlen(newnom) + 1];
 						strcpy(newDest, dest);
-						strcat(newDest, "/");
+						if (strlen(dest) != destlen) strcat(newDest, "/");
 						strcat(newDest, newnom);
 
-						char newSource[strlen(source) + 1 + strlen(newnom) + 1];
+						char newSource[sourcelen + strlen(newnom) + 1];
 						strcpy(newSource, source);
-						strcat(newSource, "/");
+						if (strlen(source) != sourcelen) strcat(newSource, "/");
 						strcat(newSource, newnom);
 
 						copyfiletartofiletar(newSource, newDest);
@@ -528,6 +531,9 @@ void copyTar(char *source, char *dest, int option) {
 			char chemin[strlen(absolutesource) - strlen(tar) + 1];
 			strcpy(chemin, &absolutesource[strlen(tar)+1]); // source n'est pas juste un tar
 
+			int sourcelen = strlen(source);
+			if (source[sourcelen-1] != '/') sourcelen++;
+
 			int fdsource = open(tar, O_RDONLY);
 			if (fdsource == -1) {
 				char *error_debut = "cp : Erreur! Impossible d'ouvrir l'archive ";
@@ -569,14 +575,14 @@ void copyTar(char *source, char *dest, int option) {
 						tmp = pos+1;
 					}
 					if (header.typeflag != '5') { // n'est pas un dossier
-						char newDest[strlen(dest) + 1 + strlen(newnom) + 1];
+						char newDest[destlen + strlen(newnom) + 1];
 						strcpy(newDest, dest);
-						strcat(newDest, "/");
+						if (destlen != strlen(dest)) strcat(newDest, "/");
 						strcat(newDest, newnom);
 
-						char newSource[strlen(source) + 1 + strlen(newnom) + 1];
+						char newSource[sourcelen + strlen(newnom) + 1];
 						strcpy(newSource, source);
-						strcat(newSource, "/");
+						if (sourcelen != strlen(source)) strcat(newSource, "/");
 						strcat(newSource, newnom);
 						copyfiletartofile(newSource, newDest, mode);
 					}
