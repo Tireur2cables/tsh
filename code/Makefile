@@ -12,6 +12,7 @@ cat.o : cat.c cat.h tar.h
 mkdir.o : mkdir.c mkdir.h tar.h
 rmdir.o : rmdir.c tar.h rmdir.h
 test.o : test.c ls.h cd.h pwd.h
+mv.o : mv.c cp.h
 exit.o : exit.c exit.h
 ls.o : ls.c tar.h ls.h
 tsh.o : tsh.c couple.h ls.h cd.h pwd.h cat.h help.h exit.h cdIn.h tar.h mkdir.h rm.h cp.h rmdir.h
