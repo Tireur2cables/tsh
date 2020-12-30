@@ -11,31 +11,36 @@
 #include "couple.h"
 #include "ls.h"
 #include "cd.h"
+#include "cat.h"
 #include "pwd.h"
 
 
 int generate_files();
 int remove_files();
 
-int nb_test = 3;
-char *test_file[3] = {"../test/tests_in/ls1", "../test/tests_in/ls2", "../test/tests_in/ls3"};
-int (*fun[3])(int, char *[]) = {ls, ls, ls};
+int nb_test = 4;
+char *test_file[4] = {"../test/tests_in/ls1", "../test/tests_in/ls2", "../test/tests_in/ls3", "..test/tests_in/cat1"};
+int (*fun[4])(int, char *[]) = {ls, ls, ls, cat};
 
 int main(int argc, char const *argv[]) {
+	remove_files();
 	generate_files();
-	char *arg[2];
+	char *arg1[2];
 	char *arg2[3];
 	char *arg3[2];
-	arg[0] = "ls";
-	arg[1] = "../test/tests";
+	char *arg4[2];
+	arg1[0] = "ls";
+	arg1[1] = "../test/tests";
 	arg2[0] = "ls";
 	arg2[1] = "-l";
 	arg2[2] = "../test/static";
 	arg3[0] = "ls";
 	arg3[1] = "../test/testss";
+	arg4[0] = "cat";
+	arg4[1] = "../test/static/file";
 
-	char **test_arg[3] = {arg, arg2, arg3};
-	int nb_arg[3] = {2,3, 2};
+	char **test_arg[4] = {arg1, arg2, arg3, arg4};
+	int nb_arg[4] = {2,3, 2, 2};
 
 	int w;
 	for(int i = 0; i < nb_test; i++){
