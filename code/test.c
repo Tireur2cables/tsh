@@ -19,12 +19,22 @@ int remove_files();
 int main(int argc, char const *argv[]) {
 	generate_files();
 	DIR* dir = opendir("../test/tests_in");
-
-	struct dirent * readdir(DIR *dirp);
-	int output = open("../test/test_out",  O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU);
-	int input = open("../test/test_in",  O_RDONLY);
+	struct dirent *entry;
 	int save = dup(1);
 	dup2(output, STDOUT_FILENO);
+	while((entry = readdir(dirp)) != NULL){
+		switch(fork()){
+			case -1:
+				exit(1);
+			case 0:
+				execlp("diff", "diff", "../test/test_out", "../test/test_in", NULL);
+			default:
+				wait(NULL);
+		}
+		printf("%s  ", entry->d_name);
+	}
+	int output = open("../test/test_out",  O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU);
+	int input = open("../test/test_in",  O_RDONLY);
 
 	char *arg[2];
 	char *arg2[2];
@@ -39,14 +49,7 @@ int main(int argc, char const *argv[]) {
 	close(save);
 
 	int output2 = open("../test/test_out",  O_RDONLY);
-	switch(fork()){
-		case -1:
-			exit(1);
-		case 0:
-			execlp("diff", "diff", "../test/test_out", "../test/test_in", NULL);
-		default:
-			wait(NULL);
-	}
+
 	remove_files();
 	return 0;
 }
