@@ -42,8 +42,7 @@ int cdIn(int, char *[]);
 int hasTarIn(char const *, int);
 int is_tar_tsh(char *);
 char *traiterArguements(char *, int *);
-void parse_command(char *, int *);
-void parse_tube(char *, int);
+void parse_tube(char *, int *);
 void parse_redirection(char *, int *);
 int traite_redirection(char *, int, int *, int *, int *, int *);
 void close_redirections(int, int, int, int, int, int, char *, int *, int *, char *, int *, int *);
@@ -96,7 +95,7 @@ int main(int argc, char const *argv[]) { //main
 				line = traiterHome(line, &readen);
 				//traite les arguments si presence de . ..
 				line = traiterArguements(line, &readen);
-				parse_command(line, &readen);
+				parse_tube(line, &readen);
 			}
 		}else { //EOF detected
 			char *newline = "\n";
@@ -112,16 +111,11 @@ int main(int argc, char const *argv[]) { //main
 	return 0;
 }
 
-void parse_command(char *line, int *readen){
-	parse_redirection(line, readen);
-	//parse_tube(line, readen);
-
-}
 /*
  TODO redirections :
  	choix : les redirections ne doivent pas etre dans les memes fichiers ou dans le meme tar et doivent etre de la forme ' > ' etc...
 
- 	changer redirection_tar pour un fichier qui existe déjà
+ 	faire le tube
 */
 void parse_redirection(char *line, int *readen){
 	int fd_entree = -1;
@@ -343,17 +337,10 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 			}
 			lseek(fd_sortie, -(size+complement+BLOCKSIZE+(*taillesortie)), SEEK_CUR); // retour à l'emplacement du header
 			struct posix_header header;
-			unsigned int oldsize = 0;
-			if (read(fd_sortie, &header, BLOCKSIZE) < BLOCKSIZE) {
-				perror("Impossible de lire le header du la sortie standard!");
-				return;
-			}
-			if (strcmp(header.name, "") != 0) sscanf(header.size, "%o", &oldsize);
-			lseek(fd_sortie, -BLOCKSIZE, SEEK_CUR); // retour à l'emplacement du header
 			char *namepos = strstr(file_sortie, ".tar") + 5; // existe car file_sortie n'est pas juste un tar
 			char namefile[strlen(namepos)+1];
 			strcpy(namefile, namepos);
-			create_header(namefile, &header, size+oldsize);
+			create_header(namefile, &header, size+(*taillesortie));
 			if (write(fd_sortie, &header, BLOCKSIZE) < BLOCKSIZE) {
 				perror("Impossible d'écirre le header de la sortie standard!");
 				return;
@@ -417,11 +404,28 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 }
 
 int traite_redirection(char *file, int type, int *fd, int *save, int *end, int *oldtaille){
-	if(strstr(file, ".tar") != NULL){
-		return redirection_tar(file, type, fd, save, end, oldtaille);
+	char *pwd = getcwd(NULL, 0);
+	char *twd = getenv("TWD");
+	int twdlen = 0;
+	int pwdlen = 0;
+	if (file[0] != '/') pwdlen = strlen(pwd) + 1;
+	if (file[0] != '/' && twd != NULL && strlen(twd) != 0) twdlen = strlen(twd) + 1;
+	char absolutefile[pwdlen + twdlen + strlen(file) + 1];
+	strcpy(absolutefile, "");
+	if (pwdlen != 0) {
+		strcat(absolutefile, pwd);
+		strcat(absolutefile, "/");
+	}
+	if (twdlen != 0) {
+		strcat(absolutefile, twd);
+		strcat(absolutefile, "/");
+	}
+	strcat(absolutefile, file);
+	if(strstr(absolutefile, ".tar") != NULL){
+		return redirection_tar(absolutefile, type, fd, save, end, oldtaille);
 	}
 	else{
-		return redirection_classique(file, type, fd, save);
+		return redirection_classique(absolutefile, type, fd, save);
 	}
 }
 
@@ -526,11 +530,10 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 			int read_size = 0;
 			while((n=read(*fd, &header, BLOCKSIZE)) > 0){
 				if(strcmp(header.name, "") == 0){
-					off_t end_of_tar;
+					write(STDERR_FILENO, "yes\n", 4);
 					lseek(*fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
 					write_block(*fd, NULL); //Place pour le header
-					end_of_tar = lseek(*fd, 0, SEEK_CUR);
-					*end = end_of_tar; // end not null because not stdin
+					*end = lseek(*fd, 0, SEEK_CUR); // end not null because not stdin
 					*save = dup((type < 4)?STDOUT_FILENO:STDERR_FILENO);
 					if((dup2(*fd, (type < 4)?STDOUT_FILENO:STDERR_FILENO) < 0)){
 						perror("Erreur de redirection");
@@ -547,7 +550,7 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 			}
 		}else{
 			char format[strlen(file) + 60];
-			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
+			sprintf(format, "tsh: %s: le dossier parent n'existe pas\n", file);
 			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
 				perror("Erreur d'écriture dans le shell");
 				return -1;
@@ -710,11 +713,11 @@ int exist_file_in_tar(int fd, char *path){
 	return 0;
 }
 
-void parse_tube(char *line, int readen){
-	if(!strstr(line, "|")){
-		selectCommand(line, readen);
+void parse_tube(char *line, int *readen){
+	if(!strstr(line, "|")) { // pas de tubes
+		parse_redirection(line, readen);
 	}else{
-		char cp[strlen(line)];
+		/*char cp[strlen(line)];
 		memset(cp, '\0', strlen(cp));
 		int k = 0;
 		for(int i = 0; i < strlen(line); i++){
@@ -724,12 +727,12 @@ void parse_tube(char *line, int readen){
 			if (line[i] == '|'){
 				cp[--k] = '\0';
 				printf("%s\n", cp);
-				selectCommand(cp, k);
+				parse_redirection(cp, &k);
 				memset(cp, '\0', strlen(cp));
 				k = 0;
 			}
-		}
-		selectCommand(cp, k);
+		}*/
+		parse_redirection(line, readen);
 	}
 }
 
