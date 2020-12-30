@@ -1,4 +1,1 @@
-../test/static : 
-total 8
-drwxr-xr-x 2 brrlt brrlt 4096 déc.  30 17:31 dossier
--rw-r--r-- 1 brrlt brrlt    8 déc.  30 17:32 file
+tests/  

@@ -27,7 +27,7 @@ int main(int argc, char const *argv[]) {
 	char *home = getcwd(NULL, 0);
 	generate_files();
 	char *arg1[2];
-	char *arg2[3];
+	char *arg2[2];
 	char *arg3[2];
 	char *arg4[2];
 	char *arg5[2];
@@ -38,8 +38,7 @@ int main(int argc, char const *argv[]) {
 	arg1[0] = "ls";
 	arg1[1] = "tests/tests";
 	arg2[0] = "ls";
-	arg2[1] = "-l";
-	arg2[2] = "../test/static";
+	arg2[1] = "tests/arch.tar";
 	arg3[0] = "ls";
 	arg3[1] = "tests/testss";
 	arg4[0] = "ls";
@@ -57,7 +56,7 @@ int main(int argc, char const *argv[]) {
 
 
 	char **test_arg[9] = {arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9};
-	int nb_arg[9] = {2,3, 2, 2, 2, 2, 2, 2, 2};
+	int nb_arg[9] = {2,2, 2, 2, 2, 2, 2, 2, 2};
 	char home_open[strlen(home) + 60];
 	sprintf(home_open, "%s/tests/test_out", home);
 
