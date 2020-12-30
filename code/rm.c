@@ -42,7 +42,7 @@ int rm_func(int argc , char ** argv) {
 	for(int i=1;i<argc;i++) {
 		if(strcmp(argv[i],"-r")!=0 && strcmp(argv[i],"-R")!=0 && strcmp(argv[i],"--recursive")!=0) {
 			if(getenv("TWD") != NULL){
-				if(is_tar_rm(getenv("TWD"))){
+				if(contains_tar_rm(getenv("TWD"))){
 					if(argv[1][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
 						which_rm(argv[i], withOption);
 					}else{
