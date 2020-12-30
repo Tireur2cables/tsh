@@ -487,12 +487,12 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 						while (read(*fd, &header, BLOCKSIZE) > 0) { // on recherche la fin du tar
 							if (strcmp(header.name, "") == 0) { // fin du tar
 								lseek(*fd, -BLOCKSIZE, SEEK_CUR); // retour au niveau du header
-								if (write(*fd, container, size) < size) { // réécrit le fichier et son contenu
-									perror("Impossible d'écirre la fin de l'archive de redicrection!");
+								if (write(*fd, container, sizefile+BLOCKSIZE) < sizefile+BLOCKSIZE) { // réécrit le fichier et son contenu
+									perror("Impossible d'écirre la fin de l'archive de redirection!");
 									return -1;
 								}
 								*oldtaille = sizefile;
-								*end = lseek(*fd, sizefile - size + BLOCKSIZE, SEEK_CUR); // end not null because not stdin
+								*end = lseek(*fd, 0, SEEK_CUR); // end not null because not stdin
 								*save = dup((type < 4)?STDOUT_FILENO:STDERR_FILENO);
 								if((dup2(*fd, (type < 4)?STDOUT_FILENO:STDERR_FILENO) < 0)){
 									perror("Erreur de redirection");
