@@ -32,7 +32,7 @@ int main(int argc, char const *argv[]) {
 	char *arg4[2];
 	char *arg5[2];
 	char *arg6[2];
-	char *arg7[2];
+	char *arg7[1];
 	char *arg8[2];
 	char *arg9[2];
 	arg1[0] = "ls";
@@ -48,7 +48,6 @@ int main(int argc, char const *argv[]) {
 	arg6[0] = "cd";
 	arg6[1] = "arch.tar";
 	arg7[0] = "ls";
-	arg7[1] = ".";
 	arg8[0] = "cd";
 	arg8[1] = home;
 	arg9[0] = "ls";
@@ -56,15 +55,15 @@ int main(int argc, char const *argv[]) {
 
 
 	char **test_arg[9] = {arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9};
-	int nb_arg[9] = {2,2, 2, 2, 2, 2, 2, 2, 2};
+	int nb_arg[9] = {2,2, 2, 2, 2, 2, 1, 2, 2};
 	char home_open[strlen(home) + 60];
 	sprintf(home_open, "%s/tests/test_out", home);
 
 	char home_cd1[strlen(home) + 60];
-	sprintf(home_cd1, "%s/tests/tests_in/ls4", home);
+	sprintf(home_cd1, "%s/tests/tests_in/cd1", home);
 	char home_ls5[strlen(home) + 60];
 	sprintf(home_ls5, "%s/tests/tests_in/ls5", home);
-	char *test_file[9] = {"tests/tests_in/ls1", "tests/tests_in/ls2", "tests/tests_in/ls3", "tests/tests_in/ls4", home_cd1, home_ls5, home_cd1, home_cd1, home_cd1};
+	char *test_file[9] = {"tests/tests_in/ls1", "tests/tests_in/ls2", "tests/tests_in/ls3", "tests/tests_in/ls4", home_cd1, home_ls5, home_cd1, home_cd1, "tests/tests_in/ls6"};
 	int w;
 	for(int i = 0; i < nb_test; i++){
 		int output = open(home_open,  O_RDWR + O_CREAT + O_TRUNC, S_IRWXU);
