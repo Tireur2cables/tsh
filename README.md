@@ -27,7 +27,7 @@ Le fichier test.c utilise pour le moment la fonction system() pour appeler un sc
 un autre système de test.  
 
 De façon générale , quelques difficultés ont été rencontrées dont les plus grandes implique le déplacement et le traitement d'informations au sein d'une   
-archive qui aura nécessité beaucoup de temps et de réflexions !
+archive qui auront nécessités beaucoup de temps et de réflexions !
 
 Dans le dossier tests, le script `test.sh` permet de construire une arborescence de fichier pour tester les commandes, et le script `testrm.sh` de la supprimer.  
 
