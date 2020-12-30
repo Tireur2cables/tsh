@@ -52,7 +52,7 @@ On vérifiera si l'option est bien indiqué en début de fonction principale. Po
 condition que celui-ci soit vide. Cette condition est vérifiée dans rmdir lors de la tentative de suppression après vérification.  
 
 
-##### Implémentations de mkdir :  
+##### Implémentation de mkdir :  
 On procède d'abord à l'analyse du chemin passé en argument dans la fonction principale puis à la tentative de création d'un répertoire. Selon les cas  
 rencontrés , la fonction `try_create_dir` appelée depuis la fonction principale appellera une fonction particulière :   
 - création d'une archive --> appel de create_tar  
@@ -62,9 +62,24 @@ rencontrés , la fonction `try_create_dir` appelée depuis la fonction principal
 La création d'une archive ou d'un répertoire ne se fait que si celle/celui-ci n'existe pas déjà , dans le cas contraire , un nouveau bloc d'entête est  
 créé dans une fonction à part selon le format classque du header d'une archive.  
 
+##### Implémentation de mv :  
+Cette fonction vérifie si l'on rentre bien au moins 2 arguments/chemins , puis implique l'utilisation de rm et cp pour les cas suivants :  
+- déplacement d'une archive / dossier  
+- changement du nom du dossier / header de l'archive si pas de nouveaux chemins indiqués après  
+
+Avant chaque déplacement ou changement de header , le dossier / l'archive est copié suite à l'appel de la fonction cp puis supprimé avec rm
 
 
-**(manque mv ; cp (-r) ; ls ; cat ; redirections ; combinaisons avec | ; exit)  **
+##### Implémentation de cat :  
+La fonction permet l'affichage du contenu de fichiers dans une archive ou non. Si l'on tente d'afficher un fichier présent dans une archive , on vérifie  
+sa présence dans le chemin indiqué puis on procède à son affichage (assez similaire à ls mais en rajoutant un parcours supplémentaire dans l'archive) dans  
+la fonction `cat_tar`  
+
+
+
+
+
+**(manque cp (-r) ; ls ; redirections ; combinaisons avec | ; exit)  **
 
 -lreadline dans le makefile pour le linkeur
 
