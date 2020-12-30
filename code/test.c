@@ -20,8 +20,10 @@ int main(int argc, char const *argv[]) {
 	generate_files();
 	DIR* dir = opendir("../test/tests_in");
 	struct dirent *entry;
+	int output = open("../test/test_out",  O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU);
 	int save = dup(1);
 	dup2(output, STDOUT_FILENO);
+	int i = 0;
 	while((entry = readdir(dirp)) != NULL){
 		switch(fork()){
 			case -1:
@@ -33,7 +35,6 @@ int main(int argc, char const *argv[]) {
 		}
 		printf("%s  ", entry->d_name);
 	}
-	int output = open("../test/test_out",  O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU);
 	int input = open("../test/test_in",  O_RDONLY);
 
 	char *arg[2];
