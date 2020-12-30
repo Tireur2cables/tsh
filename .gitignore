@@ -6,4 +6,3 @@ code/tsh
 code/test
 
 #Ignore le contenu de tests/ au cas ou on oublie de run testrm
-tests/
