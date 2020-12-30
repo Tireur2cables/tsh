@@ -71,8 +71,6 @@ void which_rm(char *chemin, int withOption){
 		delete_tar(chemin, withOption);
 	}
 	else if(contains_tar_rm(chemin)){
-		write(STDERR_FILENO, chemin, strlen(chemin));
-		write(STDERR_FILENO, "\n", 1);
 		delete_in_tar(chemin, withOption);
 	}else{
 		char *format;
@@ -141,10 +139,6 @@ int delete_in_tar(char *chemin, int option) {
 			perror("Erreur d'écriture dans le shell!");
 		return -1;
 	}
-	write(STDERR_FILENO, tarfile, strlen(tarfile));
-	write(STDERR_FILENO, "\n", 1);
-	write(STDERR_FILENO, namefile, strlen(namefile));
-	write(STDERR_FILENO, "\n", 1);
 	struct posix_header header;
 	int n = 0;
 	int read_size = 0;
@@ -153,8 +147,6 @@ int delete_in_tar(char *chemin, int option) {
 		if(strcmp(header.name, "\0") == 0){
 			break;
 		}
-		write(STDERR_FILENO, header.name, strlen(header.name));
-		write(STDERR_FILENO, "\n", 1);
 		if(strcmp(header.name, namefile) == 0 || isSameDir_rm(namefile, header.name)) {
 			if(header.typeflag == '5'){
 				found = 1;

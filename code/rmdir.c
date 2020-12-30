@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
@@ -16,13 +17,17 @@
 int parcoursChemin_rmdir(char *, char *);
 int isAccessibleFrom_rmdir(char *, char *);
 int deleteDir(char *);
-int isDirTarEmpty(char * , char * , char *);
-int DeleteDirTar(char * , char * , char * );
+int isDirTarEmpty(char * , char *);
+int DeleteDirTar(char * , char *);
+int delete_whole_tar(char *);
+int delete_dir_in_tar(char *);
 int isDirEmpty(char *);
 int parcoursCheminTar_rmdir(char *, char *, char *);
 int is_ext_rmdir(char *, char *);
 int is_tar_rmdir(char *);
 int isSameDir_rmdir(char *, char *);
+int contains_tar_rmdir(char *);
+void which_rmdir(char *);
 
 
 int rmdir_func(int argc,char **argv) {
@@ -39,273 +44,155 @@ int rmdir_func(int argc,char **argv) {
 	}
 
 	for(int i=1;i<argc;i++) {
-
-		char chemin[strlen(argv[i])+1];
-		strcpy(chemin,argv[i]);
-		char * pwd = getcwd(NULL,0);
-		char * twd = getenv("TWD");
-
-		if(chemin[0]=='/') parcoursChemin_rmdir(chemin,"/");
-		else if (twd == NULL || strlen(twd) == 0) parcoursChemin_rmdir(chemin,pwd);
-		else parcoursCheminTar_rmdir(pwd, twd, chemin);
-
-
-
-	}
-
-	return 0;
-
-
-}
-
-
-int parcoursChemin_rmdir(char * chemin, char * pwd) {
-	char *saveptr;
-	char *doss;
-	char *currentpwd = malloc(strlen(pwd) + 1);
-	assert(currentpwd);
-	strcpy(currentpwd, pwd);
-
-	while((doss=strtok_r(chemin,"/",&saveptr))!=NULL) {
-
-		if(isAccessibleFrom_rmdir(doss,currentpwd) > 0) {
-			if(strstr(doss,".tar")!=NULL && (is_tar_rmdir(doss)>0) ) {  // tar dans chemin
-
-				char newcurr[strlen(currentpwd) + 1];
-				strcpy(newcurr, currentpwd);
-				free(currentpwd);
-				return parcoursCheminTar_rmdir(newcurr,doss,saveptr);
-			}
-
-			int currentlen = strlen(currentpwd);
-			if (currentlen != 1) currentlen++; // pas la racine
-			char newcurr[currentlen + strlen(doss) + 1];
-			strcpy(newcurr, currentpwd);
-			if (currentlen != 1) strcat(newcurr, "/");
-			strcat(newcurr, doss);
-
-			currentpwd = realloc(currentpwd, strlen(newcurr)+1);
-			assert(currentpwd);
-			strcpy(currentpwd, newcurr);
-
-			chemin=saveptr;
-
-		} else {
-			free(currentpwd);
-			return -1;
-		}
-
-	}
-	write(STDOUT_FILENO, "yes\n", 4);
-	char res[strlen(currentpwd)+1];
-	strcpy(res,currentpwd);
-	free(currentpwd);
-	deleteDir(res);
-
-	return 0;
-
-
-}
-
-
-int isAccessibleFrom_rmdir(char * doss , char * dir) {
-
-	DIR * courant = opendir(dir);
-
-	if (courant == NULL) {
-		char *error_debut = "rmdir : Erreur! Impossible d'ouvrir le répertoire ";
-		char error[strlen(error_debut) + strlen(dir) + 1 + 1];
-		strcpy(error, error_debut);
-		strcat(error, dir);
-		strcat(error, "\n");
-		int errorlen = strlen(error);
-		if (write(STDERR_FILENO, error, errorlen) < errorlen)
-			perror("Erreur d'écriture dans le shell!");
-		return -1;
-	}
-
-	int found=0;
-	struct dirent * d;
-	struct stat st;
-
-	while((d=readdir(courant))!=NULL) {
-
-		if(strcmp(d->d_name,doss)==0) {
-			found=1;
-			if (strstr(doss, ".tar") == NULL) { //not tar so should be directory
-				char absolutedoss[strlen(dir) + 1 + strlen(doss) + 1];
-				strcpy(absolutedoss, dir);
-				strcat(absolutedoss, "/");
-				strcat(absolutedoss, doss);
-
-				if (stat(absolutedoss, &st) < 0) {
-					perror("Erreur de stat!");
-					return -1;
+		if(getenv("TWD") != NULL){
+			if(is_tar_rmdir(getenv("TWD"))){
+				if(argv[1][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
+					which_rmdir(argv[i]);
+				}else{
+					char file[strlen(getenv("TWD")) + strlen(argv[i])];
+					sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
+					which_rmdir(file);
 				}
-
-				if (!S_ISDIR(st.st_mode)) { //not directory
-					char *deb  = "rmdir : ";
-					char *end = " n'est pas un répertoire ou une archive !\n";
-					char error[strlen(deb) + strlen(doss) + strlen(end) + 1];
-					strcpy(error, deb);
-					strcat(error, doss);
-					strcat(error, end);
-					int errorlen = strlen(error);
-					if (write(STDERR_FILENO, error, errorlen) < errorlen)
-						perror("Erreur d'écriture dans le shell!");
-					return -1;
-				}
+			}else{
+				char file[strlen(getenv("TWD")) + strlen(argv[i])];
+				sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
+				which_rmdir(file);
 			}
-			break;
+		}else{
+			which_rmdir(argv[i]);
 		}
 	}
 
-	closedir(courant);
-	if (!found) {
-		char *deb  = "rmdir : ";
-		char *end = " n'existe pas!\n";
-		char error[strlen(deb) + strlen(doss) + strlen(end) + 1];
-		strcpy(error, deb);
-		strcat(error, doss);
-		strcat(error, end);
-		int errorlen = strlen(error);
-		if (write(STDERR_FILENO, error, errorlen) < errorlen)
-			perror("Erreur d'écriture dans le shell!");
-	}
-
-	return found;
+	return 0;
 }
 
+void which_rmdir(char *chemin){
+	if(is_tar_rmdir(chemin)){
+		delete_whole_tar(chemin);
+	}
+	else if(contains_tar_rmdir(chemin)){
+		delete_dir_in_tar(chemin);
+	}else{
+		char *format;
+		switch(fork()){  // sans tar dans chemin
+			case -1 :
+			format = "erreur de fork";
+			if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell");
+				exit(EXIT_FAILURE);
+			}
+			case 0 :
+				execlp("rmdir", "rmdir", chemin, NULL);
+				format = "erreur de exec";
+				if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+					perror("Erreur d'écriture dans le shell");
+					exit(EXIT_FAILURE);
+				}
+			default:
+				wait(NULL);
+				break;
+		}
+	}
+}
 
-int parcoursCheminTar_rmdir(char * pwd , char * twd , char *rest) {
+int delete_whole_tar(char *chemin){
+	int fd;
+	fd = open(chemin, O_RDONLY);
+	struct posix_header header;
+	read(fd, &header, BLOCKSIZE);
+	if(header.name[0] == '\0'){
+		if(remove(chemin)!=0) {
+			perror("erreur de supression du fichier");
+			return 0;
+		}
+	}else{
+		char format[60 + strlen(chemin)];
+		sprintf(format, "rmdir: impossible de supprimer '%s': Le dossier n'est pas vide", chemin);
+		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+			perror("Erreur d'écriture dans le shell");
+			exit(EXIT_FAILURE);
+		}
+	}
+	return 1;
+}
 
-	char twd_copy[strlen(twd)+1];
-	strcpy(twd_copy, twd);
-	char *tar = strtok(twd_copy, "/");
-	char absolutetar[strlen(pwd) + 1 + strlen(tar) + 1];
-	strcpy(absolutetar, pwd);
-	strcat(absolutetar, "/");
-	strcat(absolutetar, tar);
+int delete_dir_in_tar(char *chemin) {
+	char tarfile[strlen(chemin)]; //Contient le chemin jusqu'au tar pour l'ouvrir
+	char namefile[strlen(chemin)]; //Contient la suite du chemin pour l'affichage
+	int tarpos = strstr(chemin, ".tar") - chemin; //Existe car on sait qu'il y a un tar dans le chemin, arithmétique des pointers pour retrouver la position du .tar dans le nom de fichier
+	strncpy(tarfile, chemin, tarpos+4);
+	strncpy(namefile, chemin+tarpos+5, strlen(chemin)-tarpos-4);
+	tarfile[tarpos+4] = '\0';
+	namefile[strlen(chemin)-tarpos-4] = '\0';
 
-	char chemin[strlen(twd) - strlen(tar) + strlen(rest) + 1];
-	if (strlen(twd) - strlen(tar) > 0) strcpy(chemin, &twd[strlen(tar)+1]);
-	else strcpy(chemin, &twd[strlen(tar)]);
-	if (strlen(chemin) != 0) strcat(chemin, "/");
-	strcat(chemin, rest);
-
-	int fd = open(absolutetar, O_RDONLY);
-
+	int fd = open(tarfile, O_RDONLY);
 	if (fd == -1) {
 		char *error_debut = "rmdir : Erreur! Impossible d'ouvrir l'archive ";
-		char error[strlen(error_debut) + strlen(absolutetar) + 1 + 1];
+		char error[strlen(error_debut) + strlen(tarfile) + 1 + 1];
 		strcpy(error, error_debut);
-		strcat(error, absolutetar);
+		strcat(error, tarfile);
 		strcat(error, "\n");
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
 			perror("Erreur d'écriture dans le shell!");
 		return -1;
 	}
+	struct posix_header header;
 
 	int found = 0;
+	while (!found) {
+		if (read(fd, &header, BLOCKSIZE) < BLOCKSIZE) break;
 
-	if (chemin != NULL && strlen(chemin) != 0) {
-		struct posix_header header;
-		while (!found) {
-			if (read(fd, &header, BLOCKSIZE) < BLOCKSIZE) break;
-
-			char nom[strlen(header.name)+1];
-			strcpy(nom, header.name);
-			if (nom[strlen(nom)-1] == '/' && isSameDir_rmdir(chemin, nom)) found = 1;
-			else {
-				if (strcmp(nom, chemin) == 0) found = -1;
-				if (strcmp(nom, "") == 0) break;
-				unsigned int taille;
-				sscanf(header.size, "%o", &taille);
-				taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
-				taille *= BLOCKSIZE;
-				if (lseek(fd, (off_t) taille, SEEK_CUR) == -1) break;
-			}
+		char nom[strlen(header.name)+1];
+		strcpy(nom, header.name);
+		if (nom[strlen(nom)-1] == '/' && isSameDir_rmdir(namefile, nom)) found = 1;
+		else {
+			if (strcmp(nom, chemin) == 0) found = -1;
+			if (strcmp(nom, "") == 0) break;
+			unsigned int taille;
+			sscanf(header.size, "%o", &taille);
+			taille = (taille + BLOCKSIZE - 1) >> BLOCKBITS;
+			taille *= BLOCKSIZE;
+			if (lseek(fd, (off_t) taille, SEEK_CUR) == -1) break;
 		}
-	}else found = 1;
-
+	}
 	close(fd);
 	if (!found) {
 		char *deb  = "rmdir : ";
 		char *end = " n'existe pas!\n";
-		char error[strlen(deb) + strlen(absolutetar) + 1 + strlen(chemin) + strlen(end) + 1];
+		char error[strlen(deb) + strlen(chemin) + strlen(end) + 1];
 		strcpy(error, deb);
-		strcat(error, absolutetar);
-		strcat(error, "/");
 		strcat(error, chemin);
 		strcat(error, end);
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
 			perror("Erreur d'écriture dans le shell!");
 	}else if (found == 1) {
-		char res[strlen(absolutetar) + 1 + strlen(chemin) + 1];
-		strcpy(res, absolutetar);
-		if (chemin != NULL && strlen(chemin) != 0) {
-			strcat(res, "/");
-			strcat(res, chemin);
-		}
-		if (res[strlen(res)-1] == '/') res[strlen(res)-1] = '\0';
-
-		if(strcmp(absolutetar,res)==0) {
-			char *deb  = "rmdir : ";
-			char *end = " n'est pas un répertoire!\n";
-			char error[strlen(deb) + strlen(absolutetar) + 1 + strlen(end) + 1];
-			strcpy(error, deb);
-			strcat(error, absolutetar);
-			strcat(error, end);
-			int errorlen = strlen(error);
-			if (write(STDERR_FILENO, error, errorlen) < errorlen) {
-				perror("Erreur d'écriture dans le shell!");
-			} return -1;
-		}
-
-		isDirTarEmpty(absolutetar,chemin,res); /// suppression
-
-
+		isDirTarEmpty(tarfile, namefile); /// suppression
 	}else {
 		char *deb  = "rmdir : ";
 		char *end = " n'est pas un répertoire!\n";
-		char error[strlen(deb) + strlen(absolutetar) + 1 + strlen(chemin) + strlen(end) + 1];
+		char error[strlen(deb) + strlen(chemin) + strlen(end) + 1];
 		strcpy(error, deb);
-		strcat(error, absolutetar);
-		strcat(error, "/");
 		strcat(error, chemin);
 		strcat(error, end);
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
 			perror("Erreur d'écriture dans le shell!");
 	}
-
-	return (found == 1)? 0 : -1;
-
-
-
+	return 0;
 }
 
-int isDirTarEmpty(char * absolutetar , char * chemin , char * res) {
+int isDirTarEmpty(char *tarfile, char *namefile) {
 
-	char neochemin[strlen(chemin)+1+1];
-
-	if(chemin[strlen(chemin)-1]!='/') {
-		strcpy(neochemin,chemin);
-		strcat(neochemin,"/");
-	} else {
-		strcpy(neochemin,chemin);
-	}
-
-	int fd = open (absolutetar,O_RDONLY);
-	struct posix_header * header = malloc(sizeof(struct posix_header));
+	int fd = open (tarfile,O_RDONLY);
+	struct posix_header header;
 
 	if (fd == -1) {
 		char *error_debut = "rmdir : Erreur! Impossible d'ouvrir l'archive ";
-		char error[strlen(error_debut) + strlen(absolutetar) + 1 + 1];
+		char error[strlen(error_debut) + strlen(tarfile) + 1 + 1];
 		strcpy(error, error_debut);
-		strcat(error, absolutetar);
+		strcat(error, tarfile);
 		strcat(error, "\n");
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
@@ -320,9 +207,9 @@ int isDirTarEmpty(char * absolutetar , char * chemin , char * res) {
 		if(nbfound>0) {
 			char * deb = "rmdir : le répertoire ";
 			char * end = " n'est pas vide";
-			char error[strlen(deb)+strlen(res)+strlen(end)+1];
+			char error[strlen(deb)+strlen(namefile)+strlen(end)+1];
 			strcpy(error,deb);
-			strcat(error,res);
+			strcat(error,namefile);
 			strcat(error,end);
 			strcat(error,"\n");
 			if(write(STDERR_FILENO,error,strlen(error))<strlen(error))
@@ -330,49 +217,36 @@ int isDirTarEmpty(char * absolutetar , char * chemin , char * res) {
 			return -1;
 		}
 
-		if(read(fd,header,BLOCKSIZE)<BLOCKSIZE) break;
+		if(read(fd,&header,BLOCKSIZE)<BLOCKSIZE) break;
 		//if(strcmp(header->name, "\0") == 0) printf("backslash\n");
 
-		char nom[strlen(header->name)+1];
-		strcpy(nom,header->name);
-		if(strstr(nom,neochemin)!=NULL) nbfound++;
+		char nom[strlen(header.name)+1];
+		strcpy(nom,header.name);
+		if(strncmp(nom, namefile, strlen(namefile)) == 0) nbfound++;
 
 		int taille = 0;
 		int *ptaille = &taille;
-		sscanf(header->size, "%o", ptaille);
+		sscanf(header.size, "%o", ptaille);
 		int filesize = ((*ptaille + 512-1)/512);
 
-		read(fd, header, BLOCKSIZE*filesize);
+		read(fd, &header, BLOCKSIZE*filesize);
 
 		}
 
 	close(fd);
-
-	return DeleteDirTar(absolutetar , chemin , res);
-
-
+	return DeleteDirTar(tarfile, namefile);
 }
 
-int DeleteDirTar(char * absolutetar , char * chemin , char * res) {
-	char neochemin[strlen(chemin)+1+1];
+int DeleteDirTar(char *tarfile, char *namefile) {
 
-	if(chemin[strlen(chemin)-1]!='/') {
-		strcpy(neochemin,chemin);
-		strcat(neochemin,"/");
-	} else {
-		strcpy(neochemin,chemin);
-	}
-
-
-	int fd = open (absolutetar,O_RDWR);
-	struct posix_header * header = malloc(sizeof(struct posix_header));
-
+	int fd = open (tarfile,O_RDWR);
+	struct posix_header header;
 
 	if (fd == -1) {
 		char *error_debut = "rmdir : Erreur! Impossible d'ouvrir l'archive ";
-		char error[strlen(error_debut) + strlen(absolutetar) + 1 + 1];
+		char error[strlen(error_debut) + strlen(tarfile) + 1 + 1];
 		strcpy(error, error_debut);
-		strcat(error, absolutetar);
+		strcat(error, tarfile);
 		strcat(error, "\n");
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
@@ -380,20 +254,18 @@ int DeleteDirTar(char * absolutetar , char * chemin , char * res) {
 	}
 
 	int found=0;
-
 	while(!found) {
 
-		if(read(fd,header,BLOCKSIZE)<BLOCKSIZE) break;
+		if(read(fd,&header,BLOCKSIZE)<BLOCKSIZE) break;
 
-		char nom[strlen(header->name)+1];
-		strcpy(nom,header->name);
+		char nom[strlen(header.name)+1];
+		strcpy(nom,header.name);
 
 		int taille = 0;
 		int *ptaille = &taille;
-		sscanf(header->size, "%o", ptaille);
+		sscanf(header.size, "%o", ptaille);
 		int filesize = ((*ptaille + 512-1)/512);
-
-		if(strcmp(nom,neochemin)==0) {
+		if(isSameDir_rmdir(namefile, nom)) {
 
 			off_t position;
 			off_t endposition;
@@ -415,7 +287,7 @@ int DeleteDirTar(char * absolutetar , char * chemin , char * res) {
 
 		}
 
-		read(fd, header, BLOCKSIZE*filesize);
+		read(fd, &header, BLOCKSIZE*filesize);
 
 	}
 
@@ -427,32 +299,8 @@ int DeleteDirTar(char * absolutetar , char * chemin , char * res) {
 
 }
 
-int deleteDir(char * pwd) {
-
-
-	if(isDirEmpty(pwd)<0) {  // pas vide
-
-		errno = ENOTEMPTY;
-		char * error1 = "rmdir : le répertoire ";
-		char * error2 = " n'est pas vide !";
-		char error3[strlen(error1) + 1 + strlen(pwd) + 1 + strlen(error2) + 1];
-		strcpy(error3,error1);
-		strcat(error3,pwd);
-		strcat(error3,error2);
-		perror(error3);
-		return -1;
-
-	} else {
-
-	if(rmdir(pwd)<0) {
-			perror("erreur de suppression du répertoire");
-			return -1;
-		}
-
-	}
-
-	return 0;
-
+int contains_tar_rmdir(char *file){
+	return (strstr(file,".tar") != NULL);
 }
 
 int is_ext_rmdir(char *file, char *ext){
@@ -461,34 +309,6 @@ int is_ext_rmdir(char *file, char *ext){
 
 int is_tar_rmdir(char *file){
 	return is_ext_rmdir(file, ".tar") || is_ext_rmdir(file, ".tar/");
-}
-
-
-int isDirEmpty(char * pwd ) {
-
-	DIR * dir = opendir(pwd);
-	struct dirent * d;
-	int nbFile=0;  // cb de fichiers dans le rep
-
-	if (dir == NULL) {
-		char *error_debut = "rmdir : Erreur! Impossible d'ouvrir le répertoire ";
-		char error[strlen(error_debut) + strlen(pwd) + 1 + 1];
-		strcpy(error, error_debut);
-		strcat(error, pwd);
-		strcat(error, "\n");
-		int errorlen = strlen(error);
-		if (write(STDERR_FILENO, error, errorlen) < errorlen)
-			perror("Erreur d'écriture dans le shell!");
-		return -1;
-	}
-
-	while((d=readdir(dir))!=NULL) {
-		nbFile++;
-	}
-
-	if(nbFile<3) return 0;
-	return -1;
-
 }
 
 int isSameDir_rmdir(char *dir1, char *dir2) {
