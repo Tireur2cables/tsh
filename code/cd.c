@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dirent.h>
+
 #include "tar.h"
 #include "cd.h"
 
@@ -23,7 +24,7 @@ int cd(int argc, char *argv[]) {
 
 	if (errorDetect(argc)) return -1;
 
-	if (argc == 1) { //cd sans arguments
+	if (argc == 1) { // cd sans arguments
 		char *home = getenv("HOME");
 		if (home == NULL) {
 			char *error = "La variables $HOME n'est pas définie!\n";
@@ -98,7 +99,7 @@ int setWd(char *newwd) {
 	char *token;
 	char *saveptr;
 	int pwdlen = 0;
-	while((token = strtok_r(newwd, "/", &saveptr)) != NULL) {
+	while ((token = strtok_r(newwd, "/", &saveptr)) != NULL) {
 		if (strstr(token, ".tar") != NULL) break;
 		pwdlen += 1 + strlen(token);
 		newwd = saveptr;
@@ -117,7 +118,7 @@ int setWd(char *newwd) {
 		char twd[twdlen+1];
 		strcpy(twd, &newwd_copy[pwdlen+1]);
 
-		if(setenv("TWD", twd, 1) < 0) {
+		if (setenv("TWD", twd, 1) < 0) {
 			perror("Erreur changement de la variable TWD impossible!");
 			return -1;
 		}
@@ -176,9 +177,7 @@ int isAccessibleFrom(char *doss, char *dir) {
 	if (courant == NULL) {
 		char *error_debut = "cd : Erreur! Impossible d'ouvrir le répertoire ";
 		char error[strlen(error_debut) + strlen(dir) + 1 + 1];
-		strcpy(error, error_debut);
-		strcat(error, dir);
-		strcat(error, "\n");
+		sprintf(error, "%s%s\n", error_debut, dir);
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
 			perror("Erreur d'écriture dans le shell!");
@@ -191,24 +190,20 @@ int isAccessibleFrom(char *doss, char *dir) {
 	while ((d = readdir(courant)) != NULL) {
 		if (strcmp(d->d_name, doss) == 0) {
 			found = 1;
-			if (strstr(doss, ".tar") == NULL) { //not tar so should be directory
+			if (strstr(doss, ".tar") == NULL) { // not tar so should be directory
 				char absolutedoss[strlen(dir) + 1 + strlen(doss) + 1];
-				strcpy(absolutedoss, dir);
-				strcat(absolutedoss, "/");
-				strcat(absolutedoss, doss);
+				sprintf(absolutedoss, "%s/%s", dir, doss);
 
 				if (stat(absolutedoss, &st) < 0) {
 					perror("Erreur de stat!");
 					return -1;
 				}
 
-				if (!S_ISDIR(st.st_mode)) { //not directory
+				if (!S_ISDIR(st.st_mode)) { // not directory
 					char *deb  = "cd : ";
 					char *end = " n'est pas un répertoire!\n";
 					char error[strlen(deb) + strlen(absolutedoss) + strlen(end) + 1];
-					strcpy(error, deb);
-					strcat(error, absolutedoss);
-					strcat(error, end);
+					sprintf(error, "%s%s%s", deb, absolutedoss, end);
 					int errorlen = strlen(error);
 					if (write(STDERR_FILENO, error, errorlen) < errorlen)
 						perror("Erreur d'écriture dans le shell!");
@@ -223,11 +218,7 @@ int isAccessibleFrom(char *doss, char *dir) {
 		char *deb  = "cd : ";
 		char *end = " n'existe pas!\n";
 		char error[strlen(deb) + strlen(dir) + 1 + strlen(doss) + strlen(end) + 1];
-		strcpy(error, deb);
-		strcat(error, dir);
-		strcat(error, "/");
-		strcat(error, doss);
-		strcat(error, end);
+		sprintf(error, "%s%s/%s%s", deb, dir, doss, end);
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
 			perror("Erreur d'écriture dans le shell!");
@@ -240,9 +231,7 @@ int parcoursCheminTar(char *pwd, char *twd, char *rest) {
 	strcpy(twd_copy, twd);
 	char *tar = strtok(twd_copy, "/");
 	char absolutetar[strlen(pwd) + 1 + strlen(tar) + 1];
-	strcpy(absolutetar, pwd);
-	strcat(absolutetar, "/");
-	strcat(absolutetar, tar);
+	sprintf(absolutetar, "%s/%s", pwd, tar);
 
 	char chemin[strlen(twd) - strlen(tar) + strlen(rest) + 1];
 	if (strlen(twd) - strlen(tar) > 0) strcpy(chemin, &twd[strlen(tar)+1]);
@@ -254,9 +243,7 @@ int parcoursCheminTar(char *pwd, char *twd, char *rest) {
 	if (fd == -1) {
 		char *error_debut = "cd : Erreur! Impossible d'ouvrir l'archive ";
 		char error[strlen(error_debut) + strlen(absolutetar) + 1 + 1];
-		strcpy(error, error_debut);
-		strcat(error, absolutetar);
-		strcat(error, "\n");
+		sprintf(error, "%s%s\n", error_debut, absolutetar);
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
 			perror("Erreur d'écriture dans le shell!");
@@ -290,11 +277,7 @@ int parcoursCheminTar(char *pwd, char *twd, char *rest) {
 		char *deb  = "cd : ";
 		char *end = " n'existe pas!\n";
 		char error[strlen(deb) + strlen(absolutetar) + 1 + strlen(chemin) + strlen(end) + 1];
-		strcpy(error, deb);
-		strcat(error, absolutetar);
-		strcat(error, "/");
-		strcat(error, chemin);
-		strcat(error, end);
+		sprintf(error, "%s%s/%s%s", deb, absolutetar, chemin, end);
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
 			perror("Erreur d'écriture dans le shell!");
@@ -311,11 +294,7 @@ int parcoursCheminTar(char *pwd, char *twd, char *rest) {
 		char *deb  = "cd : ";
 		char *end = " n'est pas un répertoire!\n";
 		char error[strlen(deb) + strlen(absolutetar) + 1 + strlen(chemin) + strlen(end) + 1];
-		strcpy(error, deb);
-		strcat(error, absolutetar);
-		strcat(error, "/");
-		strcat(error, chemin);
-		strcat(error, end);
+		sprintf(error, "%s%s/%s%s", deb, absolutetar, chemin, end);
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
 			perror("Erreur d'écriture dans le shell!");
