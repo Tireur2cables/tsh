@@ -18,9 +18,9 @@ int mv(int argc, char *argv[]) {
 	argvbis[argc] = "-r";
 	argvbis[argcbis] = NULL;
 	cp(argcbis, argvbis);
-
+	argv[argc-1] = "-r";
 // rm sources but not dest (last argument)
-	rm_func(argc-1, argv);
+	rm_func(argc, argv);
 
 	return 0;
 }
