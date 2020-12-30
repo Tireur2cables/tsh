@@ -304,6 +304,13 @@ void copyTar(char *source, char *dest, int option) {
 	stat(dest, &stdest); // verifications déjà faites
 
 	if (isTarDir(source)) { // source est un dossier dans un tar ou un tar
+		if (isTar(source) && isTar(dest)) {
+			char *error = "cp : Attention les tars imbriqués ne sont gérés!\n";
+			int errorlen = strlen(error);
+			if (write(STDERR_FILENO, error, errorlen) < errorlen)
+				perror("Erreur d'écriture dans le shell!");
+			return;
+		}
 		if (!option) { // -r pas spécifié
 			char *error = "cp : l'option -r doit être spécifiée pour les dossiers!\n";
 			int errorlen = strlen(error);
@@ -398,8 +405,9 @@ void copyTar(char *source, char *dest, int option) {
 				strcpy(nom, header.name);
 				if (strcmp(nom, "") == 0) break;
 
+
 				if (strstr(nom, chemin) != NULL && strcmp(chemin, nom) <= 0) { // nom must start with chemin
-					char *newnom = strstr(nom, chemin) + strlen(chemin) + 1;
+					char *newnom = strstr(nom, chemin) + strlen(chemin);
 					char newnom_cpy[strlen(newnom)+1];
 					strcpy(newnom_cpy, newnom);
 					tmp = newnom_cpy;
@@ -407,10 +415,11 @@ void copyTar(char *source, char *dest, int option) {
 					char *save;
 					while ((pos = strtok_r(tmp, "/", &save)) != NULL) { // parcours (et créer si besoin) les dossiers nécéssaires pour copier le fichier
 						int len = strlen(strstr(newnom, pos)) - strlen(pos);
-						char dossier[destlen + len + 1];
+						char dossier[destlen + strlen(newnom)-len + 1];
 						strcpy(dossier, dest);
 						if (destlen != strlen(dest)) strcat(dossier, "/");
 						strncat(dossier, newnom, strlen(newnom)-len);
+						dossier[destlen+strlen(newnom)-len] = '\0';
 						if (!exist(dossier, 0) && header.typeflag == '5') {
 							char *argv[3] = {"mkdir", dossier, NULL};
 							mkdir_tar(2, argv);

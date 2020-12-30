@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
@@ -19,6 +20,9 @@ void show_complete_header_infos(struct posix_header *, int *);
 int print_dir(char *, char *);
 int print_tar(char *, char *);
 int print_inside_tar(char *, char *);
+int get_indice(char *);
+int get_indice_pere(char *);
+int get_nb_dossier(int);
 int is_tar(char *);
 int contains_tar(char *);
 int check_options(char *);
@@ -30,7 +34,11 @@ void convert_mode(mode_t, char*);
 int get_profondeur(char *);
 int get_filename(char *, char*);
 int contains_filename(char *, char *);
+void get_link(int );
 
+int *tab_link;
+char **tab_nom;
+int taille_tab;
 //FONCTION LS
 /*TODO :
 		 nombre de references dans un tar
@@ -65,9 +73,14 @@ int ls(int argc, char *argv[]){
 			if(!is_options(argv[i])){
 				char format[strlen(argv[i]) + 4];
 				sprintf(format, "%s : \n", argv[i]);
-				write(STDOUT_FILENO, format, strlen(format));
+				if(argc != 2){
+					if(write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
+						perror("Erreur d'écriture dans le shell");
+						return -1;
+					}
+				}
 				if(getenv("TWD") != NULL){
-					if(is_tar(getenv("TWD"))){
+					if(contains_tar(getenv("TWD"))){
 						if(argv[i][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
 							print_dir(argv[i], option);
 						}else{
@@ -85,12 +98,16 @@ int ls(int argc, char *argv[]){
 					print_dir(argv[i], option);
 				}
 				if(i != argc-1){
-					write(STDOUT_FILENO, "\n", 1);
+					if(write(STDOUT_FILENO, "\n", 1) < 1){
+						perror("Erreur d'écriture dans le shell");
+						return -1;
+					}
 				}
 			}
 		}
 	}
 	return 0;
+
 }
 
 int print_dir(char *file, char *options){ //Fonction générale qui gère dans quel cas on se trouve
@@ -101,7 +118,25 @@ int print_dir(char *file, char *options){ //Fonction générale qui gère dans q
 	}else if(contains_tar(cp)){
 		print_inside_tar(file, options);
 	}else{//On se trouve dans un tar, mais on fait ls sur un chemin qui ne contient pas de tar
-		execlp("ls", "ls", file, (options[0] == '\0')?NULL:options, NULL);
+		char *format;
+		switch(fork()){
+			case -1 :
+			format = "erreur de fork";
+			if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell");
+				exit(EXIT_FAILURE);
+			}
+			case 0 :
+				execlp("ls", "ls", file, (options[0] == '\0')?NULL:options, NULL);
+				format = "erreur de exec";
+				if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+					perror("Erreur d'écriture dans le shell");
+					exit(EXIT_FAILURE);
+				}
+			default:
+				wait(NULL);
+				break;
+		}
 	}
 	return 0;
 }
@@ -117,6 +152,7 @@ int print_inside_tar(char *file, char *options){
 	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
 	tarfile[tarpos+4] = '\0';
 	namefile[strlen(file)-tarpos-4] = '\0';
+	if(namefile[strlen(namefile)-1] == '/') namefile[strlen(namefile)-1] = '\0';
 	if (file[tarpos+4] != '/'){ //Si après le .tar il n'y a pas de / => Il y a une erreur dans le nom du fichier
 		char format[72 + strlen(file)];
 		sprintf(format, "ls : impossible d'accéder à '%s' : Aucun fichier ou dossier de ce type\n", file);
@@ -135,6 +171,12 @@ int print_inside_tar(char *file, char *options){
 	int n = 0;
 	int found = 0;
 	int read_size = 0;
+	taille_tab = get_nb_dossier(fd);
+	tab_link = malloc(sizeof(int)*taille_tab);
+	assert(tab_link);
+	tab_nom = malloc(sizeof(char *)*taille_tab);
+	assert(tab_nom);
+	get_link(fd);
 	int profondeur = get_profondeur(namefile);
 	while((n=read(fd, &header, BLOCKSIZE))>0){
 		if(strcmp(header.name, "\0") == 0){
@@ -142,6 +184,9 @@ int print_inside_tar(char *file, char *options){
 		}
 		if (strstr(header.name, namefile) != NULL){ //Inutile de faire plus de tests si le fichier ne contient pas le nom recherché
 			int namepos = strstr(header.name, namefile) - header.name;
+			if (strncmp(header.name, namefile, strlen(namefile)) == 0){
+				found = 1;
+			}
 			//Si le nom du fichier est exactement celui qu'on recherche (c'est un fichier) ou si on trouve un dossier qui porte se nom, on affiche le contenu a profondeur + 1
 			if( (strcmp(header.name, namefile) == 0 && namefile[strlen(namefile)+1] != '/') ||
 				(contains_filename(header.name, namefile) &&
@@ -173,7 +218,7 @@ int print_inside_tar(char *file, char *options){
 	if(found && strcmp(options, "\0") == 0){ //On affiche un retour a la ligne, seulement si on avait pas d'option, car ls -l met un retour a la ligne à la fin de chaque ligne
 		char *format = "\n";
 		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
-			perror("Erreur d'écriture dans le shell!");
+			perror("erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -183,7 +228,7 @@ int print_inside_tar(char *file, char *options){
 		strcat(format, namefile);
 		strcat(format, "': Aucun fichier ou dossier de ce type\n");
 		if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)) {
-			perror("Erreur d'écriture dans le shell!");
+			perror("erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -206,6 +251,12 @@ int print_tar(char *file, char *options){
 	}
 	int n = 0;
 	int read_size = 0;
+	taille_tab = get_nb_dossier(fd);
+	tab_link = malloc(sizeof(int)*taille_tab);
+	assert(tab_link);
+	tab_nom = malloc(sizeof(char *)*taille_tab);
+	assert(tab_nom);
+	get_link(fd);
 	while((n=read(fd, &header, BLOCKSIZE))>0){
 		if(strcmp(header.name, "\0") == 0){
 			break;
@@ -228,16 +279,94 @@ int print_tar(char *file, char *options){
 	if(strcmp(options, "\0") == 0){ //Si on a effectué un affichage simple, on doit rajouter un retour a la ligne, qui n'a pas lieu d'etre dans ls -l etant donné qu'on affiche ligne par ligne
 		char *format = "\n";
 		if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
-			perror("Erreur d'écriture dans le shell!");
+			perror("erreur d'écriture dans le shell");
 			exit(EXIT_FAILURE);
 		}
 	}
+	for(int i = 0; i < taille_tab; i++){
+		free(tab_nom[i]);
+	}
+	free(tab_link);
+	free(tab_nom);
 	close(fd);
 	return 0;
 }
 
+int get_nb_dossier(int fd){
+	lseek(fd, 0, SEEK_SET);
+	struct posix_header header;
+	int n = 0;
+	int read_size = 0;
+	int nb_dossier = 0;
+	while((n=read(fd, &header, BLOCKSIZE))>0){
+		if(header.name[strlen(header.name)-1] == '/'){
+			nb_dossier++;
+		}
+		get_header_size(&header, &read_size);
+		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+			perror("erreur de lecture de l'archive");
+			return -1;
+		}
+	}
+	return nb_dossier;
+}
+
+void get_link(int fd){
+	struct posix_header header;
+	lseek(fd, 0, SEEK_SET);
+	int n = 0;
+	int read_size = 0;
+	int i = 0;
+	int j;
+
+	while((n=read(fd, &header, BLOCKSIZE))>0){
+		if(header.name[strlen(header.name)-1] == '/'){
+			tab_nom[i] = malloc(strlen(header.name)+1);
+			assert(tab_nom[i]);
+			strcpy(tab_nom[i], header.name);
+			tab_link[i] = 2;
+			j = get_indice_pere(header.name);
+			if(j != -1){ // different de racine
+				tab_link[j] = tab_link[j]+1;
+			}
+			i++;
+		}
+		get_header_size(&header, &read_size);
+
+		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+			perror("erreur de lecture de l'archive");
+			return;
+		}
+	}
+	lseek(fd, 0, SEEK_SET);
+}
+
+int get_indice(char *nom){
+	for(int i = 0; i < taille_tab; i++){
+		if(tab_nom[i] != NULL){
+			if(strlen(tab_nom[i])-1 <= strlen(nom) && strncmp(nom, tab_nom[i], strlen(nom)) == 0) return i;
+		}
+	}
+	return -1;
+}
+int get_indice_pere(char *nom){
+	nom[strlen(nom)-1] = '\0';
+	char *pos = strrchr(nom, '/');
+	if (pos == NULL) return -1;
+	int spos = pos - nom;
+	char pere[strlen(nom)+1];
+	strcpy(pere, nom);
+	pere[spos] = '\0';
+	for(int i = 0; i < taille_tab; i++){
+		if(tab_nom[i] != NULL){
+			if(strncmp(pere, tab_nom[i], strlen(pere)) == 0) return i;
+		}
+	}
+	return -1;
+}
+
 void show_complete_header_infos(struct posix_header *header, int *read_size){
-	int taille, mode, uid, gid;
+	int taille, mode, uid, gid, link;
 	char name[strlen(header->name)+1];
 	get_filename(header->name, name);
 	char mode_str[10];
@@ -250,7 +379,15 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 		taille_str[i] = ' ';
 	}
 	taille_str[((nbdigit(taille)+1)>6)?(nbdigit(taille)+1)-1:5] = '\0';
-
+	char link_str[100];
+	if(header->name[strlen(header->name)-1] == '/'){
+		int j = get_indice(header->name);
+		link = tab_link[j];
+		sprintf(link_str, "%d", link);
+	}else{
+		link = 1;
+		sprintf(link_str, "%d", link);
+	}
 	sscanf(header->mode, "%o", &mode);
 	convert_mode(mode, mode_str);
 	sscanf(header->uid, "%o", &uid);
@@ -264,9 +401,11 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	date[strlen(date) - 1] = '\0'; // ctime renvoit une string se terminant par \n ...
 
 	*read_size = ((taille + 512-1)/512);
-	char format[2*sizeof(int) + 1 + strlen(name) + strlen(date) + strlen(pw_name) + strlen(gr_name)+ 1]; //calcul de taille faux
+	char format[strlen(typeformat) + strlen(mode_str) + strlen(taille_str) + strlen(link_str) + strlen(name) + strlen(date) + strlen(pw_name) + strlen(gr_name)+ 1]; //calcul de taille faux
 	strcpy(format, typeformat);
 	strcat(format, mode_str);
+	strcat(format, " ");
+	strcat(format, link_str);
 	strcat(format, " ");
 	strcat(format, pw_name);
 	strcat(format, " ");
@@ -278,7 +417,7 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	strcat(format, " ");
 	strcat(format, name);
 	strcat(format, "\n");
-	//fixme nombre de references
+	//fixme nombre de references des fichiers
 	if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
 		perror("Erreur d'écriture dans le shell!");
 		exit(EXIT_FAILURE);
@@ -303,18 +442,10 @@ void show_simple_header_infos(struct posix_header *header, int *read_size){
 }
 
 int contains_filename(char *haystack, char *needle){
-	char cp[strlen(haystack) + 1];
-	strcpy(cp, haystack);
-	char *token = strtok(cp, "/");
-	if(strcmp(needle, token) == 0){
+	if (strstr(haystack, needle) != NULL && strcmp(needle, haystack) <= 0) // haystack contains needle and start with it
 		return 1;
-	}
-	while((token = strtok(NULL, "/")) != NULL){
-		if(strcmp(needle, token) == 0){
-			return 1;
-		}
-	}
-	return 0;
+	else
+		return 0;
 }
 
 int get_filename(char *name, char* namecp){
