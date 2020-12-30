@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+
 #include "cp.h"
 #include "rm.h"
 
@@ -33,15 +34,15 @@ void verifArgs(int argc, char *argv[]) { // vérifie qu'un nombre correct de che
 			perror("Erreur d'écriture dans le shell!");
 		exit(EXIT_FAILURE);
 	}
-	for(int i = 1; i < argc; i++){
-		for(int j = 1; j < argc; j++){
-			if (i != j && strcmp(argv[i], argv[j]) == 0){
+	
+	for (int i = 1; i < argc; i++) {
+		for (int j = 1; j < argc; j++) {
+			if (i != j && strcmp(argv[i], argv[j]) == 0) {
 				char format[60 + strlen(argv[i]) + strlen(argv[j])];
 				sprintf(format, "mv: '%s' et '%s' identifient le même fichier\n", argv[i], argv[j]);
-				if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+				int formatlen = strlen(format);
+				if (write(STDERR_FILENO, format, formatlen) < formatlen)
 					perror("erreur d'écriture dans le shell");
-					exit(EXIT_FAILURE);
-				}
 				exit(EXIT_FAILURE);
 			}
 		}
