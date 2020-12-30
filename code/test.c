@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
-
+#include <dirent.h>
 #include <sys/wait.h>
 
 #include "ls.h"
@@ -18,6 +18,9 @@ int remove_files();
 
 int main(int argc, char const *argv[]) {
 	generate_files();
+	DIR* dir = opendir("../test/tests_in");
+
+	struct dirent * readdir(DIR *dirp);
 	int output = open("../test/test_out",  O_WRONLY + O_CREAT + O_TRUNC, S_IRWXU);
 	int input = open("../test/test_in",  O_RDONLY);
 	int save = dup(1);
