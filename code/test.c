@@ -18,9 +18,9 @@
 int generate_files();
 int remove_files();
 
-int nb_test = 7;
+int nb_test = 9;
 
-int (*fun[7])(int, char *[]) = {ls, ls, ls, ls, cd, ls, cd};
+int (*fun[9])(int, char *[]) = {ls, ls, ls, ls, cd, cd, ls, cd, cd};
 
 int main(int argc, char const *argv[]) {
 	//remove_files();
@@ -32,6 +32,8 @@ int main(int argc, char const *argv[]) {
 	char *arg5[2];
 	char *arg6[2];
 	char *arg7[2];
+	char *arg8[2];
+	char *arg9[2];
 	arg1[0] = "ls";
 	arg1[1] = "tests/tests";
 	arg2[0] = "ls";
@@ -43,22 +45,27 @@ int main(int argc, char const *argv[]) {
 	arg4[1] = "tests/arch.tar";
 	arg5[0] = "cd";
 	arg5[1] = "tests";
-	arg6[0] = "ls";
-	arg6[1] = ".";
-	arg7[0] = "cd";
-	arg7[1] = "..";
+	arg6[0] = "cd";
+	arg6[1] = "arch.tar";
+	arg7[0] = "ls";
+	arg7[1] = ".";
+	arg8[0] = "cd";
+	arg8[1] = "..";
+	arg9[0] = "cd";
+	arg9[1] = "..";
 
-	char **test_arg[7] = {arg1, arg2, arg3, arg4, arg5, arg6, arg7};
-	int nb_arg[7] = {2,3, 2, 2, 2, 2, 2};
+
+	char **test_arg[9] = {arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9};
+	int nb_arg[9] = {2,3, 2, 2, 2, 2, 2, 2, 2};
 	char *home = getcwd(NULL, 0);
 	char home_open[strlen(home) + 60];
-	sprintf(home_open, "%s/../test/test_out", home);
+	sprintf(home_open, "%s/tests/test_out", home);
 
 	char home_cd1[strlen(home) + 60];
-	sprintf(home_open, "%s/../test/test_in/ls4", home);
+	sprintf(home_cd1, "%s/tests/tests_in/ls4", home);
 	char home_ls5[strlen(home) + 60];
-	sprintf(home_open, "%s/../test/test_in/ls5", home);
-	char *test_file[7] = {"../test/tests_in/ls1", "../test/tests_in/ls2", "../test/tests_in/ls3", "../test/tests_in/ls4", home_cd1, home_ls5, home_cd1};
+	sprintf(home_ls5, "%s/tests/tests_in/ls5", home);
+	char *test_file[9] = {"tests/tests_in/ls1", "tests/tests_in/ls2", "tests/tests_in/ls3", "tests/tests_in/ls4", home_cd1, home_ls5, home_cd1, home_cd1, home_cd1};
 	int w;
 	for(int i = 0; i < nb_test; i++){
 		int output = open(home_open,  O_RDWR + O_CREAT + O_TRUNC, S_IRWXU);
