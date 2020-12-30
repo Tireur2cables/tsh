@@ -22,11 +22,24 @@ void write_content(int, int);
 * Affiche sur stdout read_size BLOCK (512 octets) du fichier fd
 */
 void write_content(int fd, int read_size){
-	for(int i = 0; i < read_size; i++){
+	int readen;
+	for(int i = 0; i < read_size; i+=readen){
 		char format[BLOCKSIZE];
-		read(fd, format, BLOCKSIZE);
-		write(STDOUT_FILENO, format, (strlen(format)));
+		int taille = (read_size - i >= BLOCKSIZE)? BLOCKSIZE : read_size - i;
+		if ((readen = read(fd, format, taille)) < 0) {
+			char *error = "cat : Erreur impossible de lire le contenu du fichier sur l'entree!\n";
+			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error))
+				perror("Impossible d'ecrire dans le shell!");
+			return;
+		}
+		if (write(STDOUT_FILENO, format, readen) < readen) {
+			char *error = "cat : Erreur impossible d'ecrire le contenu du fichier sur la sortie!\n";
+			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error))
+				perror("Impossible d'ecrire dans le shell!");
+			return;
+		}
 	}
+
 }
 
 /*
@@ -126,7 +139,9 @@ int cat_tar(char *file, char *options){
 				}else{
 					get_header_size_cat(&header, &read_size);
 					found = 1;
-					write_content(fd, read_size);
+					unsigned int size;
+					sscanf(header.size, "%o", &size);
+					write_content(fd, size);
 				}
 			}else{
 				get_header_size_cat(&header, &read_size);

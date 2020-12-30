@@ -7,28 +7,28 @@
 
 
 int pwd(int argc, char *argv[]) {
-	if (argc == 0) {
+	if (argc < 1) {
 		errno = EINVAL;
 		perror("Pas assez d'arguments!");
 		exit(EXIT_FAILURE);
 	}
 
-	char const *twd = getenv("TWD");
-	if (twd == NULL) {
-		char *error = "Erreur de lecture de TWD!\n";
-		if (write(STDERR_FILENO, error, strlen(error)) < strlen(error)) {
-			perror("Erreur d'écriture dans le shell");
-			exit(EXIT_FAILURE);
-		}
-		exit(EXIT_FAILURE);
-	}
-	int len = strlen(twd);
-	char wd[len + 1 + 1];
-	strcpy(wd, twd);
-	wd[len] = '\n';
-	wd[++len] = '\0';
+	char *pwd = getcwd(NULL, 0);
+	int pwdlen = strlen(pwd);
+	char *twd = getenv("TWD");
+	int twdlen = 0;
+	if (twd != NULL && strlen(twd) != 0) twdlen = 1 + strlen(twd);
 
-	if(write(STDOUT_FILENO, wd, len) < len) {
+	char chemin[pwdlen + twdlen + 1 + 1];
+	strcpy(chemin, pwd);
+	if (twdlen != 0) {
+		strcat(chemin, "/");
+		strcat(chemin, twd);
+	}
+	strcat(chemin, "\n");
+
+	int len = strlen(chemin);
+	if(write(STDOUT_FILENO, chemin, len) < len) {
 		perror("Erreur d'écriture dans le shell!");
 		exit(EXIT_FAILURE);
 	}

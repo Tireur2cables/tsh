@@ -22,9 +22,9 @@ int create_dir(char *);
 int create_tar(char *);
 int try_create_dir(char *);
 int contains_tar_mk(char *);
-int create_header(char *, struct posix_header *);
+int create_header_mkdir(char *, struct posix_header *);
 int is_tar_mk(char *);
-int write_block(int fd, struct posix_header *);
+int write_block_mkdir(int fd, struct posix_header *);
 int is_ext_mk(char *, char *);
 void get_header_size_mk(struct posix_header *, int *);
 
@@ -44,16 +44,16 @@ int mkdir_tar(int argc, char *argv[]) {
 	else{
 		for(int i = 1; i < argc; i++){
 			if(getenv("TWD") != NULL){
-				if(is_tar_mk(getenv("TWD"))){
+				if(contains_tar_mk(getenv("TWD"))){
 					if(argv[i][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
 						try_create_dir(argv[i]);
 					}else{
-						char file[strlen(getenv("TWD")) + strlen(argv[i])];
+						char file[strlen(getenv("TWD")) + 1 + strlen(argv[i]) + 1];
 						sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
 						try_create_dir(file);
 					}
 				}else{
-					char file[strlen(getenv("TWD")) + strlen(argv[i])];
+					char file[strlen(getenv("TWD")) + 1 + strlen(argv[i]) + 1];
 					sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
 					try_create_dir(file);
 				}
@@ -100,7 +100,7 @@ int create_tar(char *name){ //Créer un tar
 	}
 	int fd = open(name, O_WRONLY + O_CREAT, S_IRUSR + S_IWUSR + S_IRGRP + S_IROTH);
 	//ecriture d'un block de BLOCKSIZE \0 pour indiquer la fin de l'archive
-	write_block(fd, NULL);
+	write_block_mkdir(fd, NULL);
 	close(fd);
 	return 1;
 
@@ -157,10 +157,10 @@ int create_dir(char *name){ //Créer un dossier dans un tar si possible
 				//On est a la fin du tar, on écrit un nouveau header de dossier, puis un nouveau block de 512 vide
 				struct posix_header header2;
 				lseek(fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
-				create_header(namefile, &header2);
+				create_header_mkdir(namefile, &header2);
 				write(fd, &header2, BLOCKSIZE);
-				write_block(fd, NULL);
-				write_block(fd, NULL);
+				write_block_mkdir(fd, NULL);
+				write_block_mkdir(fd, NULL);
 				break;
 			}else{
 				get_header_size_mk(&header, &read_size);
@@ -207,7 +207,7 @@ int exist_dir(char *namefile, char *tarfile){ // exist namefile in tarfile
 	return 0;
 }
 
-int create_header(char *name, struct posix_header *header){ //Meilleur méthode pour le faire ?
+int create_header_mkdir(char *name, struct posix_header *header){ //Meilleur méthode pour le faire ?
 	int decalage = 0;
 	for (int i = 0; i < 155; i++) {
 		if (strlen(name) > 98 && i < strlen(name) - 98) {
@@ -331,7 +331,7 @@ int exist_pere_in_tar(char *namefile, char *tarfile) { //dossier parent exist in
 }
 
 
-int write_block(int fd, struct posix_header *header){
+int write_block_mkdir(int fd, struct posix_header *header){
 	if (header == NULL){
 		char block[BLOCKSIZE];
 		memset(block, '\0', 512);

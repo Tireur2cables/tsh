@@ -319,7 +319,7 @@ void copyTar(char *source, char *dest, int option) {
 			return;
 		}
 
-		if (isInTar(dest)) { // dest est dans un tar
+		if (isInTar(dest)) { // dest est dans un tar ou est un tar
 			char source_copy[strlen(source)+1];
 			strcpy(source_copy, source);
 			char *sourcedoss;
@@ -385,6 +385,9 @@ void copyTar(char *source, char *dest, int option) {
 			strcpy(chemin, "");
 			if (strlen(absolutesource) != strlen(tar)) strcat(chemin, &absolutesource[strlen(tar)+1]); // source n'est pas juste un tar
 
+			int sourcelen = strlen(source);
+			if (source[sourcelen-1] != '/') sourcelen++;
+
 			int fdsource = open(tar, O_RDONLY);
 			if (fdsource == -1) {
 				char *error_debut = "cp : Erreur! Impossible d'ouvrir l'archive ";
@@ -408,6 +411,7 @@ void copyTar(char *source, char *dest, int option) {
 
 				if (strstr(nom, chemin) != NULL && strcmp(chemin, nom) <= 0) { // nom must start with chemin
 					char *newnom = strstr(nom, chemin) + strlen(chemin);
+					if (newnom[0] == '/') newnom++;
 					char newnom_cpy[strlen(newnom)+1];
 					strcpy(newnom_cpy, newnom);
 					tmp = newnom_cpy;
@@ -427,14 +431,14 @@ void copyTar(char *source, char *dest, int option) {
 						tmp = save;
 					}
 					if (header.typeflag != '5') { // n'est pas un dossier
-						char newDest[strlen(dest) + 1 + strlen(newnom) + 1];
+						char newDest[destlen + strlen(newnom) + 1];
 						strcpy(newDest, dest);
-						strcat(newDest, "/");
+						if (strlen(dest) != destlen) strcat(newDest, "/");
 						strcat(newDest, newnom);
 
-						char newSource[strlen(source) + 1 + strlen(newnom) + 1];
+						char newSource[sourcelen + strlen(newnom) + 1];
 						strcpy(newSource, source);
-						strcat(newSource, "/");
+						if (strlen(source) != sourcelen) strcat(newSource, "/");
 						strcat(newSource, newnom);
 
 						copyfiletartofiletar(newSource, newDest);
@@ -528,6 +532,9 @@ void copyTar(char *source, char *dest, int option) {
 			char chemin[strlen(absolutesource) - strlen(tar) + 1];
 			strcpy(chemin, &absolutesource[strlen(tar)+1]); // source n'est pas juste un tar
 
+			int sourcelen = strlen(source);
+			if (source[sourcelen-1] != '/') sourcelen++;
+
 			int fdsource = open(tar, O_RDONLY);
 			if (fdsource == -1) {
 				char *error_debut = "cp : Erreur! Impossible d'ouvrir l'archive ";
@@ -553,12 +560,13 @@ void copyTar(char *source, char *dest, int option) {
 					sscanf(header.mode, "%o", &mode);
 
 					char *newnom = strstr(nom, chemin) + strlen(chemin);
+					if (newnom[0] == '/') newnom++;
 					char *tmp = newnom;
 					char *pos;
 					while ((pos = strstr(tmp, "/")) != NULL) { // parcours (et créer si besoin) les dossiers nécéssaires pour copier le fichier
-						char dossier[strlen(dest) + 1 + strlen(newnom) - strlen(pos) + 1];
+						char dossier[destlen + strlen(newnom) - strlen(pos) + 1];
 						strcpy(dossier, dest);
-						strcat(dossier, "/");
+						if (destlen != strlen(dest)) strcat(dossier, "/");
 						strncat(dossier, newnom, strlen(newnom) - strlen(pos));
 						if (!exist(dossier, 0) && header.typeflag == '5') {
 							if (mkdir(dossier, mode) < 0) {
@@ -569,14 +577,14 @@ void copyTar(char *source, char *dest, int option) {
 						tmp = pos+1;
 					}
 					if (header.typeflag != '5') { // n'est pas un dossier
-						char newDest[strlen(dest) + 1 + strlen(newnom) + 1];
+						char newDest[destlen + strlen(newnom) + 1];
 						strcpy(newDest, dest);
-						strcat(newDest, "/");
+						if (destlen != strlen(dest)) strcat(newDest, "/");
 						strcat(newDest, newnom);
 
-						char newSource[strlen(source) + 1 + strlen(newnom) + 1];
+						char newSource[sourcelen + strlen(newnom) + 1];
 						strcpy(newSource, source);
-						strcat(newSource, "/");
+						if (sourcelen != strlen(source)) strcat(newSource, "/");
 						strcat(newSource, newnom);
 						copyfiletartofile(newSource, newDest, mode);
 					}
@@ -829,13 +837,15 @@ void copyFile(char *source, char *dest, int option) {
 			char *tok;
 			char *saveptr;
 			char *tmp = source_copy;
+			int destlen = strlen(dest);
+			if (dest[destlen-1] != '/') destlen++;
 			while ((tok = strtok_r(tmp, "/", &saveptr)) != NULL) {
 				tmp = saveptr;
 				sourcefile = tok;
 			}
-			char newdest[strlen(dest) + 1 + strlen(sourcefile) + 1];
+			char newdest[destlen + strlen(sourcefile) + 1];
 			strcpy(newdest, dest);
-			strcat(newdest, "/");
+			if (destlen != strlen(dest)) strcat(newdest, "/");
 			strcat(newdest, sourcefile);
 			copyfiletofiletar(source, newdest);
 		}else // dest est un fichier dans un tar

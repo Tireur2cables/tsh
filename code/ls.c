@@ -23,6 +23,7 @@ int print_inside_tar(char *, char *);
 int get_indice(char *);
 int get_indice_pere(char *);
 int get_nb_dossier(int);
+int is_same_dir(char *, char *);
 int is_tar(char *);
 int contains_tar(char *);
 int check_options(char *);
@@ -184,7 +185,7 @@ int print_inside_tar(char *file, char *options){
 		}
 		if (strstr(header.name, namefile) != NULL){ //Inutile de faire plus de tests si le fichier ne contient pas le nom recherché
 			int namepos = strstr(header.name, namefile) - header.name;
-			if (strncmp(header.name, namefile, strlen(namefile)) == 0){
+			if (is_same_dir(header.name, namefile)){
 				found = 1;
 			}
 			//Si le nom du fichier est exactement celui qu'on recherche (c'est un fichier) ou si on trouve un dossier qui porte se nom, on affiche le contenu a profondeur + 1
@@ -518,6 +519,15 @@ int check_options(char *options){
 		}
 		exit(EXIT_FAILURE);
 	}
+}
+
+int is_same_dir(char *dir1, char *dir2) {
+	return
+	(strcmp(dir1, dir2) == 0) ||
+	((strncmp(dir1, dir2, strlen(dir1)) == 0)
+		&& (strlen(dir2) == strlen(dir1)+1)
+		&& (dir1[strlen(dir1)-1] != '/')
+		&& (dir2[strlen(dir2)-1] == '/'));
 }
 
 int nbdigit(int n){
