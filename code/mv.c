@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include "cp.h"
-//#include
+#include "rm.h"
 
 void verifArgs(int, char *[]);
 
@@ -20,7 +20,7 @@ int mv(int argc, char *argv[]) {
 	cp(argcbis, argvbis);
 
 // rm sources but not dest (last argument)
-	//rm(argc-1; argv);
+	rm_func(argc-1, argv);
 
 	return 0;
 }
