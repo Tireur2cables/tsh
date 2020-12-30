@@ -9,11 +9,11 @@ Dans le cadre du projet de Système (SY5) du 5ème semestre, nous avons impléme
 `cd répertoire` -> permet de se déplacer dans le répertoire demandé ou dans le tarball si `répertoire` en est un.  
 `pwd` -> affiche notre position actuelle dans l'arborescence de fichier (avec éventuellement un chemin contenant des tarballs).  
 `exit` -> quitte le `tsh`  
-`cat ` -> blabla  
-`mv  ` -> blabla  
+`cat ` -> sans argument, recopie STDIN sur STDOUT. Avec argument, affiche le contenu dans d'un fichier.  
+`mv [repertoire1] [repertoire2]` -> déplace repertoire1 vers repertoire2.   
 `rm [-r] [repertoire]` -> permet la suppression d'un fichier quelconque et également d'un répertoire avec l'option -r  
 `rmdir [repertoire]` -> permet la suppression d'un répertoire vide  
-`cp -r [repertoire] [repertoire]`  -> copie un fichier sous un nom différent et également d'un répertoire si utilisée avec l'option -r  
+`cp [-r] [repertoire] [repertoire]`  -> copie un fichier sous un nom différent et également d'un répertoire si utilisée avec l'option -r  
 `mkdir [repertoire]` -> crée un nouveau répertoire vide  
 Ainsi que toutes les commandes habituelles lorsqu'aucun tarball n'est en jeu.  
 Également `tsh` gère les redirections d'entrée (` < `), de sortie standard (` > ` ou ` >> `) et de sortie erreur (` 2> ` ou ` 2>> `) ainsi que les tubes (`|`).  
