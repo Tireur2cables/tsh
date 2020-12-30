@@ -58,7 +58,7 @@ int main(int argc, char const *argv[]) {
 	arg9[0] = "ls";
 	arg9[1] = "cp.c";
 	arg10[0] = "cat";
-	arg10[1] = "tests/arch.tar/tests/test_out";
+	arg10[1] = "tests/arch.tar/tests/tests/rep1/fic5";
 	arg11[0] = "cd";
 	arg11[1] = "tests/arch.tar/tests";
 	arg12[0] = "cat";
@@ -83,9 +83,9 @@ int main(int argc, char const *argv[]) {
 	sprintf(home_ls5, "%s/tests/tests_in/ls5", home);
 	char home_ls7[strlen(home) + 60];
 	sprintf(home_ls7, "%s/tests/tests_in/ls7", home);
-	char home_cat1[strlen(home) + 60];
-	sprintf(home_cat1, "%s/tests/tests_in/cat1", home);
-	char *test_file[NB_TESTS] = {"tests/tests_in/ls1", "tests/tests_in/ls2", "tests/tests_in/ls3", "tests/tests_in/ls4", home_cd1, home_ls5,home_ls7, home_cd1, "tests/tests_in/ls6", "tests/tests_in/cat2", home_cd1, home_cat1, home_cd1};
+	char home_cat2[strlen(home) + 60];
+	sprintf(home_cat2, "%s/tests/tests_in/cat2", home);
+	char *test_file[NB_TESTS] = {"tests/tests_in/ls1", "tests/tests_in/ls2", "tests/tests_in/ls3", "tests/tests_in/ls4", home_cd1, home_ls5,home_ls7, home_cd1, "tests/tests_in/ls6", "tests/tests_in/cat1", home_cd1, home_cat2, home_cd1};
 	int w;
 	for(int i = 0; i < NB_TESTS; i++){
 		int output = open(home_open,  O_RDWR + O_CREAT + O_TRUNC, S_IRWXU);
@@ -114,7 +114,7 @@ int main(int argc, char const *argv[]) {
 		}
 	}
 
-	remove_files();
+	//remove_files();
 	return 0;
 }
 

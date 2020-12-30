@@ -50,7 +50,7 @@ int cat(int argc, char *argv[]) {
 		cat_file(NULL, "\0");
 	}
 	if(getenv("TWD") != NULL){
-		if(is_tar_cat(getenv("TWD"))){
+		if(contains_tar_cat(getenv("TWD"))){
 			if(argv[1][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
 				cat_file(argv[1], "\0");
 			}else{
