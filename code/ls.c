@@ -37,13 +37,10 @@ int get_filename(char *, char*);
 int contains_filename(char *, char *);
 void get_link(int );
 
-int *tab_link;
-char **tab_nom;
+int *tab_link; //Stock le nombre de liens du fichier en position i
+char **tab_nom; //Stock le nom des fichiers en position i pour retrouver leur nombre de lien
 int taille_tab;
-//FONCTION LS
-/*TODO :
-		 nombre de references dans un tar
-*/
+
 
 int ls(int argc, char *argv[]){
 	if(argc == 0){
@@ -74,7 +71,7 @@ int ls(int argc, char *argv[]){
 			if(!is_options(argv[i])){
 				char format[strlen(argv[i]) + 4];
 				sprintf(format, "%s : \n", argv[i]);
-				if(argc != 2){
+				if(argc != 2){ //On affiche un descriptif du dossier qu'on liste actuellement uniquement si on liste plusieurs dossiers
 					if(write(STDOUT_FILENO, format, strlen(format)) < strlen(format)){
 						perror("Erreur d'écriture dans le shell");
 						return -1;
@@ -110,8 +107,11 @@ int ls(int argc, char *argv[]){
 	return 0;
 
 }
+/*
+*Fonction générale qui gère dans quel cas d'affiche on se trouve
+*/
 
-int print_dir(char *file, char *options){ //Fonction générale qui gère dans quel cas on se trouve
+int print_dir(char *file, char *options){ //
 	char cp[strlen(file)+1];
 	strcpy(cp, file);
 	if(is_tar(cp)){
@@ -177,8 +177,8 @@ int print_inside_tar(char *file, char *options){
 	assert(tab_link);
 	tab_nom = malloc(sizeof(char *)*taille_tab);
 	assert(tab_nom);
-	get_link(fd);
-	int profondeur = get_profondeur(namefile);
+	get_link(fd); //premier parcours du tar, pour calculer le nombre de liens de chaque dossier
+	int profondeur = get_profondeur(namefile); //profondeur du dossier qu'on souhaite lister, on affichera donc le contenu a profondeur = pronfondeur + 1
 	while((n=read(fd, &header, BLOCKSIZE))>0){
 		if(strcmp(header.name, "\0") == 0){
 			break;
@@ -223,9 +223,9 @@ int print_inside_tar(char *file, char *options){
 			exit(EXIT_FAILURE);
 		}
 	}
-	if(!found){ //On a pas trouvé le fichier dans l'archive, message d'erreur
+	if(!found){ //On n'a pas trouvé le fichier dans l'archive, message d'erreur
 		char format[strlen(namefile) + 71];
-		strcpy(format, "ls : impossible d'acceder a '");
+		strcpy(format, "ls : impossible d'accéder à '");
 		strcat(format, namefile);
 		strcat(format, "': Aucun fichier ou dossier de ce type\n");
 		if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)) {
@@ -257,19 +257,19 @@ int print_tar(char *file, char *options){
 	assert(tab_link);
 	tab_nom = malloc(sizeof(char *)*taille_tab);
 	assert(tab_nom);
-	get_link(fd);
+	get_link(fd); //premier parcours du tar, pour calculer le nombre de liens de chaque dossier
 	while((n=read(fd, &header, BLOCKSIZE))>0){
 		if(strcmp(header.name, "\0") == 0){
 			break;
 		}
-		if ((get_profondeur(header.name) == 0)) {
+		if ((get_profondeur(header.name) == 0)) { //On affiche que les fichiers "à la racine" de l'archive
 			if(strcmp(options, "\0") == 0){ //Pas d'option, affichage simple
 				show_simple_header_infos(&header, &read_size);
-			}else{
+			}else{ //ls -l
 				show_complete_header_infos(&header, &read_size);
 			}
 		}
-		else { //ls -l
+		else {
 			get_header_size(&header, &read_size);
 		}
 		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
@@ -293,6 +293,9 @@ int print_tar(char *file, char *options){
 	return 0;
 }
 
+/*
+* Calcul du nombre de dossier d'un tar pour la taille du tableau stockant le nombre de liens
+*/
 int get_nb_dossier(int fd){
 	lseek(fd, 0, SEEK_SET);
 	struct posix_header header;
@@ -318,7 +321,7 @@ void get_link(int fd){
 	int n = 0;
 	int read_size = 0;
 	int i = 0;
-	int j;
+	int j = 0;
 
 	while((n=read(fd, &header, BLOCKSIZE))>0){
 		if(header.name[strlen(header.name)-1] == '/'){
@@ -342,6 +345,9 @@ void get_link(int fd){
 	lseek(fd, 0, SEEK_SET);
 }
 
+/*
+* Récupère l'indice d'un nom de fichier dans le tableau du nombre de liens
+*/
 int get_indice(char *nom){
 	for(int i = 0; i < taille_tab; i++){
 		if(tab_nom[i] != NULL){
@@ -350,6 +356,10 @@ int get_indice(char *nom){
 	}
 	return -1;
 }
+
+/*
+* Récupère l'indice du père d'un fichier dans le tableau du nombre de liens, afin de pouvoir l'incrémenter
+*/
 int get_indice_pere(char *nom){
 	nom[strlen(nom)-1] = '\0';
 	char *pos = strrchr(nom, '/');
@@ -418,7 +428,6 @@ void show_complete_header_infos(struct posix_header *header, int *read_size){
 	strcat(format, " ");
 	strcat(format, name);
 	strcat(format, "\n");
-	//fixme nombre de references des fichiers
 	if (write(STDOUT_FILENO, format, strlen(format)) < strlen(format)) {
 		perror("Erreur d'écriture dans le shell!");
 		exit(EXIT_FAILURE);
