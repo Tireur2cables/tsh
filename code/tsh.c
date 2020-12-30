@@ -321,7 +321,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		close(fd_entree);
 		if(dup2(save_entree, STDIN_FILENO) < 0){
 			perror("erreur de redirection");
-			exit(EXIT_FAILURE);
+			return;
 		}
 		close(save_entree);
 	}
@@ -364,7 +364,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		close(fd_sortie);
 		if(dup2(save_sortie, STDOUT_FILENO) < 0){
 			perror("erreur de redirection");
-			exit(EXIT_FAILURE);
+			return;
 		}
 		close(save_sortie);
 	}
@@ -410,7 +410,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		close(fd_erreur);
 		if(dup2(save_erreur, STDERR_FILENO) < 0){
 			perror("erreur de redirection");
-			exit(EXIT_FAILURE);
+			return;
 		}
 		close(save_erreur);
 	}
@@ -431,7 +431,7 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 		sprintf(format, "tsh: %s: est une archive\n", file);
 		if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
 			perror("Erreur d'écriture dans le shell");
-			exit(EXIT_FAILURE);
+			return -1;
 		}
 		return -1;
 	}
@@ -447,7 +447,7 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 	*fd = open(tarfile, O_RDWR);
 	if(*fd == -1){
 	  perror("erreur d'ouverture de l'archive");
-	  exit(EXIT_FAILURE);
+	  return -1;
 	}
 	if(type >= 2){//redirection stout ou stderr
 		*oldtaille = 0;
@@ -496,7 +496,7 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 								*save = dup((type < 4)?STDOUT_FILENO:STDERR_FILENO);
 								if((dup2(*fd, (type < 4)?STDOUT_FILENO:STDERR_FILENO) < 0)){
 									perror("Erreur de redirection");
-									exit(EXIT_FAILURE);
+									return -1;
 								}
 								return 0;
 							}
@@ -534,7 +534,7 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 					*save = dup((type < 4)?STDOUT_FILENO:STDERR_FILENO);
 					if((dup2(*fd, (type < 4)?STDOUT_FILENO:STDERR_FILENO) < 0)){
 						perror("Erreur de redirection");
-						exit(EXIT_FAILURE);
+						return -1;
 					}
 					return 0;
 				}else{
@@ -550,7 +550,7 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
 			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
 				perror("Erreur d'écriture dans le shell");
-				exit(EXIT_FAILURE);
+				return -1;
 			}
 			return -1;
 		}
@@ -568,7 +568,7 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 					switch(fork()){
 						case -1:
 							perror("fork");
-							exit(EXIT_FAILURE);
+							return -1;
 						case 0:
 							close(tube[0]);
 							while((readen = read(*fd, read_block, BLOCKSIZE)) > 0){
@@ -594,7 +594,7 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
 			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
 				perror("Erreur d'écriture dans le shell");
-				exit(EXIT_FAILURE);
+				return -1;
 			}
 			return -1;
 		}
@@ -610,7 +610,7 @@ int redirection_classique(char *file, int type, int *fd, int *save){
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
 			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
 				perror("Erreur d'écriture dans le shell");
-				exit(EXIT_FAILURE);
+				return -1;
 			}
 			return -1;
 		}
@@ -621,7 +621,7 @@ int redirection_classique(char *file, int type, int *fd, int *save){
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
 			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
 				perror("Erreur d'écriture dans le shell");
-				exit(EXIT_FAILURE);
+				return -1;
 			}
 			return -1;
 		}
@@ -632,7 +632,7 @@ int redirection_classique(char *file, int type, int *fd, int *save){
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
 			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
 				perror("Erreur d'écriture dans le shell");
-				exit(EXIT_FAILURE);
+				return -1;
 			}
 			return -1;
 		}
@@ -643,7 +643,7 @@ int redirection_classique(char *file, int type, int *fd, int *save){
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
 			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
 				perror("Erreur d'écriture dans le shell");
-				exit(EXIT_FAILURE);
+				return -1;
 			}
 			return -1;
 		}
@@ -654,7 +654,7 @@ int redirection_classique(char *file, int type, int *fd, int *save){
 			sprintf(format, "tsh: %s: Aucun dossier ou fichier de ce type\n", file);
 			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
 				perror("Erreur d'écriture dans le shell");
-				exit(EXIT_FAILURE);
+				return -1;
 			}
 			return -1;
 		}
@@ -662,7 +662,7 @@ int redirection_classique(char *file, int type, int *fd, int *save){
 	*save = dup(type/2);
 	if((dup2(*fd, (type < 4)?((type < 2)?STDIN_FILENO:STDOUT_FILENO):STDERR_FILENO) < 0)){
 		perror("Erreur de redirection");
-		exit(EXIT_FAILURE);
+		return -1;
 	}
 	return 0;
 }
@@ -791,7 +791,7 @@ int launchFunc(int (*func)(int, char *[]), char *line, int readen) { //lance dan
 	switch(pid) {
 		case -1: {//erreur
 			perror("Erreur de fork!");
-			exit(EXIT_FAILURE);
+			return -1;
 		}
 		case 0: {//fils
 			func(argc, argv);
@@ -807,7 +807,7 @@ int launchFunc(int (*func)(int, char *[]), char *line, int readen) { //lance dan
 				int erreur_len = strlen(erreur);
 				if (write(STDERR_FILENO, erreur, erreur_len) < erreur_len) {
 					perror("Erreur d'écriture dans le shell!");
-					exit(EXIT_FAILURE);
+					return -1;
 				}
 			}
 		}
@@ -1088,12 +1088,12 @@ int write_block(int fd, struct posix_header* header){
 		memset(block, '\0', 512);
 		if(write(fd, block, BLOCKSIZE) < BLOCKSIZE){
 			perror("Erreur d'écriture dans l'archive");
-			exit(EXIT_FAILURE);
+			return -1;
 		}
 	}else{
 		if(write(fd, &header, BLOCKSIZE) < BLOCKSIZE){
 			perror("Erreur d'écriture dans l'aarchive");
-			exit(EXIT_FAILURE);
+			return -1;
 		}
 	}
 	return 0;
