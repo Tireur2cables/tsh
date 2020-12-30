@@ -41,8 +41,8 @@ int rmdir_func(int argc,char **argv) {
 
 	for(int i=1;i<argc;i++) {
 		if(getenv("TWD") != NULL){
-			if(is_tar_rmdir(getenv("TWD"))){
-				if(argv[1][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
+			if(contains_tar_rmdir(getenv("TWD"))){
+				if(argv[i][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
 					which_rmdir(argv[i]);
 				}else{
 					char file[strlen(getenv("TWD")) + strlen(argv[i])];
