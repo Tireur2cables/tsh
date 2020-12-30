@@ -18,9 +18,9 @@
 int generate_files();
 int remove_files();
 
-int nb_test = 9;
+#define NB_TESTS 13
 
-int (*fun[9])(int, char *[]) = {ls, ls, ls, ls, cd, ls, ls, cd, ls};
+int (*fun[NB_TESTS])(int, char *[]) = {ls, ls, ls, ls, cd, ls, ls, cd, ls, cat, cd, cat, cd};
 
 int main(int argc, char const *argv[]) {
 	//remove_files();
@@ -35,6 +35,11 @@ int main(int argc, char const *argv[]) {
 	char *arg7[1];
 	char *arg8[2];
 	char *arg9[2];
+	char *arg10[2];
+	char *arg11[2];
+	char *arg12[2];
+	char *arg13[2];
+
 	arg1[0] = "ls";
 	arg1[1] = "tests/tests";
 	arg2[0] = "ls";
@@ -52,10 +57,23 @@ int main(int argc, char const *argv[]) {
 	arg8[1] = home;
 	arg9[0] = "ls";
 	arg9[1] = "cp.c";
+	arg10[0] = "cat";
+	arg10[1] = "tests/arch.tar/tests/test_out";
+	arg11[0] = "cd";
+	arg11[1] = "tests/arch.tar/tests";
+	arg12[0] = "cat";
+	char *path12 = "/tests/tests/fic1";
+	char test12[strlen(home) + strlen(path12) + 1];
+	sprintf(test12, "%s%s", home, path12);
+	arg12[1] = test12;
+	arg13[0] = "cd";
+	arg13[1] = home;
 
 
-	char **test_arg[9] = {arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9};
-	int nb_arg[9] = {2,2, 2, 2, 2, 2, 1, 2, 2};
+
+	char **test_arg[NB_TESTS] = {arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13};
+	int nb_arg[NB_TESTS] = {2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2};
+						//  1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
 	char home_open[strlen(home) + 60];
 	sprintf(home_open, "%s/tests/test_out", home);
 
@@ -65,9 +83,11 @@ int main(int argc, char const *argv[]) {
 	sprintf(home_ls5, "%s/tests/tests_in/ls5", home);
 	char home_ls7[strlen(home) + 60];
 	sprintf(home_ls7, "%s/tests/tests_in/ls7", home);
-	char *test_file[9] = {"tests/tests_in/ls1", "tests/tests_in/ls2", "tests/tests_in/ls3", "tests/tests_in/ls4", home_cd1, home_ls5,home_ls7, home_cd1, "tests/tests_in/ls6"};
+	char home_cat1[strlen(home) + 60];
+	sprintf(home_cat1, "%s/tests/tests_in/cat1", home);
+	char *test_file[NB_TESTS] = {"tests/tests_in/ls1", "tests/tests_in/ls2", "tests/tests_in/ls3", "tests/tests_in/ls4", home_cd1, home_ls5,home_ls7, home_cd1, "tests/tests_in/ls6", "tests/tests_in/cat2", home_cd1, home_cat1, home_cd1};
 	int w;
-	for(int i = 0; i < nb_test; i++){
+	for(int i = 0; i < NB_TESTS; i++){
 		int output = open(home_open,  O_RDWR + O_CREAT + O_TRUNC, S_IRWXU);
 		int save = dup(1);
 		int save_err = dup(2);
@@ -88,7 +108,7 @@ int main(int argc, char const *argv[]) {
 				wait(&w);
 				if(w == 0){
 					char format[60];
-					sprintf(format, "test %d passé avec succès\n", i);
+					sprintf(format, "test %d passé avec succès\n", i+1);
 					write(STDOUT_FILENO, format, strlen(format));
 				}
 		}
