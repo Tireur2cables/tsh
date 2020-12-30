@@ -411,6 +411,7 @@ void copyTar(char *source, char *dest, int option) {
 
 				if (strstr(nom, chemin) != NULL && strcmp(chemin, nom) <= 0) { // nom must start with chemin
 					char *newnom = strstr(nom, chemin) + strlen(chemin);
+					if (newnom[0] == '/') newnom++;
 					char newnom_cpy[strlen(newnom)+1];
 					strcpy(newnom_cpy, newnom);
 					tmp = newnom_cpy;
@@ -559,6 +560,7 @@ void copyTar(char *source, char *dest, int option) {
 					sscanf(header.mode, "%o", &mode);
 
 					char *newnom = strstr(nom, chemin) + strlen(chemin);
+					if (newnom[0] == '/') newnom++;
 					char *tmp = newnom;
 					char *pos;
 					while ((pos = strstr(tmp, "/")) != NULL) { // parcours (et créer si besoin) les dossiers nécéssaires pour copier le fichier
