@@ -562,9 +562,9 @@ void copyTar(char *source, char *dest, int option) {
 					char *tmp = newnom;
 					char *pos;
 					while ((pos = strstr(tmp, "/")) != NULL) { // parcours (et créer si besoin) les dossiers nécéssaires pour copier le fichier
-						char dossier[strlen(dest) + 1 + strlen(newnom) - strlen(pos) + 1];
+						char dossier[destlen + strlen(newnom) - strlen(pos) + 1];
 						strcpy(dossier, dest);
-						strcat(dossier, "/");
+						if (destlen != strlen(dest)) strcat(dossier, "/");
 						strncat(dossier, newnom, strlen(newnom) - strlen(pos));
 						if (!exist(dossier, 0) && header.typeflag == '5') {
 							if (mkdir(dossier, mode) < 0) {
@@ -835,13 +835,15 @@ void copyFile(char *source, char *dest, int option) {
 			char *tok;
 			char *saveptr;
 			char *tmp = source_copy;
+			int destlen = strlen(dest);
+			if (dest[destlen-1] != '/') destlen++;
 			while ((tok = strtok_r(tmp, "/", &saveptr)) != NULL) {
 				tmp = saveptr;
 				sourcefile = tok;
 			}
-			char newdest[strlen(dest) + 1 + strlen(sourcefile) + 1];
+			char newdest[destlen + strlen(sourcefile) + 1];
 			strcpy(newdest, dest);
-			strcat(newdest, "/");
+			if (destlen != strlen(dest)) strcat(newdest, "/");
 			strcat(newdest, sourcefile);
 			copyfiletofiletar(source, newdest);
 		}else // dest est un fichier dans un tar
