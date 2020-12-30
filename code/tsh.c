@@ -337,7 +337,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 				char block[complement];
 				memset(block, '\0', complement);
 				if (write(fd_sortie, block, complement) < complement) {
-					//perror("Impossible de completer le block à la fin du tar!");
+					perror("Impossible de completer le block à la fin du tar!");
 					return;
 				}
 			}
@@ -345,7 +345,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 			struct posix_header header;
 			unsigned int oldsize = 0;
 			if (read(fd_sortie, &header, BLOCKSIZE) < BLOCKSIZE) {
-				//perror("Impossible de lire le header du la sortie standard!");
+				perror("Impossible de lire le header du la sortie standard!");
 				return;
 			}
 			if (strcmp(header.name, "") != 0) sscanf(header.size, "%o", &oldsize);
@@ -355,7 +355,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 			strcpy(namefile, namepos);
 			create_header(namefile, &header, size+oldsize);
 			if (write(fd_sortie, &header, BLOCKSIZE) < BLOCKSIZE) {
-				//perror("Impossible d'écirre le header de la sortie standard!");
+				perror("Impossible d'écirre le header de la sortie standard!");
 				return;
 			}
 			lseek(fd_sortie, 0, SEEK_END); // on se met à la fin
@@ -390,7 +390,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 			struct posix_header header;
 			unsigned int oldsize = 0;
 			if (read(fd_erreur, &header, BLOCKSIZE) < BLOCKSIZE) {
-				//perror("Impossible de lire le header du la sortie erreur!");
+				perror("Impossible de lire le header du la sortie erreur!");
 				return;
 			}
 			if (strcmp(header.name, "") != 0) sscanf(header.size, "%o", &oldsize);
@@ -401,7 +401,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 
 			create_header(namefile, &header, size+oldsize);
 			if (write(fd_erreur, &header, BLOCKSIZE) < BLOCKSIZE) {
-				//perror("Impossible d'écirre le header du la sortie erreur!");
+				perror("Impossible d'écirre le header du la sortie erreur!");
 				return;
 			}
 			lseek(fd_erreur, 0, SEEK_END); // on se met à la fin
