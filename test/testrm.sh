@@ -1,3 +1,3 @@
 #! /bin/bash
 
-rm -r tests/
+rm -r ../test/tests/

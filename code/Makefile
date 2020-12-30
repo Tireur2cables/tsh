@@ -11,7 +11,7 @@ cdIn.o : cdIn.c cdIn.h
 cat.o : cat.c cat.h tar.h
 mkdir.o : mkdir.c mkdir.h tar.h
 rmdir.o : rmdir.c tar.h rmdir.h
-test.o : test.c ls.h cd.h pwd.h
+test.o : test.c ls.h cd.h pwd.h couple.h
 exit.o : exit.c exit.h
 ls.o : ls.c tar.h ls.h
 tsh.o : tsh.c couple.h ls.h cd.h pwd.h cat.h help.h exit.h cdIn.h tar.h mkdir.h cp.h rmdir.h
@@ -23,4 +23,3 @@ clean :
 	rm -rf *~
 cleanall : clean
 	rm -rf test tsh *.o
-
