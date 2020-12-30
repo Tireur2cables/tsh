@@ -94,7 +94,7 @@ int main(int argc, char const *argv[]) {
 		}
 	}
 
-	//remove_files();
+	remove_files();
 	return 0;
 }
 
