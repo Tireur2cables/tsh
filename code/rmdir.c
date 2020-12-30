@@ -14,15 +14,11 @@
 #include "tar.h"
 #include "rmdir.h"
 
-int parcoursChemin_rmdir(char *, char *);
-int isAccessibleFrom_rmdir(char *, char *);
 int deleteDir(char *);
 int isDirTarEmpty(char * , char *);
 int DeleteDirTar(char * , char *);
 int delete_whole_tar(char *);
 int delete_dir_in_tar(char *);
-int isDirEmpty(char *);
-int parcoursCheminTar_rmdir(char *, char *, char *);
 int is_ext_rmdir(char *, char *);
 int is_tar_rmdir(char *);
 int isSameDir_rmdir(char *, char *);
