@@ -52,6 +52,7 @@ On vérifiera si l'option est bien indiqué en début de fonction principale. Po
 condition que celui-ci soit vide. Cette condition est vérifiée dans rmdir lors de la tentative de suppression après vérification.  
 
 
+
 ##### Implémentation de mkdir :  
 On procède d'abord à l'analyse du chemin passé en argument dans la fonction principale puis à la tentative de création d'un répertoire. Selon les cas  
 rencontrés , la fonction `try_create_dir` appelée depuis la fonction principale appellera une fonction particulière :   
@@ -62,6 +63,9 @@ rencontrés , la fonction `try_create_dir` appelée depuis la fonction principal
 La création d'une archive ou d'un répertoire ne se fait que si celle/celui-ci n'existe pas déjà , dans le cas contraire , un nouveau bloc d'entête est  
 créé dans une fonction à part selon le format classque du header d'une archive.  
 
+
+
+
 ##### Implémentation de mv :  
 Cette fonction vérifie si l'on rentre bien au moins 2 arguments/chemins , puis implique l'utilisation de rm et cp pour les cas suivants :  
 - déplacement d'une archive / dossier  
@@ -70,16 +74,39 @@ Cette fonction vérifie si l'on rentre bien au moins 2 arguments/chemins , puis 
 Avant chaque déplacement ou changement de header , le dossier / l'archive est copié suite à l'appel de la fonction cp puis supprimé avec rm
 
 
+
+
 ##### Implémentation de cat :  
 La fonction permet l'affichage du contenu de fichiers dans une archive ou non. Si l'on tente d'afficher un fichier présent dans une archive , on vérifie  
-sa présence dans le chemin indiqué puis on procède à son affichage (assez similaire à ls mais en rajoutant un parcours supplémentaire dans l'archive) dans  
-la fonction `cat_tar`  
+sa présence dans le chemin indiqué , le cas échéant  puis on procède à son affichage (assez similaire à ls mais en rajoutant un parcours supplémentaire dans l'archive) dans  
+la fonction `cat_tar` , 
+  
+  
+  
+##### Implémentation de exit :  
+Implémentée en une fonction principale permettant simplement de quitter le tsh si aucun autre argument n'est indiqué  
+
+  
+  
+##### Implémentation de help :  
+A l'instar de exit , cette commande est implémentée en une fonction principale qui ne prend qu'un argument et qui affiche toutes les autres commandes
+implémentées suivi de leur description.
 
 
+##### Implémentation de cp (-r) :  
+On vérifie d'abord si un bon nombre d'arguments est donné puis on indique la présence d'une option éventuelle. Et de façon similaire à l'implémentation  
+des autres commandes , on effectue un parcours pour vérifier l'existence des chemins indiqués en arguments contenant une archive ou non (`isCorrectDest`  
+et `exist`). Avant la suppression de fichiers ou répertoire on procède donc a des vérifications auxiliaires :  
+- si le chemin existe y compris dans une archive -> exist()  
+- si le chemin absolu existe à l'extérieur d'une archive -> existAbsolut()  
+- si le chemin existe dand une archive ou si le chemin est un tar -> existInTar()  
+
+Enfin , si les chemins sont corrects , on effectue la copie des fichers ou des répertoires dans l'archive si présence d'option -r en parcourant de manière  
+récursive si le chemin est un répertoire.  
 
 
+**( ls ; redirections ; combinaisons avec | )  **  
 
-**(manque cp (-r) ; ls ; redirections ; combinaisons avec | ; exit)  **
 
 -lreadline dans le makefile pour le linkeur
 
