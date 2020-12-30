@@ -27,8 +27,20 @@ paramètre en vérifiant si on est dans une archive ou non. Ce parcours permet d
  - Archive simple : cd archive.tar  
  - Repertoire simple : cd dossier  
  - Dossier dans une archive : cd archive.tar/dossier  
+  
+     
 
-Plus simplement parlant : trouver le dossier suivant dans le chemin, vérifier qu'il est accessible, puis l'ouvrir / l'afficher.
+##### Implémentations de rm & rmdir :  
+A l'instar de cd et ls , l'implémentation de ces 2 fonctions implique premièrement un parcours récursif du chemin passé en paramètre pour savoir si on à  
+affaire a une archive tar , auquel cas on procède à une vérication du chemin contenant le tarball puis à la suppression du chemin postérieur à l'archive.  
+En fin de vérification , les cas possibles sont donc :  
+- tar indiqué en fin chemin : rmdir tar , rm -r archive.tar  
+- fichier quelconque indiqué en fin de chemin : rm (-r) archive.tar/../fichier  
+- dossier indiqué en fin de chemin : rmdir tar/../dossier , rm -r archive.tar/../dossier  
+
+En cas d'utilisation de rm , la suppression d'un ou plusieurs répertoires ne se fera qu'en cas d'indication de l'option -r ou -R  
+On vérifiera si l'option est bien indiqué en début de fonction principale. Pour rmdir , bien sûr , la suppression d'un répertoire se fera à  
+condition que celui-ci soit vide. Cette condition est vérifié dans rmdir lors de la tentative de suppression après vérification.  
 
 
 ### Gestion du working directory
