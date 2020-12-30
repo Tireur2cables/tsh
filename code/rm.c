@@ -14,13 +14,10 @@
 #include "tar.h"
 #include "rm.h"
 
-int parcoursCheminTar_rm(char * , char * , char *,int);
-int parcoursChemin_rm(char * , char * , int );
 int delete_dir_tar(char * , char *);
 int delete_file_tar(char * , char *);
 int detectError_rm(int );
 int isSameDir_rm(char *, char *);
-int isAccessibleFrom_rm(char * , char *);
 int is_ext_rm(char *, char *);
 int is_tar_rm(char *);
 int contains_tar_rm(char *);
