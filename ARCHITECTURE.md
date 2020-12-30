@@ -106,7 +106,9 @@ Enfin , si les chemins sont corrects , on effectue la copie des fichers ou des r
 récursive si le chemin est un répertoire.  
 
 
+-------------------------------------------------------------  
 ** ( manque ls (-l) ; redirections ; combinaisons avec | )  **  
+-------------------------------------------------------------  
 
 
 -lreadline dans le makefile pour le linkeur
