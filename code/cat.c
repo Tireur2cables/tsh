@@ -24,9 +24,18 @@ void write_content(int, int);
 void write_content(int fd, int read_size){
 	for(int i = 0; i < read_size; i++){
 		char format[BLOCKSIZE];
-		read(fd, format, BLOCKSIZE);
-		write(STDOUT_FILENO, format, (strlen(format)));
+		if (read(fd, format, BLOCKSIZE) < BLOCKSIZE) {
+			char *error = "cat : Erreur impossible de lire le contenu du fichier sur l'entree!\n";
+			write(STDERR_FILENO, error, strlen(error));
+			return;
+		}
+		if (write(STDOUT_FILENO, format, BLOCKSIZE) < BLOCKSIZE) {
+			char *error = "cat : Erreur impossible d'ecrire le contenu du fichier sur la sortie!\n";
+			write(STDERR_FILENO, error, strlen(error));
+			return;
+		}
 	}
+
 }
 
 /*
