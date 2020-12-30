@@ -128,11 +128,11 @@ int main(int argc, char const *argv[]) {
 
 int generate_files(){
 	//TEMPORAIRE POUR CREER L'ARBORESCENCE DE FICHIER POUR EFFECTUER LES TESTS
-	system("../test/test.sh");
+	system("tests/test.sh");
 	return 0;
 }
 
 int remove_files(){
-	system("../test/testrm.sh");
+	system("tests/testrm.sh");
 	return 0;
 }
