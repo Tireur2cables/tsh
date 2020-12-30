@@ -44,16 +44,16 @@ int mkdir_tar(int argc, char *argv[]) {
 	else{
 		for(int i = 1; i < argc; i++){
 			if(getenv("TWD") != NULL){
-				if(is_tar_mk(getenv("TWD"))){
+				if(contains_tar_mk(getenv("TWD"))){
 					if(argv[i][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
 						try_create_dir(argv[i]);
 					}else{
-						char file[strlen(getenv("TWD")) + strlen(argv[i])];
+						char file[strlen(getenv("TWD")) + 1 + strlen(argv[i]) + 1];
 						sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
 						try_create_dir(file);
 					}
 				}else{
-					char file[strlen(getenv("TWD")) + strlen(argv[i])];
+					char file[strlen(getenv("TWD")) + 1 + strlen(argv[i]) + 1];
 					sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
 					try_create_dir(file);
 				}
