@@ -20,10 +20,11 @@ int remove_files();
 
 int nb_test = 9;
 
-int (*fun[9])(int, char *[]) = {ls, ls, ls, ls, cd, cd, ls, cd, cd};
+int (*fun[9])(int, char *[]) = {ls, ls, ls, ls, cd, cd, ls, cd, ls};
 
 int main(int argc, char const *argv[]) {
 	//remove_files();
+	char *home = getcwd(NULL, 0);
 	generate_files();
 	char *arg1[2];
 	char *arg2[3];
@@ -50,14 +51,13 @@ int main(int argc, char const *argv[]) {
 	arg7[0] = "ls";
 	arg7[1] = ".";
 	arg8[0] = "cd";
-	arg8[1] = "..";
-	arg9[0] = "cd";
-	arg9[1] = "..";
+	arg8[1] = home;
+	arg9[0] = "ls";
+	arg9[1] = "cp.c";
 
 
 	char **test_arg[9] = {arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9};
 	int nb_arg[9] = {2,3, 2, 2, 2, 2, 2, 2, 2};
-	char *home = getcwd(NULL, 0);
 	char home_open[strlen(home) + 60];
 	sprintf(home_open, "%s/tests/test_out", home);
 
