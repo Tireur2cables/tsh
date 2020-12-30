@@ -43,7 +43,7 @@ int rm_func(int argc , char ** argv) {
 		if(strcmp(argv[i],"-r")!=0 && strcmp(argv[i],"-R")!=0 && strcmp(argv[i],"--recursive")!=0) {
 			if(getenv("TWD") != NULL){
 				if(contains_tar_rm(getenv("TWD"))){
-					if(argv[1][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
+					if(argv[i][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
 						which_rm(argv[i], withOption);
 					}else{
 						char file[strlen(getenv("TWD")) + strlen(argv[i])];
