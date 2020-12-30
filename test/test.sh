@@ -23,5 +23,3 @@ ln -s tests/tests/test_fic tests/tests/test_lien
 mkfifo tests/tests/test_fifo
 touch tests/tests/test_exe1
 touch tests/tests/test_exe2
-chmod 220 tests/tests/test_exe1
-chmod 222 tests/tests/test_exe2
