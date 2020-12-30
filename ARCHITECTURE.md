@@ -105,11 +105,23 @@ et `exist`). Avant la suppression de fichiers ou répertoire on procède donc a 
 Enfin , si les chemins sont corrects , on effectue la copie des fichers ou des répertoires dans l'archive si présence d'option -r en parcourant de manière  
 récursive si le chemin est un répertoire.  
 
+#### Implémentation de ls
+`ls` peut etre utilisé avec l'option `-l` pour afficher des informations détaillées sur les fichiers. Elle vérifie donc dans un premier temps la présence de
+l'option `-l`, puis parcours la liste des fichiers qu'on lui à donné en argument. Si elle doit afficher un fichier en dehors d'un tar, elle appelle simplement la 
+commande `ls` externe. Si on veut lister le contenu d'un tar, ou d'un dossier dans un tar, elle parcourt le tar, en calculant la `profondeur` de chaque fichier, 
+via le nombre de `/` dans leur nom.  
+Elle n'affiche donc que le contenu à profondeur `n+1` dans le tar.  
+Pour l'option `-l`, on calcul avant d'afficher les fichiers, le nombre de liens de ceux-ci, car cette information n'est pas stockée dans le header. On parcourt donc
+une première fois le tar, afin de chercher les liens des fichiers avec leurs père.  
 
--------------------------------------------------------------  
-** ( manque ls (-l) ; redirections ; combinaisons avec | )  **  
--------------------------------------------------------------  
+#### Implémentation des redirections et des tubes  
+Le tsh supporte aussi les redirections et les tubes entre plusieurs commandes, sous certaines limitations. On peut rediriger l'entrée, la sortie et la sortie erreur
+des commandes avec `>`,`>>`,`2>`,`2>>` et `<`. Nous n'acceptons que le cas ou il y à des espaces entre les commandes et les chevrons.
 
+#### Tests unitaires
+Le programme `test`, compilé en même temps que le `tsh`, permet de faire quelques tests sur certaines fonctions du programmes (principalement `ls` et `cd`). On passe par
+un tableau de pointeurs de fonctions, qu'on peut appeler avec une boucle. On redirige l'affichage ou l'erreur des fonctions dans un fichier, qu'on peut comparer avec aisement
+avec ce qu'on attend habituellement des fonctions, et donc détecter si elles agissent de façon anormale.  
 
 -lreadline dans le makefile pour le linkeur
 
