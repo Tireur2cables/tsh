@@ -25,7 +25,6 @@ int isSameDir_rmdir(char *, char *);
 int contains_tar_rmdir(char *);
 void which_rmdir(char *);
 
-
 int rmdir_func(int argc,char **argv) {
 	if(argc==0) {
 		errno=EINVAL;
@@ -63,12 +62,13 @@ int rmdir_func(int argc,char **argv) {
 }
 
 void which_rmdir(char *chemin){
-	if(is_tar_rmdir(chemin)){
+	if(is_tar_rmdir(chemin)){ //Seulement si le tar est vide
 		delete_whole_tar(chemin);
 	}
 	else if(contains_tar_rmdir(chemin)){
 		delete_dir_in_tar(chemin);
-	}else{
+	}
+	else{
 		char *format;
 		switch(fork()){  // sans tar dans chemin
 			case -1 :
@@ -85,7 +85,7 @@ void which_rmdir(char *chemin){
 					exit(EXIT_FAILURE);
 				}
 			default:
-				wait(NULL);
+				wait(NULL); //La valeur de retour n'a pas d'intéret
 				break;
 		}
 	}
@@ -96,7 +96,7 @@ int delete_whole_tar(char *chemin){
 	fd = open(chemin, O_RDONLY);
 	struct posix_header header;
 	read(fd, &header, BLOCKSIZE);
-	if(header.name[0] == '\0'){
+	if(header.name[0] == '\0'){ //Si le premier header est vide, on considère que le tar est vide
 		if(remove(chemin)!=0) {
 			perror("erreur de supression du fichier");
 			return 0;
@@ -123,14 +123,14 @@ int delete_dir_in_tar(char *chemin) {
 
 	int fd = open(tarfile, O_RDONLY);
 	if (fd == -1) {
-		char *error_debut = "rmdir : Erreur! Impossible d'ouvrir l'archive ";
+		char *error_debut = "rmdir : erreur, impossible d'ouvrir l'archive ";
 		char error[strlen(error_debut) + strlen(tarfile) + 1 + 1];
 		strcpy(error, error_debut);
 		strcat(error, tarfile);
 		strcat(error, "\n");
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
-			perror("Erreur d'écriture dans le shell!");
+			perror("Erreur d'écriture dans le shell");
 		return -1;
 	}
 	struct posix_header header;
@@ -214,7 +214,6 @@ int isDirTarEmpty(char *tarfile, char *namefile) {
 		}
 
 		if(read(fd,&header,BLOCKSIZE)<BLOCKSIZE) break;
-		//if(strcmp(header->name, "\0") == 0) printf("backslash\n");
 
 		char nom[strlen(header.name)+1];
 		strcpy(nom,header.name);
@@ -226,8 +225,7 @@ int isDirTarEmpty(char *tarfile, char *namefile) {
 		int filesize = ((*ptaille + 512-1)/512);
 
 		read(fd, &header, BLOCKSIZE*filesize);
-
-		}
+	}
 
 	close(fd);
 	return DeleteDirTar(tarfile, namefile);
@@ -282,17 +280,12 @@ int DeleteDirTar(char *tarfile, char *namefile) {
 			break;
 
 		}
-
 		read(fd, &header, BLOCKSIZE*filesize);
 
 	}
 
 	close(fd);
-
-
 	return 0;
-
-
 }
 
 int contains_tar_rmdir(char *file){
