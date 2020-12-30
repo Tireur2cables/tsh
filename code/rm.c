@@ -63,15 +63,18 @@ int rm_func(int argc , char ** argv) {
 	return 0;
 }
 
+/*
+* Choix de quelle fonction rm à employée
+*/
 void which_rm(char *chemin, int withOption){
 	if(is_tar_rm(chemin)){
-		delete_tar(chemin, withOption);
+		delete_tar(chemin, withOption); //Si option -r, on peut supprimer un tar complet
 	}
-	else if(contains_tar_rm(chemin)){
+	else if(contains_tar_rm(chemin)){  //On supprimer un fichier ou dossier dans un tar
 		delete_in_tar(chemin, withOption);
 	}else{
 		char *format;
-		switch(fork()){  // sans tar dans chemin
+		switch(fork()){  // sans tar dans le chemin
 			case -1 :
 			format = "erreur de fork";
 			if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
@@ -93,7 +96,7 @@ void which_rm(char *chemin, int withOption){
 }
 
 void delete_tar(char *chemin, int withOption){
-	if( withOption<=0) {
+	if( withOption<=0) { //On ne peut pas supprimer un dossier avec rm sans option
 		char *deb  = "rm : ";
 		char *end = " est un répertoire !\n";
 		char error[strlen(deb) + strlen(chemin) + strlen(end) + 1];
@@ -144,7 +147,7 @@ int delete_in_tar(char *chemin, int option) {
 		if(strcmp(header.name, "\0") == 0){
 			break;
 		}
-		if(strcmp(header.name, namefile) == 0 || isSameDir_rm(namefile, header.name)) {
+		if(strcmp(header.name, namefile) == 0 || isSameDir_rm(namefile, header.name)) { //Si on trouve un fichier ou un dossier du bon nom
 			if(header.typeflag == '5'){
 				found = 1;
 			}else{
@@ -192,7 +195,7 @@ int delete_dir_tar(char *absolutetar, char *chemin) {
 	struct posix_header * header = malloc(sizeof(struct posix_header));
 
 	if (fd == -1) {
-		char *error_debut = "rm : erreur, Impossible d'ouvrir l'archive ";
+		char *error_debut = "rm : erreur, impossible d'ouvrir l'archive ";
 		char error[strlen(error_debut) + strlen(absolutetar) + 1 + 1];
 		strcpy(error, error_debut);
 		strcat(error, absolutetar);
@@ -203,9 +206,7 @@ int delete_dir_tar(char *absolutetar, char *chemin) {
 	}
 
 	int found=0;
-
 	while(!found) {
-
 		if(read(fd,header,BLOCKSIZE)<BLOCKSIZE) break;
 
 		char nom[strlen(header->name)+1];
@@ -217,8 +218,6 @@ int delete_dir_tar(char *absolutetar, char *chemin) {
 		int *ptaille = &taille;
 		sscanf(header->size, "%o", ptaille);
 		int filesize = ((*ptaille + 512-1)/512);
-
-
 
 		if(strncmp(nom, chemin, strlen(chemin)) == 0 && ((chemin[strlen(chemin)-1] == '/') || (chemin[strlen(chemin)-1] != '/' && nom[strlen(chemin)] == '/')) ) {
 
@@ -240,14 +239,10 @@ int delete_dir_tar(char *absolutetar, char *chemin) {
 			if(lseek(fd,position,SEEK_SET)==-1) break;
 
 		} else {
-
-		read(fd,header,BLOCKSIZE*filesize);
-
+			read(fd,header,BLOCKSIZE*filesize);
 		}
 	}
 	close(fd);
-
-
 	return 0;
 }
 
@@ -256,7 +251,7 @@ int delete_file_tar(char * absolutetar , char * chemin) {
 	struct posix_header * header = malloc(sizeof(struct posix_header));
 
 	if (fd == -1) {
-		char *error_debut = "rm : Erreur! Impossible d'ouvrir l'archive ";
+		char *error_debut = "rm : erreur, impossible d'ouvrir l'archive ";
 		char error[strlen(error_debut) + strlen(absolutetar) + 1 + 1];
 		strcpy(error, error_debut);
 		strcat(error, absolutetar);
@@ -267,7 +262,6 @@ int delete_file_tar(char * absolutetar , char * chemin) {
 	}
 
 	int found=0;
-
 	while(!found) {
 
 		if(read(fd,header,BLOCKSIZE)<BLOCKSIZE) break;
@@ -300,23 +294,12 @@ int delete_file_tar(char * absolutetar , char * chemin) {
 
 			found=1;
 			break;
-
-
 		}
-
-
 		read(fd,header,BLOCKSIZE*filesize);
-
 	}
-
-
 	close(fd);
-
-
 	return 0;
 }
-
-
 int detectError_rm(int argc) {
 
 	if(argc==0) {
@@ -325,15 +308,12 @@ int detectError_rm(int argc) {
 		exit(EXIT_FAILURE);
 		return -1;
 	}
-
 	if(argc==1) {
 		errno=EINVAL;
 		perror("missing operand");
 		return -1;
 	}
-
 	return 0;
-
 }
 
 int contains_tar_rm(char *file){
