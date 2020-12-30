@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <errno.h>
 #include <assert.h>
 #include <fcntl.h>
@@ -19,7 +20,7 @@ int delete_dir_tar(char * , char * , char *);
 int delete_file_tar(char * , char * , char *);
 int detectError_rm(int );
 int isSameDir_rm(char *, char *);
-int isAccessibleFrom_rm(char * , char * , int);
+int isAccessibleFrom_rm(char * , char *);
 int is_ext_rm(char *, char *);
 int is_tar_rm(char *);
 
@@ -46,6 +47,7 @@ int rm_func(int argc , char ** argv) {
 		if(strcmp(argv[i],"-r")!=0 && strcmp(argv[i],"-R")!=0 && strcmp(argv[i],"--recursive")!=0) {
 
 		char * pwd = getcwd(NULL,0);
+		char * twd = getenv("TWD");
 		char chemin[strlen(argv[i]+1)];
 		strcpy(chemin,argv[i]);
 
@@ -65,25 +67,18 @@ int parcoursChemin_rm(char * chemin, char * pwd , int option) {
 
 	char *saveptr;
 	char *doss;
-	char * cpydoss=NULL;
 	char * oldpwd=NULL;
 	char *currentpwd = malloc(strlen(pwd) + 1);
 	strcpy(currentpwd, pwd);
 
 	while((doss=strtok_r(chemin,"/",&saveptr))!=NULL) {
 
-		if(doss!=NULL) {
-			cpydoss = realloc(cpydoss,strlen(doss)+1);
-			assert(cpydoss);
-			strcpy(cpydoss,doss);
-		}
-
 		oldpwd = realloc(oldpwd,strlen(currentpwd)+1);
 		assert(oldpwd);
 		strcpy(oldpwd,currentpwd);
 
 
-		if(isAccessibleFrom_rm(doss,currentpwd,option) > 0) {
+		if(isAccessibleFrom_rm(doss,currentpwd) > 0) {
 
 		if(strstr(doss,".tar")!=NULL && (is_tar_rm(doss)>0) ) {  // tar dans chemin
 
@@ -91,8 +86,7 @@ int parcoursChemin_rm(char * chemin, char * pwd , int option) {
 
 		}
 
-
-		//maj pwd wow
+		//maj currentpwd 
 		int currentlen = strlen(currentpwd);
 		if (currentlen != 1) currentlen++;
 		char newcurr[currentlen + strlen(doss) + 1];
@@ -115,12 +109,26 @@ int parcoursChemin_rm(char * chemin, char * pwd , int option) {
 	char res[strlen(currentpwd+1)];
 	strcpy(res,currentpwd);
 
-	char resdoss[strlen(cpydoss+1)];
-	strcpy(resdoss,cpydoss);
-
-
-
-	free(cpydoss);
+	char *format;
+	switch(fork()){  // sans tar dans chemin
+		case -1 :
+		format = "erreur de fork";
+		if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+			perror("Erreur d'écriture dans le shell");
+			exit(EXIT_FAILURE);
+		}
+		case 0 :
+			execlp("rm", "rm", res, (option<=0)?NULL:"-r", NULL);
+			format = "erreur de exec";
+			if(write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+				perror("Erreur d'écriture dans le shell");
+				exit(EXIT_FAILURE);
+			}
+		default:
+			wait(NULL);
+			break;
+	}
+	
 	free(oldpwd);
 
 	return 0;
@@ -128,7 +136,7 @@ int parcoursChemin_rm(char * chemin, char * pwd , int option) {
 
 }
 
-int isAccessibleFrom_rm(char * doss , char * dir , int option) {
+int isAccessibleFrom_rm(char * doss , char * dir) {
 
 	DIR * courant = opendir(dir);
 
