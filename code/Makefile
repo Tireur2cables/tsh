@@ -24,4 +24,3 @@ clean :
 	rm -rf *~
 cleanall : clean
 	rm -rf test tsh *.o
-
