@@ -24,7 +24,10 @@ De façon générale , quelques difficultés ont été rencontrées dont les plu
 archive qui auront nécessités beaucoup de temps et de réflexions !  
 Le traitement de la position d'un fichier, de son header, et de son contenu dans un tar aura été source de nombreux problèmes que nous avons, dans l'ensemble esperont-le, 
 réussit à résoudre.
-La fonction qui nous a posé le plus de difficulté est ![alt text](http://url/to/img.png)
+La fonction qui nous a posé le plus de difficulté est `cp` car présentant de très nombreux cas de figures différents.
+Nous avons aussi rencontré quelques bugs `rigolos` en implémentant les redirections. 
+![Un tar d'une taille ... considérable ?](imgreadme/134309707_198105755294458_2271115212665234299_n.jpg)
+Une petite erreur dans le calcul de la position du fichier à copier ...
 Tous les bugs qui étaient présent dans le tsh lors du premier rendu on été corrigé.  
 
 ## Pour la suite
