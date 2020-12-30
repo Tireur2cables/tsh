@@ -17,7 +17,7 @@ Ce traitement transforme le caractère spécial `~` en la valeur de `$HOME` et g
 Ce choix permet de simplifier au maximum le chemin entré par l'utilisateur, les commandes s'exécuteront alors plus rapidement que
 si l'utilisateur avait emprunté des 'détours' pour désigner un chemin plus simple. En outre il est tout à fait possible d'entrer un chemin comprenant des dossiers inexistants
 s'il y a assez de caractères `..` pour en sortir. C'est un choix de design que nous avons fait, qui diffère de comment fonctionne `bash` par exemple.
-
+Nous avons fait le choix d'inclure directemnt toutes les commandes que nous avons ré-implémentés dans le tsh.
 
 ### Implémentations des commandes spéciales
 
@@ -84,7 +84,7 @@ la fonction `cat_tar` ,
   
   
 ##### Implémentation de exit :  
-Implémentée en une fonction principale permettant simplement de quitter le tsh si aucun autre argument n'est indiqué  
+Implémentée en une fonction principale permettant simplement de quitter le tsh si aucun autre argument n'est indiqué.  
 
   
   
@@ -116,7 +116,17 @@ une première fois le tar, afin de chercher les liens des fichiers avec leurs p�
 
 #### Implémentation des redirections et des tubes  
 Le tsh supporte aussi les redirections et les tubes entre plusieurs commandes, sous certaines limitations. On peut rediriger l'entrée, la sortie et la sortie erreur
-des commandes avec `>`,`>>`,`2>`,`2>>` et `<`. Nous n'acceptons que le cas ou il y à des espaces entre les commandes et les chevrons.
+des commandes avec `>`,`>>`,`2>`,`2>>` et `<`. Nous n'acceptons que le cas ou il y a des espaces entre les commandes et les chevrons.  
+On effectue donc une redirection classique (avec simplement l'ouverture et `dup`) s'il n'y a pas de tar en jeu. Dans l'autre cas, on distingue 3 cas :  
+- Si le fichier n'existe pas dans le tar : On se positionne à la fin de l'archive, on laisse un place pour écrire le header par la suite, puis on écrit de contenu de la commande.
+- Si le fichier existe dans le tar et qu'on utilise `>` : On supprime le fichier dans le tar, puis on en créé un nouveau à la fin de l'archive.
+- Si le fichier existe dans le tar et qu'on utilise `>>` : On trouve le fichier dans le tar, copie son contenu a la fin du tar, en déplaçant tout le contenu du tar vers le haut, puis on écrit la sortie de la commande.  
+Finalement, il ne nous reste plus qu'a calculer la taille du contenu du fichier qu'on à créé, et ecrire le header à la bonne position (qu'on avais laissé blanche).  
+Nous ne traitons pas le cas si deux redirections vont dans le même fichier, ou des fichiers différents, mais dans le même tar. De plus, on ne garantit pas le comportement 
+de l'écriture, si une commande utilise en argument un fichier qui est aussi utilisé pour une redirection. Par exemple `cat archive.tar/fichier > archive.tar/autrefichier` 
+a un comportement que nous ne pouvons pas prévoir.  
+Les tubes fonctionnent comme les tubes de `bash`, ils redirigent la sortie de chaque commande sur l'entrée de la suivante. Nous avons cependant pu remarquer un comportement différent
+de celui de bash ou zsh, pour la suite de commande `cat | ls`, qui met `cat` en attente de lecture, puis affiche `ls` quand `cat` est fini.  
 
 #### Tests unitaires
 Le programme `test`, compilé en même temps que le `tsh`, permet de faire quelques tests sur certaines fonctions du programmes (principalement `ls` et `cd`). On passe par
