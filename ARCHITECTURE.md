@@ -122,6 +122,7 @@ On effectue donc une redirection classique (avec simplement l'ouverture et `dup`
 - Si le fichier existe dans le tar et qu'on utilise `>` : On supprime le fichier dans le tar, puis on en créé un nouveau à la fin de l'archive.
 - Si le fichier existe dans le tar et qu'on utilise `>>` : On trouve le fichier dans le tar, copie son contenu a la fin du tar, en déplaçant tout le contenu du tar vers le haut, puis on écrit la sortie de la commande.  
 Finalement, il ne nous reste plus qu'a calculer la taille du contenu du fichier qu'on à créé, et ecrire le header à la bonne position (qu'on avais laissé blanche).  
+
 Nous ne traitons pas le cas si deux redirections vont dans le même fichier, ou des fichiers différents, mais dans le même tar. De plus, on ne garantit pas le comportement 
 de l'écriture, si une commande utilise en argument un fichier qui est aussi utilisé pour une redirection. Par exemple `cat archive.tar/fichier > archive.tar/autrefichier` 
 a un comportement que nous ne pouvons pas prévoir.  
@@ -134,7 +135,6 @@ un tableau de pointeurs de fonctions, qu'on peut appeler avec une boucle. On red
 avec ce qu'on attend habituellement des fonctions, et donc détecter si elles agissent de façon anormale.  
 
 -lreadline dans le makefile pour le linkeur
-
 
 
 ### Gestion du working directory
