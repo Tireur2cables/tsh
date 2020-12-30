@@ -52,10 +52,11 @@ int main(int argc, char const *argv[]) {
 		fun[i](nb_arg[i], test_arg[i]);
 		close(output);
 		dup2(save, STDOUT_FILENO);
-		dup2(save, STDERR_FILENO);
+		dup2(save_err, STDERR_FILENO);
 		close(save);
 		close(save_err);
-		switch(fork()){
+		write(STDOUT_FILENO, "yes", 3);
+		/*switch(fork()){
 			case -1:
 				exit(1);
 			case 0:
@@ -66,8 +67,10 @@ int main(int argc, char const *argv[]) {
 					char format[60];
 					sprintf(format, "test %d passé avec succès\n", i);
 					write(STDOUT_FILENO, format, strlen(format));
+				}else{
+					printf("echec%d", i);
 				}
-		}
+		}*/
 	}
 
 	remove_files();
