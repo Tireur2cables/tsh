@@ -220,7 +220,7 @@ int delete_dir_tar(char *absolutetar, char *chemin) {
 
 
 
-		if(strncmp(nom, chemin, strlen(chemin)) == 0 ) {
+		if(strncmp(nom, chemin, strlen(chemin)) == 0 && ((chemin[strlen(chemin)-1] == '/') || (chemin[strlen(chemin)-1] != '/' && nom[strlen(chemin)] == '/')) ) {
 
 			off_t position;
 			off_t endposition;
