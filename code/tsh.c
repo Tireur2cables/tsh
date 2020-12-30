@@ -335,7 +335,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 				char block[complement];
 				memset(block, '\0', complement);
 				if (write(fd_sortie, block, complement) < complement) {
-					perror("Impossible de completer le block à la fin du tar!");
+					//perror("Impossible de completer le block à la fin du tar!");
 					return;
 				}
 			}else{
@@ -345,7 +345,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 			struct posix_header header;
 			unsigned int oldsize = 0;
 			if (read(fd_sortie, &header, BLOCKSIZE) < BLOCKSIZE) {
-				perror("Impossible de lire le header du la sortie standard!");
+				//perror("Impossible de lire le header du la sortie standard!");
 				return;
 			}
 			if (strcmp(header.name, "") != 0) sscanf(header.size, "%o", &oldsize);
@@ -355,7 +355,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 			strcpy(namefile, namepos);
 			create_header(namefile, &header, size+oldsize);
 			if (write(fd_sortie, &header, BLOCKSIZE) < BLOCKSIZE) {
-				perror("Impossible d'écirre le header de la sortie standard!");
+				//perror("Impossible d'écirre le header de la sortie standard!");
 				return;
 			}
 			lseek(fd_sortie, 0, SEEK_END); // on se met à la fin
@@ -380,7 +380,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 				char block[complement];
 				memset(block, '\0', complement);
 				if (write(fd_erreur, block, complement) < complement) {
-					perror("Impossible de completer le block à la fin du tar!");
+					//perror("Impossible de completer le block à la fin du tar!");
 					return;
 				}
 			}else{
@@ -390,7 +390,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 			struct posix_header header;
 			unsigned int oldsize = 0;
 			if (read(fd_erreur, &header, BLOCKSIZE) < BLOCKSIZE) {
-				perror("Impossible de lire le header du la sortie erreur!");
+				//perror("Impossible de lire le header du la sortie erreur!");
 				return;
 			}
 			if (strcmp(header.name, "") != 0) sscanf(header.size, "%o", &oldsize);
@@ -398,9 +398,10 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 			char *namepos = strstr(file_erreur, ".tar") + 5; // existe car file_sortie n'est pas juste un tar
 			char namefile[strlen(namepos)+1];
 			strcpy(namefile, namepos);
+
 			create_header(namefile, &header, size+oldsize);
 			if (write(fd_erreur, &header, BLOCKSIZE) < BLOCKSIZE) {
-				perror("Impossible d'écirre le header du la sortie erreur!");
+				//perror("Impossible d'écirre le header du la sortie erreur!");
 				return;
 			}
 			lseek(fd_erreur, 0, SEEK_END); // on se met à la fin
@@ -423,6 +424,7 @@ int traite_redirection(char *file, int type, int *fd, int *save, int *end){
 		return redirection_classique(file, type, fd, save);
 	}
 }
+
 int redirection_tar(char *file, int type, int *fd, int *save, int *end){
 	if(is_tar_tsh(file)){
 		char format[strlen(file) + 25];
@@ -488,7 +490,7 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end){
 									perror("Impossible d'écirre la fin de l'archive de redicrection!");
 									return -1;
 								}
-								*end = lseek(*fd, 0, SEEK_CUR); // end not null because not stdin
+								*end = lseek(*fd, sizefile - size , SEEK_CUR); // end not null because not stdin
 								*save = dup((type < 4)?STDOUT_FILENO:STDERR_FILENO);
 								if((dup2(*fd, (type < 4)?STDOUT_FILENO:STDERR_FILENO) < 0)){
 									perror("Erreur de redirection");
