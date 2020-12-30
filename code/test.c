@@ -8,22 +8,22 @@
 #include <dirent.h>
 #include <sys/wait.h>
 
-#include "couple.h"
 #include "tar.h"
+#include "couple.h"
 #include "ls.h"
 #include "cd.h"
 #include "cat.h"
 #include "pwd.h"
 #include "mkdir.h"
-#include "rmdir.h"
+#include "rm.h"
 
 
 int generate_files();
 int remove_files();
 
-#define NB_TESTS 14
+#define NB_TESTS 15
 
-int (*fun[NB_TESTS])(int, char *[]) = {ls, ls, ls, ls, cd, ls, ls, cd, ls, cat, cd, mkdir_tar, rmdir_func, cd};
+int (*fun[NB_TESTS])(int, char *[]) = {ls, ls, ls, ls, cd, ls, ls, cd, ls, cat, cd, mkdir_tar, mkdir_tar, cd, rm_func};
 
 int main(int argc, char const *argv[]) {
 	//remove_files();
@@ -43,6 +43,7 @@ int main(int argc, char const *argv[]) {
 	char *arg12[2];
 	char *arg13[2];
 	char *arg14[2];
+	char *arg15[3];
 
 	arg1[0] = "ls";
 	arg1[1] = "tests/tests";
@@ -67,16 +68,20 @@ int main(int argc, char const *argv[]) {
 	arg11[1] = "tests/arch.tar/tests";
 	arg12[0] = "mkdir";
 	arg12[1] = "tropbien";
-	arg13[0] = "rmdir";
-	arg13[1] = "tropbien";
+	arg13[0] = "mkdir";
+	arg13[1] = "tropbien2";
 	arg14[0] = "cd";
 	arg14[1] = home;
+	arg15[0] = "rm";
+	arg15[1] = "-r";
+	arg15[2] = "tests/arch.tar/tests/tropbien";
 
 
 
-	char **test_arg[NB_TESTS] = {arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14};
-	int nb_arg[NB_TESTS] = {2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2};
-						//  1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20
+
+	char **test_arg[NB_TESTS] = {arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15};
+	int nb_arg[NB_TESTS] = {2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 3};
+						//  1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15
 	char home_open[strlen(home) + 60];
 	sprintf(home_open, "%s/tests/test_out", home);
 
@@ -88,12 +93,12 @@ int main(int argc, char const *argv[]) {
 	sprintf(home_ls7, "%s/tests/tests_in/ls7", home);
 	char home_cat2[strlen(home) + 60];
 	sprintf(home_cat2, "%s/tests/tests_in/cat2", home);
-	char *test_file[NB_TESTS] = {"tests/tests_in/ls1", "tests/tests_in/ls2", "tests/tests_in/ls3", "tests/tests_in/ls4", home_cd1, home_ls5,home_ls7, home_cd1, "tests/tests_in/ls6", "tests/tests_in/cat1", home_cd1, home_cd1, home_cd1, home_cd1};
+	char *test_file[NB_TESTS] = {"tests/tests_in/ls1", "tests/tests_in/ls2", "tests/tests_in/ls3", "tests/tests_in/ls4", home_cd1, home_ls5, home_ls7, home_cd1, "tests/tests_in/ls6", "tests/tests_in/cat1", home_cd1, home_cd1, home_cd1, home_cd1, home_cd1};
 	int w;
 	for(int i = 0; i < NB_TESTS; i++){
 		int output = open(home_open,  O_RDWR + O_CREAT + O_TRUNC, S_IRWXU);
-		int save = dup(1);
-		int save_err = dup(2);
+		int save = dup(STDOUT_FILENO);
+		int save_err = dup(STDERR_FILENO);
 		dup2(output, STDOUT_FILENO);
 		dup2(output, STDERR_FILENO);
 		fun[i](nb_arg[i], test_arg[i]);
@@ -104,7 +109,7 @@ int main(int argc, char const *argv[]) {
 		close(save_err);
 		switch(fork()){
 			case -1:
-				exit(1);
+				exit(EXIT_FAILURE);
 			case 0:
 				execlp("diff", "diff", home_open, test_file[i], NULL);
 			default:
@@ -116,7 +121,7 @@ int main(int argc, char const *argv[]) {
 				}
 		}
 	}
-	//remove_files();
+	remove_files();
 	return 0;
 }
 
