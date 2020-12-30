@@ -782,26 +782,28 @@ void parse_tube(char *line, int *readen){
 		char *old = NULL;
 		int fdin[2];
 		int fdout[2];
-		pipe(fdin);
-		pipe(fdout);
 		while ((tok = strtok_r(tmp, "|", &saveptr)) != NULL) {
 			int savein;
+			pipe(fdout);
 			if (old != NULL) {
 				char buf[BLOCKSIZE];
 				int readen = 0;
 				while ((readen = read(fdin[0], buf, BLOCKSIZE)) > 0) {
-					write(STDERR_FILENO, "yes\n", 4);
 					if (write(fdout[1], buf, readen) < readen) {
 						perror("Impossible de trnafere le contenu du tube!");
 						return;
 					}
 				}
+				close(fdin[0]);
+				close(fdout[1]);
 				savein = dup(STDIN_FILENO);
 				if((dup2(fdout[0], STDIN_FILENO) < 0)){
 					perror("Erreur de redirection");
 					return;
 				}
 			}
+
+			pipe(fdin);
 
 			newline = malloc(strlen(tok)+1);
 			assert(newline);
@@ -826,12 +828,12 @@ void parse_tube(char *line, int *readen){
 				perror("Erreur de redirection");
 				return;
 			}
+			close(fdin[1]);
+			close(fdout[0]);
 			tmp = saveptr;
 			old = tok;
 		}
-		close(fdin[1]);
 		close(fdin[0]);
-		close(fdout[0]);
 		close(fdout[1]);
 	}
 }
