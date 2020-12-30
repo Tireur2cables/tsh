@@ -20,16 +20,24 @@ Ainsi que toutes les commandes habituelles lorsqu'aucun tarball n'est en jeu.
 
 ## Difficultés rencontrées  
 
-Il existe encore certains problèmes connus, notamment avec la commande `ls` (`ls .` par exemple, affiche actuellement tout le temps le contenu du répertoire a partir duquel
-on a lancé le tsh, ou `ls ..` dans un tar ne fonctionne pas).  
-Les commandes `pwd`, `cd` et `exit` fonctionnent sans problème. Nous avons aussi débuté la rédaction de tests, afin de vérifier le bon fonctionnement de toutes les commandes.
-Le fichier test.c utilise pour le moment la fonction system() pour appeler un script construisant une architecture de fichier, mais sera rapidement remplacé par
-un autre système de test.  
 
 De façon générale , quelques difficultés ont été rencontrées dont les plus grandes implique le déplacement et le traitement d'informations au sein d'une   
-archive qui auront nécessités beaucoup de temps et de réflexions !
+archive qui auront nécessités beaucoup de temps et de réflexions !  
+Le traitement de la position d'un fichier, de son header, et de son contenu dans un tar aura été source de nombreux problèmes que nous avons, dans l'ensemble esperont-le, 
+réussit à résoudre.
+Tous les bugs qui étaient présent dans le tsh lors du premier rendu on été corrigé.
 
 Dans le dossier tests, le script `test.sh` permet de construire une arborescence de fichier pour tester les commandes, et le script `testrm.sh` de la supprimer.  
+
+## Pour la suite
+
+Actuellement l'affichage par ls dans le tar n'est pas très pratique comparé a l'affichage de bash a cause du manque de couleur. Nous n'avons pas implémenté l'affichage
+des dossiers ou archives en couleurs différentes.  
+Comme dit plus haut, actuellement nous n'effectuons pas de vérifications des droits des utilisateurs pour les commandes
+cd, mkdir ou autres dans un tar. Un utilisateur n'ayant pas les droits d'executions d'un dossier pourrait quand même se déplacer dans celui-ci via la commande `cd` si 
+il possède les droits d'executer le tar.  
+Nous aurions aussi aimé implémenter une commande history et une gestion des dernières commandes écrites dans le shell, afin de faciliter son utilisation.  
+Finalement, le tsh ne gère actuellement aucun signaux que l'utilisateur pourrait lui envoyer, et par exemple, `CTRL-C` l'arrête. 
 
 
 ## Tests unitaires
