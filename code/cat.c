@@ -19,30 +19,6 @@ void write_content(int, int);
 
 
 /*
-* Affiche sur stdout read_size BLOCK (512 octets) du fichier fd
-*/
-void write_content(int fd, int read_size){
-	int readen;
-	for(int i = 0; i < read_size; i+=readen){
-		char format[BLOCKSIZE];
-		int taille = (read_size - i >= BLOCKSIZE)? BLOCKSIZE : read_size - i;
-		if ((readen = read(fd, format, taille)) < 0) {
-			char *error = "cat : Erreur impossible de lire le contenu du fichier sur l'entree!\n";
-			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error))
-				perror("Impossible d'ecrire dans le shell!");
-			return;
-		}
-		if (write(STDOUT_FILENO, format, readen) < readen) {
-			char *error = "cat : Erreur impossible d'ecrire le contenu du fichier sur la sortie!\n";
-			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error))
-				perror("Impossible d'ecrire dans le shell!");
-			return;
-		}
-	}
-
-}
-
-/*
 * Appel de la fonction, gestion des options et du nom du fichier a cat
 */
 int cat(int argc, char *argv[]) {
@@ -71,8 +47,8 @@ int cat(int argc, char *argv[]) {
 
 /*
 *
-Fonction générale qui gére les différents cas dans lesquels on peut se trouver : - Afficher un tar -> erreur
-																				 - Pas de Tar dans le nom -> Ne dois pas arriver -> Erreur
+Fonction générale qui gére les différents cas dans lesquels on peut se trouver : - Afficher un tar -> erreur, c'est un dossier
+																				 - Pas de Tar dans le nom -> On sort du tar avec des .., on appelle donc la fonction externe
 																				 - Un fichier dans un tar -> Appel de cat_tar
 
 */
@@ -104,6 +80,31 @@ int cat_file(char *file, char *options){
 	}
 	return 0;
 }
+
+/*
+* Affiche sur stdout read_size BLOCK (512 octets) du fichier fd
+*/
+void write_content(int fd, int read_size){
+	int readen;
+	for(int i = 0; i < read_size; i+=readen){
+		char format[BLOCKSIZE];
+		int taille = (read_size - i >= BLOCKSIZE)? BLOCKSIZE : read_size - i;
+		if ((readen = read(fd, format, taille)) < 0) {
+			char *error = "cat : Erreur impossible de lire le contenu du fichier sur l'entree!\n";
+			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error))
+				perror("Impossible d'ecrire dans le shell!");
+			return;
+		}
+		if (write(STDOUT_FILENO, format, readen) < readen) {
+			char *error = "cat : Erreur impossible d'ecrire le contenu du fichier sur la sortie!\n";
+			if (write(STDERR_FILENO, error, strlen(error)) < strlen(error))
+				perror("Impossible d'ecrire dans le shell!");
+			return;
+		}
+	}
+
+}
+
 /*
 * Parcours le tar et appelle write_content sur les parties du fichier qui correspondent au nom de fichier demandé
 *
@@ -131,7 +132,7 @@ int cat_tar(char *file, char *options){
 				break;
 			}
 			if(strstr(header.name, namefile) != NULL && (strncmp(header.name, namefile, strlen(header.name)-1) == 0)) {
-				if(header.typeflag == '5'){
+				if(header.typeflag == '5'){ //On ne peut pas afficher de dossier
 					char format[25 + strlen(file)];
 					sprintf(format, "cat : %s: est un dossier\n", file);
 					write(STDOUT_FILENO, format, strlen(format));
