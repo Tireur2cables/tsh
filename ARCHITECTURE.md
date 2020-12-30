@@ -93,6 +93,7 @@ A l'instar de exit , cette commande est implémentée en une fonction principale
 implémentées suivi de leur description.
 
 
+
 ##### Implémentation de cp (-r) :  
 On vérifie d'abord si un bon nombre d'arguments est donné puis on indique la présence d'une option éventuelle. Et de façon similaire à l'implémentation  
 des autres commandes , on effectue un parcours pour vérifier l'existence des chemins indiqués en arguments contenant une archive ou non (`isCorrectDest`  
@@ -105,7 +106,7 @@ Enfin , si les chemins sont corrects , on effectue la copie des fichers ou des r
 récursive si le chemin est un répertoire.  
 
 
-**( ls ; redirections ; combinaisons avec | )  **  
+** ( manque ls (-l) ; redirections ; combinaisons avec | )  **  
 
 
 -lreadline dans le makefile pour le linkeur
