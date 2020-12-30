@@ -8,6 +8,10 @@ Nous avons implémenté le shell, `./tsh`, capable d'executer les commandes suiv
 `cd [repertoire]` -> permet de se déplacer dans un repertoire particulier  
 `pwd` -> affiche notre position actuelle dans l'arborescence de fichier  
 `exit` -> quitte le tsh  
+`rm [-r] [repertoire]` -> permet la suppression d'un fichier quelconque et également d'un répertoire avec l'option -r
+`rmdir [repertoire]` -> permet la suppression d'un répertoire vide
+`cp -r [repertoire] [repertoire]`  -> copie un fichier sous un nom différent et également d'un répertoire si utilisée avec l'option -r
+`mkdir [repertoire]` -> crée un nouveau répertoire vide
 
 Il existe encore certains problèmes connus, notamment avec la commande `ls` (`ls .` par exemple, affiche actuellement tout le temps le contenu du repertoire a partir duquel
 on a lancé le tsh, ou `ls ..` dans un tar ne fonctionne pas).  
