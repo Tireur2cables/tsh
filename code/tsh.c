@@ -478,6 +478,7 @@ int traite_redirection(char *file, int type, int *fd, int *save, int *end, int *
 		strcat(absolutefile, "/");
 	}
 	strcat(absolutefile, file);
+
 	if(strstr(absolutefile, ".tar") != NULL){
 		return redirection_tar(absolutefile, type, fd, save, end, oldtaille);
 	}
@@ -782,7 +783,10 @@ void parse_tube(char *line, int *readen){
 		char *old = NULL;
 		int fdin[2];
 		int fdout[2];
+		int parcouru = 0;
 		while ((tok = strtok_r(tmp, "|", &saveptr)) != NULL) {
+			parcouru += strlen(tok);
+			if (old != NULL) parcouru++;
 			int savein;
 			pipe(fdout);
 			if (old != NULL) {
@@ -811,9 +815,11 @@ void parse_tube(char *line, int *readen){
 			*readen = strlen(newline);
 
 			int saveout = dup(STDOUT_FILENO);
-			if((dup2(fdin[1], STDOUT_FILENO) < 0)){
-				perror("Erreur de redirection");
-				return;
+			if (parcouru != strlen(line)) {
+				if((dup2(fdin[1], STDOUT_FILENO) < 0)){
+					perror("Erreur de redirection");
+					return;
+				}
 			}
 
 			parse_redirection(newline, readen);
