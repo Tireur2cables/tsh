@@ -126,6 +126,7 @@ Finalement, il ne nous reste plus qu'a calculer la taille du contenu du fichier 
 Nous ne traitons pas le cas si deux redirections vont dans le même fichier, ou des fichiers différents, mais dans le même tar. De plus, on ne garantit pas le comportement 
 de l'écriture, si une commande utilise en argument un fichier qui est aussi utilisé pour une redirection. Par exemple `cat archive.tar/fichier > archive.tar/autrefichier` 
 a un comportement que nous ne pouvons pas prévoir.  
+Dans le cas ou il y aurait plusieurs redirections du même descripteur, on affiche une erreur.  
 Les tubes fonctionnent comme les tubes de `bash`, ils redirigent la sortie de chaque commande sur l'entrée de la suivante. Nous avons cependant pu remarquer un comportement différent
 de celui de bash ou zsh, pour la suite de commande `cat | ls`, qui met `cat` en attente de lecture, puis affiche `ls` quand `cat` est fini.  
 
