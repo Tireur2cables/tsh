@@ -115,7 +115,7 @@ int main(int argc, char const *argv[]) { //main
 /*
  TODO redirections :
  	choix : les redirections ne doivent pas etre dans les memes fichiers ou dans le meme tar et doivent etre de la forme ' > ' etc...
-
+			impossible de verifier si une redirection est faite dans le meme tar que le input d'une commande qui affiche des choses (comme cat)
  	faire le tube
 */
 void parse_redirection(char *line, int *readen){
@@ -772,23 +772,58 @@ int exist_file_in_tar(int fd, char *path){
 void parse_tube(char *line, int *readen){
 	if(!strstr(line, "|")) { // pas de tubes
 		parse_redirection(line, readen);
-	}else{
-		/*char cp[strlen(line)];
-		memset(cp, '\0', strlen(cp));
-		int k = 0;
-		for(int i = 0; i < strlen(line); i++){
-			if(!isspace(line[i])){
-				cp[k++] = line[i];
+	}else {
+		char copy[strlen(line)+1];
+		strcpy(copy, line);
+		char *newline;
+		char *tmp = copy;
+		char *saveptr;
+		char *tok;
+		char *old = NULL;
+		int fdin[2];
+		int fdout[2];
+		pipe(fdin);
+		close(fdin[0]);
+		pipe(fdout);
+		close(fdout[1]);
+		while ((tok = strtok_r(tmp, "|", &saveptr)) != NULL) {
+			int savein;
+			if (old != NULL) {
+				savein = dup(STDIN_FILENO);
+				if((dup2(fdout[0], STDIN_FILENO) < 0)){
+					perror("Erreur de redirection");
+					return;
+				}
 			}
-			if (line[i] == '|'){
-				cp[--k] = '\0';
-				printf("%s\n", cp);
-				parse_redirection(cp, &k);
-				memset(cp, '\0', strlen(cp));
-				k = 0;
+
+			newline = malloc(strlen(tok)+1);
+			assert(newline);
+			strcpy(newline, tok);
+			*readen = strlen(newline);
+
+			int saveout = dup(STDOUT_FILENO);
+			if((dup2(fdin[1], STDOUT_FILENO) < 0)){
+				perror("Erreur de redirection");
+				return;
 			}
-		}*/
-		parse_redirection(line, readen);
+
+			parse_redirection(newline, readen);
+
+			if (old != NULL) {
+				if((dup2(savein, STDIN_FILENO) < 0)){
+					perror("Erreur de redirection");
+					return;
+				}
+			}
+			if((dup2(saveout, STDOUT_FILENO) < 0)){
+				perror("Erreur de redirection");
+				return;
+			}
+			tmp = saveptr;
+			old = tok;
+		}
+		close(fdin[1]);
+		close(fdout[0]);
 	}
 }
 
