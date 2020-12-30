@@ -9,20 +9,20 @@ Le script `tsh.sh` permet de lancer l’exécutable `tsh` du dossier `code/`.
 
 Le programme principal se situe dans le fichier `tsh.c`.  
 Dans ce programme on trouvera une boucle lisant les commandes entrées par l'utilisateur. La librairie `readline` a été utilisée afin de pouvoir gérer toutes les tailles de commandes (utilisation possible indiquée dans README) .
-La commande entrée par l'utilisateur est ensuite comparée d'abord aux commandes dites `built-in` ([cf. Commandes built-in](#-Commandes-built-in)) (qui ne seront pas lancées dans un processus fils, par exemple `cd` ou `exit`). 
+La commande entrée par l'utilisateur est ensuite comparée d'abord aux commandes dites `built-in` ([cf. Commandes built-in](#-Commandes-built-in)) (qui ne seront pas lancées dans un processus fils, par exemple `cd` ou `exit`).
 Si elle ne correspond pas à l'une de ces commandes elle est ensuite comparée aux autres commandes qui ont été réimplémentées (ces commandes seront lancées dans un processus fils le cas échéant).  
 Si l'utilisateur n'a rentré aucune de ces commandes alors sa commande sera exécutée dans un processus fils avec la fonction `exec`.  
-Si l'utilisateur rentre une commande et que celle-ci met en jeu l'utilisation d'un fichier `.tar` de quelques façon que ce soit, les arguments de cette commande sont 'traités'. 
-Ce traitement transforme le caractère spécial `~` en la valeur de `$HOME` et gère les caractères `.` et `..` en transformant le chemin en chemin absolu et le modifiant ou non (suivant si le caractère rencontré et `..` ou `.`). 
-Ce choix permet de simplifier au maximum le chemin entré par l'utilisateur, les commandes s'exécuteront alors plus rapidement que 
-si l'utilisateur avait emprunté des 'détours' pour désigner un chemin plus simple. En outre il est tout à fait possible d'entrer un chemin comprenant des dossiers inexistants 
+Si l'utilisateur rentre une commande et que celle-ci met en jeu l'utilisation d'un fichier `.tar` de quelques façon que ce soit, les arguments de cette commande sont 'traités'.
+Ce traitement transforme le caractère spécial `~` en la valeur de `$HOME` et gère les caractères `.` et `..` en transformant le chemin en chemin absolu et le modifiant ou non (suivant si le caractère rencontré et `..` ou `.`).
+Ce choix permet de simplifier au maximum le chemin entré par l'utilisateur, les commandes s'exécuteront alors plus rapidement que
+si l'utilisateur avait emprunté des 'détours' pour désigner un chemin plus simple. En outre il est tout à fait possible d'entrer un chemin comprenant des dossiers inexistants
 s'il y a assez de caractères `..` pour en sortir. C'est un choix de design que nous avons fait, qui diffère de comment fonctionne `bash` par exemple.
 
 
 ### Implémentations des commandes spéciales
 
 Chaque commande nécessitant d'être implémentée pour pouvoir gérer de façon spécifique les fichier `.tar` sont dans un fichier à part du main (`tsh.c`).  
-Chacune de ces commandes est implémentée comme si elle était une fonction main (renvoit un entier et prend en arguments `argc`, nombre d'éléments dans `argv`, et `argv`, 
+Chacune de ces commandes est implémentée comme si elle était une fonction main (renvoit un entier et prend en arguments `argc`, nombre d'éléments dans `argv`, et `argv`,
 tableau de string finissant par un pointeur `NULL`).  
 Le fichier `tar.h` contient les structures nécéssaires à la gestion des fichiers `.tar`.  
 Lors de l'appelle d'une commande, le tsh appelle les fonctions externes s'il est évident qu'il n'y a pas de tar en jeu. Cependant, il existe des situations
@@ -36,8 +36,8 @@ paramètre en vérifiant si on est dans une archive ou non. Ce parcours permet d
  - Archive simple : cd archive.tar  
  - Repertoire simple : cd dossier  
  - Dossier dans une archive : cd archive.tar/dossier  
-  
-     
+
+
 
 ##### Implémentations de rm & rmdir :  
 A l'instar de ls , l'implémentation de rm et de rmdir implique premièrement l'analyse du chemin passé en argument dans la fonction principale . Soit le chemin  
@@ -66,6 +66,7 @@ créé dans une fonction à part selon le format classque du header d'une archiv
 
 **(manque mv ; cp (-r) ; ls ; cat ; redirections ; combinaisons avec | ; exit)  **
 
+-lreadline dans le makefile pour le linkeur
 
 
 
