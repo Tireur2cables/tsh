@@ -340,7 +340,6 @@ void parse_redirection(char *line, int *readen){
 			char file[restelen + 1];
 			strncpy(file, rest, restelen);
 			file[restelen] = '\0';
-			printf("%s\n", file);
 			if (file[0] != '/') {
 				file_sortie = malloc(pwdlen + twdlen + strlen(file) + 1);
 				assert(file_sortie);
@@ -482,7 +481,6 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		close(save_entree);
 	}
 	if (save_sortie != -1 && fd_sortie != fd_entree) {
-		fprintf(stderr, "%s\n", file_sortie);
 		if (file_sortie != NULL && strstr(file_sortie, ".tar") != NULL) { // On se trouve dans un tar, on doit donc écrire le header
 			off_t new_end_of_tar = lseek(fd_sortie, 0, SEEK_CUR); // On écrit le nouveau fichier a la fin du tar, on se trouve donc à la fin après écriture
 			int size = new_end_of_tar - (*endsortie);
