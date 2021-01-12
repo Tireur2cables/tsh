@@ -22,30 +22,27 @@ Ainsi que toutes les commandes habituelles lorsqu'aucun tarball n'est en jeu.
 
 De façon générale , quelques difficultés ont été rencontrées dont les plus grandes implique le déplacement et le traitement d'informations au sein d'une   
 archive qui auront nécessités beaucoup de temps et de réflexions !  
-Le traitement de la position d'un fichier, de son header, et de son contenu dans un tar aura été source de nombreux problèmes que nous avons, dans l'ensemble esperont-le, 
-réussit à résoudre.
+Le traitement de la position d'un fichier, de son header, et de son contenu dans un tar aura été source de nombreux problèmes que nous avons, dans l'ensemble espérons-le, réussit à résoudre.
 La fonction qui nous a posé le plus de difficulté est `cp` car présentant de très nombreux cas de figures différents.
-Nous avons aussi rencontré quelques bugs `rigolos` en implémentant les redirections. 
+Nous avons aussi rencontré quelques bugs `rigolos` en implémentant les redirections.  
 ![Un tar d'une taille ... considérable ?](imgreadme/134309707_198105755294458_2271115212665234299_n.jpg)
-Une petite erreur dans le calcul de la position du fichier à copier ...
-Tous les bugs qui étaient présent dans le tsh lors du premier rendu on été corrigé.  
+Une petite erreur dans le calcul de la position du fichier à copier ...  
+Tous les bugs qui étaient présents dans le tsh lors du premier rendu on été corrigé.  
 
 ## Pour la suite
 
 Une grande partie des issues que nous avons ouvertes sur le projet, sont maintenant `closed`, mais il en reste quelques unes que nous n'avons pas pu implémenter.  
-Actuellement l'affichage par ls dans le tar n'est pas très pratique comparé a l'affichage de bash a cause du manque de couleur. Nous n'avons pas implémenté l'affichage
-des dossiers ou archives en couleurs différentes.  
-Comme dit plus haut, actuellement nous n'effectuons pas de vérifications des droits des utilisateurs pour les commandes
-`cd`, `mkdir` ou autres dans un tar. Un utilisateur n'ayant pas les droits d'executions d'un dossier pourrait quand même se déplacer dans celui-ci via la commande `cd` si 
-il possède les droits d'executer le tar.  
-Nous aurions aussi aimé implémenter une commande history et une gestion des dernières commandes écrites dans le shell, afin de faciliter son utilisation.  
-Finalement, le tsh ne gère actuellement aucun signaux que l'utilisateur pourrait lui envoyer, et par exemple, `CTRL-C` l'arrête. 
+Actuellement l'affichage par ls dans un tarball n'est pas très pratique comparé a l'affichage de bash a cause du manque de couleur. Nous n'avons pas implémenté l'affichage des dossiers ou archives en couleurs différentes.  
+Comme dit plus haut, actuellement nous n'effectuons pas de vérifications des droits des utilisateurs pour les commandes `cd`, `mkdir` ou autres dans un tarball. Un utilisateur n'ayant pas les droits d'exécutions d'un dossier pourrait quand même se déplacer dans celui-ci via la commande `cd`.  
+Nous aurions aussi aimé implémenter une commande `history` et une gestion des dernières commandes écrites dans le shell, afin de faciliter son utilisation.  
+Finalement, le tsh ne gère actuellement aucun signaux que l'utilisateur pourrait lui envoyer, et par exemple, `CTRL-C` l'arrête.  
 
 
 ## Tests unitaires
 
 Avec la commande suivante vous pouvez lancer une vague de tests unitaires afin de vérifier le bon fonctionnement de `tsh` :  
-`./test/sh`  
+`./tests.sh`  
+Ou alors vous pouvez utiliser `./test` dans code une fois le projet compiler via `make`.  
 
 Dans le dossier tests, le script `test.sh` permet de construire une arborescence de fichier pour tester les commandes, et le script `testrm.sh` de la supprimer.  
 Nous avons aussi créé une arborescence de fichiers classiques, et une archive, afin de pouvoir tester facilement les fonctionnalités du tsh.  
