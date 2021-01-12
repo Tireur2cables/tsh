@@ -107,7 +107,8 @@ int create_tar(char *name) { // Créer un tar
 		perror("Impossible d'ouvrir le fichier!");
 		return -1;
 	}
-	// ecriture d'un block de BLOCKSIZE \0 pour indiquer la fin de l'archive
+	// ecriture de deux blocks de BLOCKSIZE \0 pour indiquer la fin de l'archive
+	write_block_mkdir(fd, NULL);
 	write_block_mkdir(fd, NULL);
 	close(fd);
 	return 1;
