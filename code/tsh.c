@@ -420,9 +420,21 @@ void parse_redirection(char *line, int *readen){
 		char file[restelen + 1];
 		strncpy(file, rest, restelen);
 		file[restelen] = '\0';
-		file_entree = malloc(strlen(file)+1);
-		assert(file_entree);
-		strcpy(file_entree, file);
+		if (file[0] != '/') {
+			file_entree = malloc(pwdlen + twdlen + strlen(file)+1);
+			assert(file_entree);
+			strcpy(file_entree, pwd);
+			strcat(file_entree, "/");
+			if (twdlen != 0) {
+				strcat(file_entree, twd);
+				strcat(file_entree, "/");
+			}
+			strcat(file_entree, file);
+		}else {
+			file_entree = malloc(strlen(file)+1);
+			assert(file_entree);
+			strcpy(file_entree, file);
+		}
 		if ((file_erreur != NULL && in_same_tar(file_entree, file_erreur)) || (file_sortie != NULL && in_same_tar(file_sortie, file_entree))) {
 			close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur, file_sortie, &endsortie, &taillesortie, file_erreur, &enderreur, &tailleerreur);
 			if (file_erreur != NULL) free(file_erreur);
@@ -516,12 +528,12 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		close(save_sortie);
 	}
 
-	if(save_erreur != -1 && fd_erreur != fd_entree && fd_erreur != fd_sortie){
-		if(file_erreur != NULL && strstr(file_erreur, ".tar") != NULL){ //On se trouve dans un tar, on doit donc écrire le header
+	if (save_erreur != -1 && fd_erreur != fd_entree && fd_erreur != fd_sortie) {
+		if (file_erreur != NULL && strstr(file_erreur, ".tar") != NULL) { // On se trouve dans un tar, on doit donc écrire le header
 			off_t new_end_of_tar = lseek(fd_erreur, 0, SEEK_CUR);
 			int size = new_end_of_tar - (*enderreur);
 			int complement;
-			if(new_end_of_tar%BLOCKSIZE != 0){
+			if (new_end_of_tar%BLOCKSIZE != 0) {
 				complement = BLOCKSIZE-(new_end_of_tar%BLOCKSIZE);
 				char block[complement];
 				memset(block, '\0', complement);
@@ -529,7 +541,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 					perror("Impossible de completer le block à la fin du tar!");
 					return;
 				}
-			}else{
+			}else {
 				complement = 0;
 			}
 			lseek(fd_erreur, -(size+complement+BLOCKSIZE+(*tailleerreur)), SEEK_CUR); // retour à l'emplacement du header
@@ -565,7 +577,7 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 /*
 * Calcul dans quel cas on se trouve pour faire la redirection
 */
-int traite_redirection(char *file, int type, int *fd, int *save, int *end, int *oldtaille){
+int traite_redirection(char *file, int type, int *fd, int *save, int *end, int *oldtaille) {
 	char *pwd = getcwd(NULL, 0);
 	char *twd = getenv("TWD");
 	int twdlen = 0;
@@ -584,18 +596,18 @@ int traite_redirection(char *file, int type, int *fd, int *save, int *end, int *
 	}
 	strcat(absolutefile, file);
 
-	if(strstr(absolutefile, ".tar") != NULL){
+	if (strstr(absolutefile, ".tar") != NULL) {
 		return redirection_tar(absolutefile, type, fd, save, end, oldtaille);
 	}
-	else{
+	else {
 		return redirection_classique(absolutefile, type, fd, save);
 	}
 }
 /*
 * Redirection mettant en jeu l'écriture ou la lecture d'un fichier dans un tar
 */
-int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *oldtaille){
-	if(is_tar_tsh(file)){ //file est un nom d'archive, on ne peut pas écrire dedans
+int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *oldtaille) {
+	if (is_tar_tsh(file)) { // file est un nom d'archive, on ne peut pas écrire dedans
 		char format[strlen(file) + 25];
 		sprintf(format, "tsh: %s: est une archive\n", file);
 		if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
@@ -604,23 +616,23 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 		}
 		return -1;
 	}
-	int tarpos = strstr(file, ".tar") - file; //Existe car on sait qu'il y a un tar dans le chemin, arithmétique des pointers pour retrouver la position du .tar dans le nom de fichier
-	char tarfile[tarpos+4+1]; //Contient le chemin jusqu'au tar pour l'ouvrir
+	int tarpos = strstr(file, ".tar") - file; // Existe car on sait qu'il y a un tar dans le chemin, arithmétique des pointers pour retrouver la position du .tar dans le nom de fichier
+	char tarfile[tarpos+4+1]; // Contient le chemin jusqu'au tar pour l'ouvrir
 	strncpy(tarfile, file, tarpos+4);
 	tarfile[tarpos+4] = '\0';
-	char namefile[strlen(file)-tarpos-4+1]; //Contient la suite du chemin pour l'affichage
+	char namefile[strlen(file)-tarpos-4+1]; // Contient la suite du chemin pour l'affichage
 	strncpy(namefile, file+tarpos+5, strlen(file)-tarpos-4);
 	namefile[strlen(file)-tarpos-4] = '\0';
 
 	struct posix_header header;
 	*fd = open(tarfile, O_RDWR);
-	if(*fd == -1){
+	if (*fd == -1) {
 	  perror("erreur d'ouverture de l'archive");
 	  return -1;
 	}
-	if(type >= 2){//redirection stout ou stderr
+	if (type >= 2) { // redirection stout ou stderr
 		*oldtaille = 0;
-		if(exist_file_in_tar(*fd, namefile)){ // existe donc on le suprrime et remet à la fin
+		if (exist_file_in_tar(*fd, namefile)) { // existe donc on le suprrime et remet à la fin
 			if (type == 3 || type == 5) { // >> ou 2>> (Concatenation)
 				int read_size;
 				while(read(*fd, &header, BLOCKSIZE) > 0){
@@ -690,21 +702,21 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 				rm_func(2, argvbis);
 			} // pas de return pour rentrer dans le if suivant
 		}
-		if (exist_path_in_tar(*fd, namefile)) { //vérifie que l'arborescence de fichier existe dans le tar
+		if (exist_path_in_tar(*fd, namefile)) { // vérifie que l'arborescence de fichier existe dans le tar
 			int n = 0;
 			int read_size = 0;
 			while ((n=read(*fd, &header, BLOCKSIZE)) > 0) {
-				if(strcmp(header.name, "") == 0){
-					lseek(*fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
-					write_block(*fd, NULL); //Place pour le header
+				if(strcmp(header.name, "") == 0) { // a la fin du tar
+					lseek(*fd, -BLOCKSIZE, SEEK_CUR); // On remonte d'un block pour écrire au bon endroit
+					write_block(*fd, NULL); // Place pour le header
 					*end = lseek(*fd, 0, SEEK_CUR); // end n'est pas nul car on à écrit du contenu
-					*save = dup((type < 4)?STDOUT_FILENO:STDERR_FILENO);
-					if((dup2(*fd, (type < 4)?STDOUT_FILENO:STDERR_FILENO) < 0)){
+					*save = dup((type < 4)? STDOUT_FILENO : STDERR_FILENO);
+					if ((dup2(*fd, (type < 4)? STDOUT_FILENO : STDERR_FILENO) < 0)) {
 						perror("Erreur de redirection");
 						return -1;
 					}
 					return 0;
-				}else{
+				}else {
 					get_header_size_tsh(&header, &read_size);
 					if(lseek(*fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
 						perror("erreur de lecture de l'archive");
@@ -712,27 +724,27 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 					}
 				}
 			}
-		}else{
+		}else {
 			char format[strlen(file) + 50];
 			sprintf(format, "tsh: %s: le dossier parent n'existe pas\n", file);
-			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)){
+			if (write(STDERR_FILENO, format, strlen(format)) < strlen(format)) {
 				perror("Erreur d'écriture dans le shell");
 				return -1;
 			}
 			return -1;
 		}
-	}else{ //redirection de stdin
-		if(exist_file_in_tar(*fd, namefile)){
+	}else { //redirection de stdin
+		if (exist_file_in_tar(*fd, namefile)) {
 			int n = 0;
 			int read_size = 0;
 			int readen = 0;
 			char read_block[BLOCKSIZE];
-			while((n=read(*fd, &header, BLOCKSIZE)) > 0){
-				if(strcmp(header.name, "\0") == 0){
+			while ((n=read(*fd, &header, BLOCKSIZE)) > 0) {
+				if (strcmp(header.name, "") == 0) {
 					int tube[2];
 					pipe(tube);
 					get_header_size_tsh(&header, &read_size);
-					switch(fork()){
+					switch (fork()) {
 						case -1:
 							perror("fork");
 							return -1;
