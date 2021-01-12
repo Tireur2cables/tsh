@@ -270,18 +270,37 @@ int delete_file_tar(char * absolutetar , char * chemin) {
 		sscanf(header.size, "%o", &taille);
 		read_size = ((taille + BLOCKSIZE-1) / BLOCKSIZE);
 
-		if (strcmp(nom, chemin) == 0) { // on siat qu'il existe donc on arrivera forcément ici
+		if (strcmp(nom, chemin) == 0) { // on sait qu'il existe donc on arrivera forcément ici
 
-			if (lseek(fd, -BLOCKSIZE , SEEK_CUR) == -1) break; // retour au niveau du header
+			off_t position;
+			off_t endposition;
+
+			if ((position = lseek(fd, -BLOCKSIZE, SEEK_CUR)) == -1) break; // retour à la position du header
+			if ((endposition = lseek(fd, 0, SEEK_END)) == -1) break;
 
 			unsigned int size = BLOCKSIZE + (read_size * BLOCKSIZE);
 			char cpy[size];
 			memset(cpy, '\0', size);
 
+			if (lseek(fd, position, SEEK_SET) == -1) break; // retour à la position du header
 			if (write(fd , cpy , size) < size) {
 				perror("Impossible de supprimer totalement le contenu!");
 				break;
 			}
+			off_t curr = lseek(fd, 0, SEEK_CUR);
+			int lenrest = endposition - curr;
+			char rest[lenrest];
+			if (read(fd, rest, lenrest) < lenrest) {
+				perror("Impossible de récupérer la fin de l'archive!");
+				break;
+			}
+
+			if (lseek(fd, position, SEEK_SET) == -1) break; // retour à la position du header
+			if (write(fd, rest, lenrest) < lenrest) {
+				perror("Impossible de remettre la fin du tar correctement!");
+				break;
+			}
+
 			found = 1;
 			break;
 		}
