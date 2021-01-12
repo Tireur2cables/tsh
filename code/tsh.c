@@ -662,23 +662,23 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 								}
 								*oldtaille = sizefile;
 								*end = lseek(*fd, 0, SEEK_CUR); // end not null because not stdin
-								*save = dup((type < 4)?STDOUT_FILENO:STDERR_FILENO);
-								if((dup2(*fd, (type < 4)?STDOUT_FILENO:STDERR_FILENO) < 0)){
+								*save = dup((type < 4)? STDOUT_FILENO : STDERR_FILENO);
+								if ((dup2(*fd, (type < 4)? STDOUT_FILENO : STDERR_FILENO) < 0)) {
 									perror("Erreur de redirection");
 									return -1;
 								}
 								return 0;
 							}
 							get_header_size_tsh(&header, &read_size);
-							if(lseek(*fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+							if (lseek(*fd, BLOCKSIZE*read_size, SEEK_CUR) == -1) {
 								perror("erreur de lecture de l'archive");
 								return -1;
 							}
 						}
 						return -1; // erreur si on arrive ici
-					}else{
+					}else {
 						get_header_size_tsh(&header, &read_size);
-						if(lseek(*fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+						if (lseek(*fd, BLOCKSIZE*read_size, SEEK_CUR) == -1) {
 							perror("erreur de lecture de l'archive");
 							return -1;
 						}
@@ -690,10 +690,10 @@ int redirection_tar(char *file, int type, int *fd, int *save, int *end, int *old
 				rm_func(2, argvbis);
 			} // pas de return pour rentrer dans le if suivant
 		}
-		if(exist_path_in_tar(*fd, namefile)){ //vérifie que l'arborescence de fichier existe dans le tar
+		if (exist_path_in_tar(*fd, namefile)) { //vérifie que l'arborescence de fichier existe dans le tar
 			int n = 0;
 			int read_size = 0;
-			while((n=read(*fd, &header, BLOCKSIZE)) > 0){
+			while ((n=read(*fd, &header, BLOCKSIZE)) > 0) {
 				if(strcmp(header.name, "") == 0){
 					lseek(*fd, -BLOCKSIZE, SEEK_CUR); //On remonte d'un block pour écrire au bon endroit
 					write_block(*fd, NULL); //Place pour le header

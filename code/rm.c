@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dirent.h>
+
 #include "tar.h"
 #include "rm.h"
 
@@ -31,31 +32,31 @@ int rm_func(int argc , char ** argv) {
 
 	if (detectError_rm(argc)) return -1;
 	int withOption = 0;
-	for(int i=1;i<argc;i++){
-		if(strcmp(argv[i],"-r")==0 || strcmp(argv[i],"-R")==0 || strcmp(argv[i],"--recursive")==0) withOption++;
+	for (int i = 1; i < argc; i++) {
+		if(strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "-R") == 0 || strcmp(argv[i], "--recursive") == 0) withOption++;
 	}
-	if (withOption==argc-1) { // si que des options
-		errno=EINVAL;
+	if (withOption == argc-1) { // si que des options
+		errno = EINVAL;
 		perror("missing operand");
 		return -1;
 	}
-	for(int i=1;i<argc;i++) {
-		if(strcmp(argv[i],"-r")!=0 && strcmp(argv[i],"-R")!=0 && strcmp(argv[i],"--recursive")!=0) {
-			if(getenv("TWD") != NULL){
-				if(contains_tar_rm(getenv("TWD"))){
-					if(argv[i][0] == '/'){ //Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
+	for (int i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "-r" ) != 0 && strcmp(argv[i], "-R") != 0 && strcmp(argv[i], "--recursive") != 0) {
+			if (getenv("TWD") != NULL) {
+				if (contains_tar_rm(getenv("TWD"))) {
+					if (argv[i][0] == '/') { // Si l'appel ressort du tar (avec .. ou ~ par exemple), alors l'argument est transformé en chemin partant de la racine
 						which_rm(argv[i], withOption);
-					}else{
+					}else {
 						char file[strlen(getenv("TWD")) + strlen(argv[i])];
 						sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
 						which_rm(file, withOption);
 					}
-				}else{
+				}else {
 					char file[strlen(getenv("TWD")) + strlen(argv[i])];
 					sprintf(file, "%s/%s", getenv("TWD"), argv[i]);
 					which_rm(file, withOption);
 				}
-			}else{
+			}else {
 				which_rm(argv[i], withOption);
 			}
 		}
@@ -66,13 +67,13 @@ int rm_func(int argc , char ** argv) {
 /*
 * Choix de quelle fonction rm à employée
 */
-void which_rm(char *chemin, int withOption){
-	if(is_tar_rm(chemin)){
-		delete_tar(chemin, withOption); //Si option -r, on peut supprimer un tar complet
+void which_rm(char *chemin, int withOption) {
+	if (is_tar_rm(chemin)) {
+		delete_tar(chemin, withOption); // Si option -r, on peut supprimer un tar complet
 	}
-	else if(contains_tar_rm(chemin)){  //On supprimer un fichier ou dossier dans un tar
+	else if(contains_tar_rm(chemin)) {  // On supprime un fichier ou dossier dans un tar
 		delete_in_tar(chemin, withOption);
-	}else{
+	}else {
 		char *format;
 		switch(fork()){  // sans tar dans le chemin
 			case -1 :
@@ -119,21 +120,20 @@ void delete_tar(char *chemin, int withOption){
 }
 
 int delete_in_tar(char *chemin, int option) {
-	char tarfile[strlen(chemin)]; //Contient le chemin jusqu'au tar pour l'ouvrir
-	char namefile[strlen(chemin)]; //Contient la suite du chemin pour l'affichage
-	int tarpos = strstr(chemin, ".tar") - chemin; //Existe car on sait qu'il y a un tar dans le chemin, arithmétique des pointers pour retrouver la position du .tar dans le nom de fichier
+	int tarpos = strstr(chemin, ".tar") - chemin; // Existe car on sait qu'il y a un tar dans le chemin, arithmétique des pointers pour retrouver la position du .tar dans le nom de fichier
+	char tarfile[tarpos + 4 + 1]; // Contient le chemin jusqu'au tar pour l'ouvrir
 	strncpy(tarfile, chemin, tarpos+4);
-	strncpy(namefile, chemin+tarpos+5, strlen(chemin)-tarpos-4);
 	tarfile[tarpos+4] = '\0';
+
+	char namefile[strlen(chemin) - tarpos - 4 + 1]; // Contient la suite du chemin pour l'affichage
+	strncpy(namefile, chemin+tarpos+5, strlen(chemin)-tarpos-4);
 	namefile[strlen(chemin)-tarpos-4] = '\0';
 
 	int fd = open(tarfile, O_RDONLY);
 	if (fd == -1) {
 		char *error_debut = "rm : erreur, impossible d'ouvrir l'archive ";
 		char error[strlen(error_debut) + strlen(tarfile) + 1 + 1];
-		strcpy(error, error_debut);
-		strcat(error, tarfile);
-		strcat(error, "\n");
+		sprintf(error, "%s%s\n", error_debut, tarfile);
 		int errorlen = strlen(error);
 		if (write(STDERR_FILENO, error, errorlen) < errorlen)
 			perror("Erreur d'écriture dans le shell!");
@@ -143,32 +143,29 @@ int delete_in_tar(char *chemin, int option) {
 	int n = 0;
 	int read_size = 0;
 	int found = 0;
-	while((n=read(fd, &header, BLOCKSIZE))>0){
-		if(strcmp(header.name, "\0") == 0){
-			break;
-		}
-		if(strcmp(header.name, namefile) == 0 || isSameDir_rm(namefile, header.name)) { //Si on trouve un fichier ou un dossier du bon nom
-			if(header.typeflag == '5'){
+	while ((n = read(fd, &header, BLOCKSIZE)) > 0) {
+		if (strcmp(header.name, "") == 0) break;
+
+		if (strcmp(header.name, namefile) == 0 || isSameDir_rm(namefile, header.name)) { // Si on trouve un fichier ou un dossier du bon nom
+			if(header.typeflag == '5')
 				found = 1;
-			}else{
+			else
 				found = 2;
-			}
-		}else{
-			get_header_size_rm(&header, &read_size);
-		}
-		if(lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1){
+		}else get_header_size_rm(&header, &read_size);
+
+		if (lseek(fd, BLOCKSIZE*read_size, SEEK_CUR) == -1) {
 			perror("erreur de lecture de l'archive");
 			return -1;
 		}
 	}
-	if(!found){
+	if (!found) {
 		char format[60 + strlen(chemin)];
 		sprintf(format, "rm : %s: Aucun fichier ou dossier de ce type\n", chemin);
 		write(STDOUT_FILENO, format, strlen(format));
 	}
 	close(fd);
 	if (found == 1) {
-		if(option<=0) {
+		if(option <= 0) {
 			char *deb  = "rm : ";
 			char *end = " est un répertoire !\n";
 			char error[strlen(deb) + strlen(chemin) + strlen(end) + 1];
@@ -184,7 +181,7 @@ int delete_in_tar(char *chemin, int option) {
 		}
 	}
 	else { //delete file in tar
-		delete_file_tar(tarfile,namefile);
+		delete_file_tar(tarfile, namefile);
 	}
 	return 0;
 }
@@ -247,8 +244,8 @@ int delete_dir_tar(char *absolutetar, char *chemin) {
 }
 
 int delete_file_tar(char * absolutetar , char * chemin) {
-	int fd = open(absolutetar,O_RDWR);
-	struct posix_header * header = malloc(sizeof(struct posix_header));
+	int fd = open(absolutetar, O_RDWR);
+	struct posix_header header;
 
 	if (fd == -1) {
 		char *error_debut = "rm : erreur, impossible d'ouvrir l'archive ";
@@ -261,66 +258,64 @@ int delete_file_tar(char * absolutetar , char * chemin) {
 			perror("Erreur d'écriture dans le shell!");
 	}
 
-	int found=0;
-	while(!found) {
+	int n = 0;
+	int read_size = 0;
+	int found = 0;
+	while ((n = read(fd, &header, BLOCKSIZE)) > 0) {
 
-		if(read(fd,header,BLOCKSIZE)<BLOCKSIZE) break;
-
-		char nom[strlen(header->name)+1];
-		strcpy(nom,header->name);
+		char nom[strlen(header.name)+1];
+		strcpy(nom, header.name);
 
 		int taille = 0;
-		int *ptaille = &taille;
-		sscanf(header->size, "%o", ptaille);
-		int filesize = ((*ptaille + 512-1)/512);
+		sscanf(header.size, "%o", &taille);
+		read_size = ((taille + BLOCKSIZE-1) / BLOCKSIZE);
 
+		if (strcmp(nom, chemin) == 0) { // on siat qu'il existe donc on arrivera forcément ici
 
-		if(strcmp(nom, chemin) == 0) {
+			if (lseek(fd, -BLOCKSIZE , SEEK_CUR) == -1) break; // retour au niveau du header
 
-			off_t position;
-			off_t endposition;
-
-			if((position=lseek(fd, -BLOCKSIZE , SEEK_CUR))==-1) break;
-			if((endposition=lseek(fd, 0 , SEEK_END))==-1) break;
-
-			unsigned int size= endposition - (position+BLOCKSIZE+filesize*BLOCKSIZE);
+			unsigned int size = BLOCKSIZE + (read_size * BLOCKSIZE);
 			char cpy[size];
+			memset(cpy, '\0', size);
 
-			if(lseek(fd, position+BLOCKSIZE+filesize*BLOCKSIZE , SEEK_SET)==-1) break;
-			read(fd , cpy , size);
-
-			if(lseek(fd, position , SEEK_SET)==-1) break;
-			write(fd , cpy , size);
-
-			found=1;
+			if (write(fd , cpy , size) < size) {
+				perror("Impossible de supprimer totalement le contenu!");
+				break;
+			}
+			found = 1;
 			break;
 		}
-		read(fd,header,BLOCKSIZE*filesize);
+
+		if (lseek(fd, BLOCKSIZE * read_size, SEEK_CUR) == -1) {
+			perror("erreur de lecture de l'archive");
+			return -1;
+		}
 	}
 	close(fd);
-	return 0;
+	return found;
 }
+
 int detectError_rm(int argc) {
 
-	if(argc==0) {
-		errno=EINVAL;
+	if (argc == 0) {
+		errno = EINVAL;
 		perror("program error");
 		exit(EXIT_FAILURE);
 		return -1;
 	}
-	if(argc==1) {
-		errno=EINVAL;
+	if (argc==1) {
+		errno = EINVAL;
 		perror("missing operand");
 		return -1;
 	}
 	return 0;
 }
 
-int contains_tar_rm(char *file){
+int contains_tar_rm(char *file) {
 	return (strstr(file,".tar") != NULL);
 }
 
-int is_ext_rm(char *file, char *ext){
+int is_ext_rm(char *file, char *ext) {
 	return (strcmp(&file[strlen(file)-strlen(ext)], ext) == 0);
 }
 
