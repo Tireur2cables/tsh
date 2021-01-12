@@ -340,7 +340,7 @@ void parse_redirection(char *line, int *readen){
 			char file[restelen + 1];
 			strncpy(file, rest, restelen);
 			file[restelen] = '\0';
-
+			printf("%s\n", file);
 			if (file[0] != '/') {
 				file_sortie = malloc(pwdlen + twdlen + strlen(file) + 1);
 				assert(file_sortie);
@@ -1069,7 +1069,7 @@ char *traiterHome(char *line, int *len) {
 	}
 
 	*len = newlen + argc - 1;
-	char *newline = malloc(newlen + argc);
+	char *newline = malloc(newlen + argc + 1);
 	strcpy(newline, argv[0]);
 	for (int i = 1; i < argc; i++) {
 		strcat(newline, " ");
@@ -1162,7 +1162,7 @@ char *traiterArguements(char *line, int *len) {
 	}
 
 	*len = newlen + argc - 1;
-	char *newline = malloc(newlen + argc);
+	char *newline = malloc(newlen + argc + 1);
 	strcpy(newline, argv[0]);
 	for (int i = 1; i < argc; i++) {
 		strcat(newline, " ");
