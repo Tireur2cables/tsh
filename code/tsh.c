@@ -191,6 +191,11 @@ void parse_tube(char *line, int *readen){
  	faire le tube, donc comportement imprévisible dans ce cas
 */
 void parse_redirection(char *line, int *readen){
+	char *pwd = getcwd(NULL, 0);
+	char *twd = getenv("TWD");
+	int twdlen = 0;
+	int pwdlen = strlen(pwd) + 1;
+	if (twd != NULL && strlen(twd) != 0) twdlen = strlen(twd) + 1;
 	int fd_entree = -1;
 	int fd_sortie = -1;
 	int fd_erreur = -1;
@@ -244,10 +249,21 @@ void parse_redirection(char *line, int *readen){
 			char file[restelen + 1];
 			strncpy(file, rest, restelen);
 			file[restelen] = '\0';
-
-			file_erreur = malloc(strlen(file)+1);
-			assert(file_erreur);
-			strcpy(file_erreur, file);
+			if (file[0] != '/') {
+				file_erreur = malloc(pwdlen + twdlen + strlen(file) + 1);
+				assert(file_erreur);
+				strcpy(file_erreur, pwd);
+				strcat(file_erreur, "/");
+				if (twdlen != 0) {
+					strcat(file_erreur, twd);
+					strcat(file_erreur, "/");
+				}
+				strcat(file_erreur, file);
+			}else {
+				file_erreur = malloc(strlen(file) + 1);
+				assert(file_erreur);
+				strcpy(file_erreur, file);
+			}
 			if ((file_entree != NULL && in_same_tar(file_entree, file_erreur)) || (file_sortie != NULL && in_same_tar(file_sortie, file_erreur))) {
 				close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur, file_sortie, &endsortie, &taillesortie, file_erreur, &enderreur, &tailleerreur);
 				if (file_erreur != NULL) free(file_erreur); //On a du rediriger l'erreur
@@ -286,7 +302,7 @@ void parse_redirection(char *line, int *readen){
 				return;
 			}
 		}
-		if((pos = strstr(line, " >"))){ //redirection de la sortie standard
+		if ((pos = strstr(line, " >"))) { //redirection de la sortie standard
 			char command[pos-line + 1];
 			strncpy(command, line, pos-line);
 			command[pos-line] = '\0';
@@ -317,16 +333,29 @@ void parse_redirection(char *line, int *readen){
 			int restelen = strlen(rest);
 			char *tok;
 			int toklen = 0;
-			if ((tok = strstr(rest, " ")) != NULL) {// retire les potentielles autres redirections ou suite de commandes
+			if ((tok = strstr(rest, " ")) != NULL) { // retire les potentielles autres redirections ou suite de commandes
 				restelen -= strlen(tok);
 				toklen = strlen(tok);
 			}
 			char file[restelen + 1];
 			strncpy(file, rest, restelen);
 			file[restelen] = '\0';
-			file_sortie = malloc(strlen(file)+1);
-			assert(file_sortie);
-			strcpy(file_sortie, file);
+
+			if (file[0] != '/') {
+				file_sortie = malloc(pwdlen + twdlen + strlen(file) + 1);
+				assert(file_sortie);
+				strcpy(file_sortie, pwd);
+				strcat(file_sortie, "/");
+				if (twdlen != 0) {
+					strcat(file_sortie, twd);
+					strcat(file_sortie, "/");
+				}
+				strcat(file_sortie, file);
+			}else {
+				file_sortie = malloc(strlen(file) + 1);
+				assert(file_sortie);
+				strcpy(file_sortie, file);
+			}
 			if ((file_entree != NULL && in_same_tar(file_entree, file_sortie)) || (file_erreur != NULL && in_same_tar(file_sortie, file_erreur))) {
 				close_redirections(fd_entree, fd_sortie, fd_erreur, save_entree, save_sortie, save_erreur, file_sortie, &endsortie, &taillesortie, file_erreur, &enderreur, &tailleerreur);
 				if (file_erreur != NULL) free(file_erreur);
@@ -452,14 +481,14 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 		}
 		close(save_entree);
 	}
-
-	if(save_sortie != -1 && fd_sortie != fd_entree){
-		if(file_sortie != NULL && strstr(file_sortie, ".tar") != NULL){ //On se trouve dans un tar, on doit donc écrire le header
-			off_t new_end_of_tar = lseek(fd_sortie, 0, SEEK_CUR); //On écrit le nouveau fichier a la fin du tar, on se trouve donc à la fin après écriture
-			int size = new_end_of_tar-(*endsortie);
+	if (save_sortie != -1 && fd_sortie != fd_entree) {
+		fprintf(stderr, "%s\n", file_sortie);
+		if (file_sortie != NULL && strstr(file_sortie, ".tar") != NULL) { // On se trouve dans un tar, on doit donc écrire le header
+			off_t new_end_of_tar = lseek(fd_sortie, 0, SEEK_CUR); // On écrit le nouveau fichier a la fin du tar, on se trouve donc à la fin après écriture
+			int size = new_end_of_tar - (*endsortie);
 			int complement = 0;
-			if(new_end_of_tar%BLOCKSIZE != 0){ //Complément pour avoir un bloc complet de 512 octets
-				complement = BLOCKSIZE-(new_end_of_tar%BLOCKSIZE);
+			if (new_end_of_tar % BLOCKSIZE != 0) { // Complément pour avoir un bloc complet de 512 octets
+				complement = BLOCKSIZE - (new_end_of_tar % BLOCKSIZE);
 				char block[complement];
 				memset(block, '\0', complement);
 				if (write(fd_sortie, block, complement) < complement) {
@@ -478,7 +507,8 @@ void close_redirections(int fd_entree, int fd_sortie, int fd_erreur, int save_en
 				return;
 			}
 			lseek(fd_sortie, 0, SEEK_END); // on se met à la fin
-			write_block(fd_sortie, NULL); // on ecrit un block vide à la fin au cas ou
+			write_block(fd_sortie, NULL);
+			write_block(fd_sortie, NULL); // on ecrit deux blocks vides à la fin au cas ou
 		}
 		close(fd_sortie);
 		if(dup2(save_sortie, STDOUT_FILENO) < 0){
